@@ -15,10 +15,10 @@ local function Story()
 		},
 		React.createElement(React.Fragment, nil, {
 			Padding = React.createElement("UIPadding", {
-				PaddingTop = UDim.new(0, 40),
-				PaddingLeft = UDim.new(0, 40),
-				PaddingRight = UDim.new(0, 40),
-				PaddingBottom = UDim.new(0, 40),
+				PaddingTop = UDim.new(0, 20),
+				PaddingLeft = UDim.new(0, 20),
+				PaddingRight = UDim.new(0, 20),
+				PaddingBottom = UDim.new(0, 20),
 			}),
 			Toolbar = React.createElement(SearchToolbar, {
 				searchText = searchText,
