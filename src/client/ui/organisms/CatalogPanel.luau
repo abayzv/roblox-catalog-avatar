@@ -85,8 +85,8 @@ local function CatalogPanel(props: CatalogPanelProps)
 
 			-- 2. SearchToolbar
 			SearchArea = React.createElement(SearchToolbar, {
-				query = state.searchQuery,
-				onQueryChanged = actions.setSearchQuery,
+				searchText = state.searchQuery,
+				onSearchTextChanged = actions.setSearchQuery,
 				onFilterActivated = function()
 					print("Filter activated")
 				end,
