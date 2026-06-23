@@ -16,7 +16,8 @@ local function HeaderTabs(props: HeaderTabsProps)
 	return React.createElement(
 		"Frame",
 		{
-			Size = UDim2.new(1, 0, 0, 54),
+			Size = UDim2.new(1, 0, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
 			BackgroundTransparency = 1,
 			LayoutOrder = props.layoutOrder,
 		},
@@ -24,7 +25,7 @@ local function HeaderTabs(props: HeaderTabsProps)
 			Layout = React.createElement("UIListLayout", {
 				FillDirection = Enum.FillDirection.Vertical,
 				SortOrder = Enum.SortOrder.LayoutOrder,
-				Padding = UDim.new(0, 0),
+				Padding = UDim.new(0, Theme.Space.XL), -- 24px gap between tabs and divider
 			}),
 			TabsContainer = React.createElement(
 				"Frame",
@@ -37,7 +38,8 @@ local function HeaderTabs(props: HeaderTabsProps)
 					Layout = React.createElement("UIListLayout", {
 						FillDirection = Enum.FillDirection.Horizontal,
 						SortOrder = Enum.SortOrder.LayoutOrder,
-						Padding = UDim.new(0, Theme.Space.MD),
+						Padding = UDim.new(0, Theme.Space.MD), -- 16px gap between the two buttons
+						HorizontalAlignment = Enum.HorizontalAlignment.Left,
 					}),
 					ItemCatalog = React.createElement(HeaderTabButton, {
 						text = "Item Catalog",
@@ -63,7 +65,7 @@ local function HeaderTabs(props: HeaderTabsProps)
 					}),
 				})
 			),
-			UnderlineContainer = React.createElement(
+			DividerContainer = React.createElement(
 				"Frame",
 				{
 					Size = UDim2.new(1, 0, 0, 3),
@@ -71,7 +73,15 @@ local function HeaderTabs(props: HeaderTabsProps)
 					LayoutOrder = 2,
 				},
 				React.createElement(React.Fragment, nil, {
-					Underline = React.createElement(
+					-- Full width thin grey line
+					GreyLine = React.createElement("Frame", {
+						Size = UDim2.new(1, 0, 0, 1),
+						Position = UDim2.new(0, 0, 1, -1),
+						BackgroundColor3 = Theme.Color.Border,
+						BorderSizePixel = 0,
+					}),
+					-- Active gradient underline
+					ActiveUnderline = React.createElement(
 						"Frame",
 						{
 							Size = UDim2.fromOffset(274, 3),
