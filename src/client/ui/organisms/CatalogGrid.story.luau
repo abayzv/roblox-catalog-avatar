@@ -25,7 +25,7 @@ local function Story()
 		return function()
 			task.cancel(timer)
 		end
-	end, [])
+	end, {})
 
 	return React.createElement(
 		"Frame",
