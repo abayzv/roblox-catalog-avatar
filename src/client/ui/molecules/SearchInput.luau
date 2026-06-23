@@ -28,7 +28,7 @@ local function SearchInput(props: SearchInputProps)
 				CornerRadius = UDim.new(0, Theme.Radius.XL),
 			}),
 			UIStroke = React.createElement("UIStroke", {
-				Color = strokeColor,
+				Color = isFocused and Theme.Color.Purple or Theme.Color.Border,
 				Thickness = 1,
 				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 			}),

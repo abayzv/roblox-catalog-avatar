@@ -48,6 +48,7 @@ local function CatalogPanel(props: CatalogPanelProps)
 			UIStroke = React.createElement("UIStroke", {
 				Color = Theme.Color.Border,
 				Thickness = 1,
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 			}),
 			UIPadding = React.createElement("UIPadding", {
 				PaddingTop = UDim.new(0, Theme.Space.XL),

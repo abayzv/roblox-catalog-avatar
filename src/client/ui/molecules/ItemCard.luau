@@ -27,6 +27,7 @@ local function ItemCard(props: ItemCardProps)
 			UIStroke = React.createElement("UIStroke", {
 				Color = Theme.Color.Border,
 				Thickness = 1,
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 			}),
 			UIPadding = React.createElement("UIPadding", {
 				PaddingTop = UDim.new(0, 12),
