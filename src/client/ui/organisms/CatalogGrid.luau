@@ -21,17 +21,18 @@ export type CatalogGridProps = {
 
 local function CatalogGrid(props: CatalogGridProps)
 	local contentSizeBinding, updateContentSize = React.useBinding(Vector2.new(0, 0))
+	local containerWidth, setContainerWidth = React.useState(804) -- default desktop assumption
 
 	local children = {}
 	local isEmpty = props.items and #props.items == 0 and not props.isLoading
 
 	local columns = props.columns or 3
-	local containerWidth = 810
+	local usableWidth = containerWidth - 6 -- subtract ScrollBarThickness
 	local gapX = 18
 	local originalWidth = 248
 	local originalHeight = 252
 
-	local targetCellWidth = (containerWidth - (gapX * (columns - 1))) / columns
+	local targetCellWidth = (usableWidth - (gapX * (columns - 1))) / columns
 	local scale = targetCellWidth / originalWidth
 
 	if not isEmpty then
@@ -121,6 +122,11 @@ local function CatalogGrid(props: CatalogGridProps)
 			return UDim2.fromOffset(0, size.Y + 36) -- extra bottom padding + top padding
 		end),
 		LayoutOrder = props.layoutOrder,
+		[React.Change.AbsoluteSize] = function(rbx)
+			if rbx.AbsoluteSize.X > 0 and math.abs(rbx.AbsoluteSize.X - containerWidth) > 1 then
+				setContainerWidth(rbx.AbsoluteSize.X)
+			end
+		end,
 	}, children)
 end
 

@@ -132,7 +132,7 @@ local function CatalogPanel(props: CatalogPanelProps)
 				Grid = React.createElement(CatalogGrid, {
 					items = MOCK_ITEMS,
 					isLoading = false,
-					columns = 6,
+					columns = 5,
 					onTryOn = function(item)
 						actions.setSelectedItemId(item.id)
 						print("Try On", item.name, item.id)
