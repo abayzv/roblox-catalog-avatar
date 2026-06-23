@@ -11,7 +11,6 @@ local useCatalogState = require(script.Parent.Parent.hooks.useCatalogState)
 
 export type CatalogPanelProps = {
 	layoutOrder: number?,
-	isMobile: boolean?,
 }
 
 local function CatalogPanel(props: CatalogPanelProps)
@@ -44,32 +43,28 @@ local function CatalogPanel(props: CatalogPanelProps)
 	return React.createElement(
 		"Frame",
 		{
-			Size = props.isMobile and UDim2.fromScale(1, 1) or UDim2.new(1, -144, 1, -16),
-			Position = props.isMobile and UDim2.fromScale(0, 0) or UDim2.new(0, 72, 0.5, 0),
-			AnchorPoint = props.isMobile and Vector2.new(0, 0) or Vector2.new(0, 0.5),
+			Size = UDim2.fromScale(1, 1),
+			Position = UDim2.fromScale(0, 0),
+			AnchorPoint = Vector2.new(0, 0),
 			BackgroundColor3 = Theme.Color.Panel,
 			ClipsDescendants = true,
 			LayoutOrder = props.layoutOrder,
 			BorderSizePixel = 0,
 		},
 		React.createElement(React.Fragment, nil, {
-			SizeConstraint = not props.isMobile and React.createElement("UISizeConstraint", {
-				MaxSize = Vector2.new(858, math.huge),
-				MinSize = Vector2.new(300, 0),
-			}),
-			UICorner = not props.isMobile and React.createElement("UICorner", {
+			UICorner = React.createElement("UICorner", {
 				CornerRadius = UDim.new(0, Theme.Radius.Panel),
 			}),
-			UIStroke = not props.isMobile and React.createElement("UIStroke", {
+			UIStroke = React.createElement("UIStroke", {
 				Color = Theme.Color.Border,
 				Thickness = 1,
 				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 			}),
 			UIPadding = React.createElement("UIPadding", {
-				PaddingTop = UDim.new(0, props.isMobile and Theme.Space.LG or Theme.Space.XL),
-				PaddingBottom = UDim.new(0, props.isMobile and Theme.Space.LG or Theme.Space.XL),
-				PaddingLeft = UDim.new(0, props.isMobile and Theme.Space.LG or Theme.Space.XL),
-				PaddingRight = UDim.new(0, props.isMobile and Theme.Space.LG or Theme.Space.XL),
+				PaddingTop = UDim.new(0, Theme.Space.XL),
+				PaddingBottom = UDim.new(0, Theme.Space.XL),
+				PaddingLeft = UDim.new(0, Theme.Space.XL),
+				PaddingRight = UDim.new(0, Theme.Space.XL),
 			}),
 			Layout = React.createElement("UIListLayout", {
 				FillDirection = Enum.FillDirection.Vertical,
