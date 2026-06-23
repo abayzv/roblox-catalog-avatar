@@ -60,7 +60,7 @@ local function BaseFrame(props: BaseFrameProps)
 		BackgroundTransparency = props.backgroundTransparency or 0,
 		BorderSizePixel = 0,
 		LayoutOrder = props.layoutOrder,
-	}, children)
+	}, React.createElement(React.Fragment, nil, children))
 end
 
 return BaseFrame

@@ -34,42 +34,46 @@ local function GradientButton(props: GradientButtonProps)
 				overlayColor = Color3.new(1, 1, 1)
 			end
 
-			return React.createElement("Frame", {
-				Size = UDim2.fromScale(1, 1),
-				BackgroundColor3 = Color3.new(1, 1, 1),
-				BackgroundTransparency = 0,
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.fromScale(0.5, 0.5),
-			}, {
-				UIScale = React.createElement("UIScale", {
-					Scale = scale,
-				}),
-				UICorner = React.createElement("UICorner", {
-					CornerRadius = UDim.new(0, Theme.Radius.SM),
-				}),
-				UIGradient = React.createElement("UIGradient", {
-					Color = Theme.Gradient.Primary,
-				}),
-				Overlay = React.createElement("Frame", {
+			return React.createElement(
+				"Frame",
+				{
 					Size = UDim2.fromScale(1, 1),
-					BackgroundColor3 = overlayColor,
-					BackgroundTransparency = overlayTransparency,
-					ZIndex = 2,
-				}, {
+					BackgroundColor3 = Color3.new(1, 1, 1),
+					BackgroundTransparency = 0,
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(0.5, 0.5),
+				},
+				React.createElement(React.Fragment, nil, {
+					UIScale = React.createElement("UIScale", {
+						Scale = scale,
+					}),
 					UICorner = React.createElement("UICorner", {
 						CornerRadius = UDim.new(0, Theme.Radius.SM),
 					}),
-				}),
-				TextLabel = React.createElement("TextLabel", {
-					Size = UDim2.fromScale(1, 1),
-					BackgroundTransparency = 1,
-					Text = props.text,
-					TextColor3 = Color3.new(1, 1, 1),
-					Font = Theme.Font.Bold,
-					TextSize = Theme.Text.Button,
-					ZIndex = 3,
-				}),
-			})
+					UIGradient = React.createElement("UIGradient", {
+						Color = Theme.Gradient.Primary,
+					}),
+					Overlay = React.createElement("Frame", {
+						Size = UDim2.fromScale(1, 1),
+						BackgroundColor3 = overlayColor,
+						BackgroundTransparency = overlayTransparency,
+						ZIndex = 2,
+					}, {
+						UICorner = React.createElement("UICorner", {
+							CornerRadius = UDim.new(0, Theme.Radius.SM),
+						}),
+					}),
+					TextLabel = React.createElement("TextLabel", {
+						Size = UDim2.fromScale(1, 1),
+						BackgroundTransparency = 1,
+						Text = props.text,
+						TextColor3 = Color3.new(1, 1, 1),
+						Font = Theme.Font.Bold,
+						TextSize = Theme.Text.Button,
+						ZIndex = 3,
+					}),
+				})
+			)
 		end,
 	})
 end
