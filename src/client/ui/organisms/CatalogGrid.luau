@@ -36,6 +36,8 @@ local function CatalogGrid(props: CatalogGridProps)
 		Padding = React.createElement("UIPadding", {
 			PaddingTop = UDim.new(0, 12),
 			PaddingBottom = UDim.new(0, 24),
+			PaddingLeft = UDim.new(0, 2),
+			PaddingRight = UDim.new(0, 2),
 		}),
 	}
 
