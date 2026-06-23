@@ -1,0 +1,8 @@
+Packages/
+build/
+sourcemap.json
+*.rbxlx
+*.rbxm
+*.rbxmx
+*.tmp
+
