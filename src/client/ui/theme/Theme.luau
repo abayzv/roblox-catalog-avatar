@@ -18,9 +18,9 @@ Theme.Color = {
 }
 
 Theme.Font = {
-	Regular = Enum.Font.GothamSSm,
-	Medium = Enum.Font.GothamSSmMedium,
-	Bold = Enum.Font.GothamSSmBold,
+	Regular = Enum.Font.Gotham,
+	Medium = Enum.Font.GothamMedium,
+	Bold = Enum.Font.GothamBold,
 }
 
 Theme.Text = {
