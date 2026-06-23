@@ -25,12 +25,24 @@ local function CatalogGrid(props: CatalogGridProps)
 	local children = {}
 	local isEmpty = props.items and #props.items == 0 and not props.isLoading
 
+	local columns = props.columns or 3
+	local containerWidth = 810
+	local gapX = 18
+	local originalWidth = 248
+	local originalHeight = 252
+
+	local targetCellWidth = (containerWidth - (gapX * (columns - 1))) / columns
+	local scale = targetCellWidth / originalWidth
+
 	if not isEmpty then
 		children.Layout = React.createElement("UIGridLayout", {
-			CellSize = UDim2.fromOffset(248, 252),
-			CellPadding = UDim2.fromOffset(18, 14),
+			CellSize = UDim2.fromOffset(
+				math.floor(targetCellWidth),
+				math.floor(originalHeight * scale)
+			),
+			CellPadding = UDim2.fromOffset(gapX, 14),
 			FillDirection = Enum.FillDirection.Horizontal,
-			FillDirectionMaxCells = props.columns or 3,
+			FillDirectionMaxCells = columns,
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			HorizontalAlignment = Enum.HorizontalAlignment.Left,
 			[React.Change.AbsoluteContentSize] = function(rbx)
@@ -45,24 +57,45 @@ local function CatalogGrid(props: CatalogGridProps)
 		})
 
 		if props.isLoading then
-			local skeletonCount = props.columns and (props.columns * 3) or 9
+			local skeletonCount = columns * 3
 			for i = 1, skeletonCount do
-				children["Skeleton_" .. i] = React.createElement(ItemCardSkeleton, {
-					layoutOrder = i,
+				children["SkeletonWrapper_" .. i] = React.createElement("Frame", {
+					BackgroundTransparency = 1,
+					Size = UDim2.fromScale(1, 1),
+					LayoutOrder = i,
+				}, {
+					ScalerContainer = React.createElement("Frame", {
+						BackgroundTransparency = 1,
+						Size = UDim2.fromOffset(originalWidth, originalHeight),
+					}, {
+						UIScale = React.createElement("UIScale", { Scale = scale }),
+						Card = React.createElement(ItemCardSkeleton, {}),
+					}),
 				})
 			end
 		elseif props.items then
 			for i, item in ipairs(props.items) do
-				children["Item_" .. item.id] = React.createElement(ItemCard, {
-					name = item.name,
-					price = item.price,
-					image = item.image,
-					layoutOrder = i,
-					onTryOn = if props.onTryOn
-						then function()
-							props.onTryOn(item)
-						end
-						else nil,
+				children["ItemWrapper_" .. item.id] = React.createElement("Frame", {
+					BackgroundTransparency = 1,
+					Size = UDim2.fromScale(1, 1),
+					LayoutOrder = i,
+				}, {
+					ScalerContainer = React.createElement("Frame", {
+						BackgroundTransparency = 1,
+						Size = UDim2.fromOffset(originalWidth, originalHeight),
+					}, {
+						UIScale = React.createElement("UIScale", { Scale = scale }),
+						Card = React.createElement(ItemCard, {
+							name = item.name,
+							price = item.price,
+							image = item.image,
+							onTryOn = if props.onTryOn
+								then function()
+									props.onTryOn(item)
+								end
+								else nil,
+						}),
+					}),
 				})
 			end
 		end
