@@ -3,7 +3,7 @@ local React = require(ReplicatedStorage.Packages.React)
 local Theme = require(script.Parent.Parent.theme.Theme)
 local ItemCard = require(script.Parent.Parent.molecules.ItemCard)
 local ItemCardSkeleton = require(script.Parent.Parent.molecules.ItemCardSkeleton)
-local usePreviewState = require(script.Parent.Parent.hooks.usePreviewState)
+local usePreviewState = require(script.Parent.Parent.Parent.hooks.usePreviewState)
 
 export type CatalogItem = {
 	id: string,
