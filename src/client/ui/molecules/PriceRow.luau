@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local Theme = require(script.Parent.Parent.theme.Theme)
+local Icons = require(script.Parent.Parent.theme.Icons)
 local Icon = require(script.Parent.Parent.atoms.Icon)
 
 export type PriceRowProps = {
@@ -24,7 +25,7 @@ local function PriceRow(props: PriceRowProps)
 				VerticalAlignment = Enum.VerticalAlignment.Center,
 			}),
 			RobuxIcon = React.createElement(Icon, {
-				image = Theme.Icons.Robux,
+				image = Icons.Robux,
 				size = 20,
 				layoutOrder = 1,
 				color = Theme.Color.TextPrimary,
