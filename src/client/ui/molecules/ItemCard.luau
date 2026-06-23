@@ -8,6 +8,7 @@ export type ItemCardProps = {
 	name: string,
 	price: number | string,
 	image: string,
+	isPreviewing: boolean?,
 	onTryOn: (() -> ())?,
 	layoutOrder: number?,
 }
@@ -97,7 +98,7 @@ local function ItemCard(props: ItemCardProps)
 
 			-- 4. Try On Button
 			TryOnButton = React.createElement(GradientButton, {
-				text = "Try On",
+				text = props.isPreviewing and "Remove" or "Try On",
 				onActivated = props.onTryOn,
 				layoutOrder = 4,
 			}),

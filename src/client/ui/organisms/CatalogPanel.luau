@@ -9,8 +9,13 @@ local SubCategoryChips = require(script.Parent.SubCategoryChips)
 local CatalogGrid = require(script.Parent.CatalogGrid)
 local useCatalogState = require(script.Parent.Parent.hooks.useCatalogState)
 
+local AvatarPreviewController = require(script.Parent.Parent.controllers.AvatarPreviewController)
+
 export type CatalogPanelProps = {
 	layoutOrder: number?,
+	isMobile: boolean?,
+	isTablet: boolean?,
+	viewportSize: Vector2?,
 }
 
 local function CatalogPanel(props: CatalogPanelProps)
@@ -135,7 +140,7 @@ local function CatalogPanel(props: CatalogPanelProps)
 					columns = 5,
 					onTryOn = function(item)
 						actions.setSelectedItemId(item.id)
-						print("Try On", item.name, item.id)
+						AvatarPreviewController.ToggleItemPreview(item)
 					end,
 				}),
 			}),

@@ -3,6 +3,7 @@ local React = require(ReplicatedStorage.Packages.React)
 local Theme = require(script.Parent.Parent.theme.Theme)
 local ItemCard = require(script.Parent.Parent.molecules.ItemCard)
 local ItemCardSkeleton = require(script.Parent.Parent.molecules.ItemCardSkeleton)
+local usePreviewState = require(script.Parent.Parent.hooks.usePreviewState)
 
 export type CatalogItem = {
 	id: string,
@@ -22,6 +23,7 @@ export type CatalogGridProps = {
 local function CatalogGrid(props: CatalogGridProps)
 	local contentSizeBinding, updateContentSize = React.useBinding(Vector2.new(0, 0))
 	local containerWidth = 804 -- Hardcoded to Desktop GridArea minus scrollbar (810 - 6)
+	local previewItems = usePreviewState()
 
 	local children = {}
 	local isEmpty = props.items and #props.items == 0 and not props.isLoading
@@ -90,6 +92,7 @@ local function CatalogGrid(props: CatalogGridProps)
 							name = item.name,
 							price = item.price,
 							image = item.image,
+							isPreviewing = previewItems[item.id] ~= nil,
 							onTryOn = if props.onTryOn
 								then function()
 									props.onTryOn(item)
