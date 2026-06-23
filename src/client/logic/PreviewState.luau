@@ -5,6 +5,7 @@ export type CatalogItem = {
 	name: string,
 	price: number | string,
 	image: string,
+	assetId: number?,
 }
 
 local previewItems: { [string]: CatalogItem } = {}

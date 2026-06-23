@@ -30,10 +30,10 @@ local function MainCategoryTabs(props: MainCategoryTabsProps)
 			VerticalAlignment = Enum.VerticalAlignment.Center,
 		}),
 		Padding = React.createElement("UIPadding", {
-			PaddingTop = UDim.new(0, 2),
-			PaddingBottom = UDim.new(0, 2),
-			PaddingLeft = UDim.new(0, 2),
-			PaddingRight = UDim.new(0, 2),
+			PaddingTop = UDim.new(0, 6),
+			PaddingBottom = UDim.new(0, 6),
+			PaddingLeft = UDim.new(0, 6),
+			PaddingRight = UDim.new(0, 6),
 		}),
 	}
 
@@ -52,7 +52,7 @@ local function MainCategoryTabs(props: MainCategoryTabsProps)
 	end
 
 	return React.createElement("ScrollingFrame", {
-		Size = UDim2.new(1, 0, 0, 52),
+		Size = UDim2.new(1, 0, 0, 60),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 0,

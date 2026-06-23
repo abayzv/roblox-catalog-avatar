@@ -49,7 +49,7 @@ local function CategoryButton(props: CategoryButtonProps)
 					}),
 					UIStroke = React.createElement("UIStroke", {
 						Color = strokeColor,
-						Thickness = 1,
+						Thickness = if active then 2 else 1.5,
 						ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 					}),
 					UIPadding = React.createElement("UIPadding", {

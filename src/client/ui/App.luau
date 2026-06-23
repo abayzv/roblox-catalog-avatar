@@ -1,6 +1,6 @@
 local React = require(game:GetService("ReplicatedStorage").Packages.React)
 
-local CatalogScreen = require(script.screens.CatalogScreen)
+local CatalogScreen = require(script.Parent.screens.CatalogScreen)
 
 local function App()
 	return React.createElement(CatalogScreen)

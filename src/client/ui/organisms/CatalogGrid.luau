@@ -10,6 +10,7 @@ export type CatalogItem = {
 	name: string,
 	price: number,
 	image: string,
+	assetId: number?,
 }
 
 export type CatalogGridProps = {
@@ -18,23 +19,27 @@ export type CatalogGridProps = {
 	columns: number?,
 	onTryOn: ((item: CatalogItem) -> ())?,
 	layoutOrder: number?,
+	viewportScale: number?,
 }
 
 local function CatalogGrid(props: CatalogGridProps)
 	local contentSizeBinding, updateContentSize = React.useBinding(Vector2.new(0, 0))
-	local containerWidth = 804 -- Hardcoded to Desktop GridArea minus scrollbar (810 - 6)
+	local containerWidth, setContainerWidth = React.useState(804)
 	local previewItems = usePreviewState()
 
 	local children = {}
 	local isEmpty = props.items and #props.items == 0 and not props.isLoading
 
 	local columns = props.columns or 3
-	local usableWidth = containerWidth - 6 -- subtract ScrollBarThickness
+	local viewportScale = props.viewportScale or 1
+	local scrollBarThickness = 6
+	local sidePadding = 4
+	local usableWidth = math.max(containerWidth - scrollBarThickness - sidePadding, 1)
 	local gapX = 18
 	local originalWidth = 248
 	local originalHeight = 252
 
-	local targetCellWidth = (usableWidth - (gapX * (columns - 1))) / columns
+	local targetCellWidth = math.max((usableWidth - (gapX * (columns - 1))) / columns, 1)
 	local scale = targetCellWidth / originalWidth
 
 	if not isEmpty then
@@ -125,6 +130,12 @@ local function CatalogGrid(props: CatalogGridProps)
 			return UDim2.fromOffset(0, size.Y + 36) -- extra bottom padding + top padding
 		end),
 		LayoutOrder = props.layoutOrder,
+		[React.Change.AbsoluteSize] = function(rbx)
+			local nextWidth = rbx.AbsoluteSize.X / viewportScale
+			if nextWidth ~= containerWidth then
+				setContainerWidth(nextWidth)
+			end
+		end,
 	}, children)
 end
 

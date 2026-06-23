@@ -9,11 +9,11 @@ Referensi UI utama:
 ## Prinsip Arsitektur
 
 1. UI catalog dibuat dulu dengan mock data.
-2. Preview avatar menggunakan karakter aktif player di world, bukan `ViewportFrame`.
-3. Tombol `Try On` hanya melakukan preview client-side pada karakter lokal.
-4. Item hasil preview tidak terlihat oleh player lain.
+2. Preview avatar menggunakan `ViewportFrame` berisi clone karakter aktif player.
+3. Tombol `Try On` hanya mengubah clone di viewport secara client-side.
+4. Item hasil preview tidak terlihat oleh player lain dan tidak mengubah live character.
 5. Tombol `Apply` baru mengirim pilihan final ke server.
-6. Server hanya menerima pilihan final, melakukan validasi, lalu menerapkan appearance agar terlihat oleh player lain.
+6. Server hanya menerima pilihan final, melakukan validasi, lalu menerapkan appearance ke live character agar terlihat oleh player lain.
 7. Komponen UI tidak boleh berisi logic Marketplace, purchase, server validation, atau insert asset langsung.
 8. Catalog UI dibuka dan ditutup lewat tombol TopbarPlus bernama `Catalog`.
 
@@ -224,7 +224,7 @@ Scope:
 
 Acceptance criteria:
 - Panel tidak menutup karakter kanan.
-- Background kanan tidak memakai `ViewportFrame`.
+- Area kanan disiapkan untuk preview `ViewportFrame`.
 - Layout desktop match screenshot secara visual.
 
 ## Milestone 3 - UI Interaction And Responsive Polish
@@ -293,22 +293,22 @@ Acceptance criteria:
 - Tidak ada clipping/overlap besar.
 - Semua komponen mengambil style dari `Theme`.
 
-## Milestone 4 - Client-Side Try On Preview
+## Milestone 4 - Viewport Try On Preview
 
-Tujuan: tombol `Try On` melakukan preview di karakter aktif player secara lokal, belum terlihat oleh orang lain.
+Tujuan: tombol `Try On` melakukan preview pada clone avatar di `ViewportFrame` secara lokal, belum terlihat oleh orang lain dan belum mengubah karakter asli player.
 
 ### Issue 4.1 - Avatar Preview Architecture
 
 Scope:
-- Buat dokumen teknis singkat untuk preview aktif character.
+- Buat dokumen teknis singkat untuk preview `ViewportFrame`.
 - Tentukan module client:
   - `AvatarPreviewController`
   - `PreviewState`
-  - `PreviewItemApplier`
+  - `AvatarPreviewViewport`
 
 Acceptance criteria:
-- Preview tidak memakai `ViewportFrame`.
-- Preview target adalah `Players.LocalPlayer.Character`.
+- Preview memakai clone dari `Players.LocalPlayer.Character` di `ViewportFrame`.
+- Preview tidak mengubah live character.
 - Batas client-only dan server apply jelas.
 
 ### Issue 4.2 - Local Preview State
@@ -322,22 +322,37 @@ Acceptance criteria:
 - State preview bisa di-clear.
 - UI bisa menampilkan selected/previewed item.
 
-### Issue 4.3 - Client-Only Visual Apply
+### Issue 4.3 - Client-Only Viewport Apply
 
 Scope:
-- Terapkan item visual ke karakter lokal di client.
+- Terapkan item visual ke clone viewport di client.
 - Jangan kirim remote event saat `Try On`.
 
 Acceptance criteria:
-- Player lokal melihat item preview di karakter aktif.
+- Player lokal melihat item preview di viewport avatar.
 - Player lain belum melihat perubahan.
 - Preview bisa diganti tanpa menumpuk duplicate item.
+
+### Issue 4.3a - Viewport Preview Polish
+
+Scope:
+- Framing kamera menampilkan avatar full-body.
+- Clone viewport menjalankan idle animation agar tidak terlihat kaku.
+- Avatar viewport bisa di-rotate dengan mouse drag dan touch drag.
+- Style panel preview mengikuti `Theme` catalog: putih, border soft, radius konsisten.
+
+Acceptance criteria:
+- Seluruh badan avatar terlihat di preview, bukan hanya kepala atau setengah badan.
+- Idle animation berjalan pada clone viewport.
+- Drag horizontal memutar avatar tanpa mengubah live character.
+- Preview panel terasa seirama dengan catalog panel.
+- Tidak ada RemoteEvent atau server mutation pada flow `Try On`.
 
 ### Issue 4.4 - Reset Preview
 
 Scope:
 - Tambahkan tombol/aksi reset preview.
-- Kembalikan karakter lokal ke appearance sebelum preview.
+- Kembalikan clone viewport ke appearance sebelum preview.
 
 Acceptance criteria:
 - Semua item preview terhapus.
@@ -578,12 +593,13 @@ Acceptance criteria:
 21. Issue 3.5 - Visual QA Pass
 22. Issue 4.1 - Avatar Preview Architecture
 23. Issue 4.2 - Local Preview State
-24. Issue 4.3 - Client-Only Visual Apply
-25. Issue 4.4 - Reset Preview
-26. Issue 5.1 - Apply Button UI
-27. Issue 5.2 - Remote Contract
-28. Issue 5.3 - Server Validation
-29. Issue 5.4 - Server Appearance Apply
+24. Issue 4.3 - Client-Only Viewport Apply
+25. Issue 4.3a - Viewport Preview Polish
+26. Issue 4.4 - Reset Preview
+27. Issue 5.1 - Apply Button UI
+28. Issue 5.2 - Remote Contract
+29. Issue 5.3 - Server Validation
+30. Issue 5.4 - Server Appearance Apply
 
 ## MVP Definition
 
@@ -594,8 +610,8 @@ MVP awal dianggap selesai jika:
 - UI memakai mock data.
 - Search/category/chip/filter visual sudah ada.
 - Item card dan grid rapi.
-- Karakter aktif di kanan tetap terlihat di world.
-- Klik `Try On` bisa preview client-side di karakter lokal.
+- Avatar preview di kanan tampil melalui `ViewportFrame` dengan blur background world.
+- Klik `Try On` bisa preview client-side di clone viewport.
 - Klik `Apply` bisa membuat pilihan final terlihat oleh player lain.
 
 ## Catatan Untuk Pembuatan GitHub Issues

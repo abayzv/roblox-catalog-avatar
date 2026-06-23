@@ -21,9 +21,9 @@ UI terdiri dari dua area besar:
    - Look & feel: modern, clean, rounded, soft shadow, warna aksen ungu-magenta.
 
 2. **Avatar Preview Area**
-   - Area kanan berisi karakter aktif player di world Roblox asli.
-   - Area ini bukan `ViewportFrame`; catalog panel harus transparan terhadap world kanan.
-   - Preview item dilakukan client-side pada `Players.LocalPlayer.Character`.
+   - Area kanan berisi `ViewportFrame` dengan clone dari karakter aktif player.
+   - Preview item dilakukan client-side pada clone viewport, bukan live character.
+   - World camera diberi blur saat catalog terbuka supaya UI dan preview lebih fokus.
    - Perubahan baru terlihat oleh player lain setelah user klik `Apply` dan server memvalidasi pilihan final.
 
 3. **Topbar Entry**
@@ -153,7 +153,7 @@ Ukuran gambar referensi: `1456 x 819`.
 ScreenGui
 └── AppRoot
     ├── CatalogPanel              // kiri
-    └── WorldPreviewSpace         // kanan, world Roblox asli
+    └── AvatarPreviewViewport    // kanan, clone avatar client-only
 ```
 
 Rekomendasi ukuran desktop:
@@ -164,13 +164,13 @@ Rekomendasi ukuran desktop:
   - Corner radius: `18`
 - `AvatarPreviewArea`
   - Mengisi sisa layar kanan
-  - Berupa ruang world asli yang tidak ditutup UI
-  - Tidak menggunakan `ViewportFrame`
+  - Berupa panel `ViewportFrame` untuk clone avatar
+  - Tidak mengubah live character saat `Try On`
 
 Untuk responsive:
 - Jika layar besar: panel fixed width `840–880px`.
 - Jika layar medium: panel width `60–65%`.
-- Jika mobile/layar kecil: panel boleh full-screen dan avatar preview disembunyikan/menjadi tab terpisah.
+- Jika mobile/layar kecil: catalog dan avatar preview tetap terlihat berdampingan secara proporsional, mengikuti scale layout landscape.
 
 ---
 
@@ -643,28 +643,32 @@ Style:
 
 ---
 
-## 9. Active Character Preview Area
+## 9. Viewport Avatar Preview Area
 
-Preview avatar memakai karakter aktif player di world, bukan `ViewportFrame`.
+Preview avatar memakai clone karakter aktif player di `ViewportFrame`.
 
-### 9.1 `AvatarPreviewArea`
+### 9.1 `AvatarPreviewViewport`
 
 Struktur:
 ```txt
-AvatarPreviewArea
-└── ActiveCharacterInWorld
+AvatarPreviewViewport
+├── ViewportFrame
+│   ├── Camera
+│   └── WorldModel
+│       └── CatalogPreviewRig
 ```
 
 Style:
 - Fill sisa layar kanan.
-- Background transparent agar world Roblox asli terlihat.
-- Character center kanan.
-- Tidak menutupi CatalogPanel.
+- Background memakai token `Theme.Color.Panel` dan `Theme.Color.PanelSoft`.
+- Radius, border, dan padding mengikuti catalog panel.
+- Avatar full-body terlihat.
+- Viewport mendukung mouse/touch drag untuk rotate avatar.
+- Idle animation berjalan agar clone tidak terlihat kaku.
 
 Catatan:
 - Jangan taruh logic `HumanoidDescription`, insert asset, purchase, atau server call di komponen visual ini.
-- Jangan membuat `ViewportFrame` untuk avatar preview.
-- `Try On` nantinya hanya mengubah karakter lokal di client.
+- `Try On` hanya mengubah clone viewport di client.
 - `Apply` adalah aksi pertama yang boleh mengirim pilihan final ke server.
 - Komponen ini cukup menerima prop:
 ```lua
@@ -966,7 +970,7 @@ Jangan campur dengan:
 ### Mobile / Small
 
 - Panel full screen.
-- Avatar preview disembunyikan atau pindah ke tab `Avatar Loader`.
+- Avatar preview tetap visible di kanan, diskalakan proporsional bersama layout landscape.
 - Grid 1 kolom atau 2 kolom compact.
 - Button height minimum `44`.
 - Search filter button tetap `48–52`.

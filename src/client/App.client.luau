@@ -5,15 +5,15 @@ local Packages = ReplicatedStorage:WaitForChild("Packages")
 local React = require(Packages.React)
 local ReactRoblox = require(Packages.ReactRoblox)
 
-local CatalogTopbarController = require(script.controllers.CatalogTopbarController)
-local App = require(script.ui.App)
+local CatalogTopbarController = require(script.Parent.controllers.CatalogTopbarController)
+local App = require(script.Parent.ui.App)
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "RobloxItemCatalogGui"
-screenGui.IgnoreGuiInset = true
+screenGui.IgnoreGuiInset = false
 screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = playerGui
