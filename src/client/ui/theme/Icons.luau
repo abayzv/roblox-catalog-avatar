@@ -1,5 +1,5 @@
 local Icons = {
-	Catalog = "rbxassetid://18517062196",
+	Catalog = "rbxassetid://132847573851619",
 	Avatar = "rbxassetid://81489458260315",
 	Search = "rbxassetid://118685771787843",
 	Filter = "rbxassetid://128741217923901",
