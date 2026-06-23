@@ -119,12 +119,10 @@ local function Story()
 	)
 end
 
-return function(props)
-	local target = type(props) == "table" and props.target or props
-	local root = ReactRoblox.createRoot(target)
-	root:render(React.createElement(Story))
+local story = {
+	react = React,
+	reactRoblox = ReactRoblox,
+	story = Story,
+}
 
-	return function()
-		root:unmount()
-	end
-end
+return story
