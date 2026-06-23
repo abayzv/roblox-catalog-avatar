@@ -27,11 +27,24 @@ local function CatalogScreen()
 		BackgroundTransparency = 1,
 		Size = UDim2.fromScale(1, 1),
 	}, {
+		InputBlocker = React.createElement("TextButton", {
+			AutoButtonColor = false,
+			Active = true,
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			Modal = true,
+			Selectable = false,
+			Size = UDim2.fromScale(1, 1),
+			Text = "",
+			ZIndex = 1,
+		}),
+
 		CatalogArea = React.createElement("Frame", {
 			BackgroundTransparency = 1,
 			Position = UDim2.fromScale(0, 0),
 			Size = UDim2.fromScale(CATALOG_WIDTH_SCALE, 1),
 			ClipsDescendants = false,
+			ZIndex = 10,
 		}, {
 			Padding = React.createElement("UIPadding", {
 				PaddingTop = UDim.new(SCREEN_PADDING_SCALE, 0),
@@ -60,6 +73,7 @@ local function CatalogScreen()
 			BackgroundTransparency = 1,
 			Position = UDim2.fromScale(CATALOG_WIDTH_SCALE, 0),
 			Size = UDim2.fromScale(PREVIEW_WIDTH_SCALE, 1),
+			ZIndex = 10,
 		}, {
 			Padding = React.createElement("UIPadding", {
 				PaddingTop = UDim.new(SCREEN_PADDING_SCALE, 0),

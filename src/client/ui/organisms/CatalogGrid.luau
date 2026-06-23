@@ -33,22 +33,29 @@ local function CatalogGrid(props: CatalogGridProps)
 	local columns = props.columns or 3
 	local viewportScale = props.viewportScale or 1
 	local scrollBarThickness = 6
-	local sidePadding = 4
+	local sidePadding = 16
 	local usableWidth = math.max(containerWidth - scrollBarThickness - sidePadding, 1)
 	local gapX = 18
+	local gapY = 14
 	local originalWidth = 248
 	local originalHeight = 252
 
 	local targetCellWidth = math.max((usableWidth - (gapX * (columns - 1))) / columns, 1)
 	local scale = targetCellWidth / originalWidth
+	local targetCellHeight = math.floor(originalHeight * scale)
+	local itemCount = if props.isLoading then columns * 3 elseif props.items then #props.items else 0
+	local rowCount = math.max(math.ceil(itemCount / columns), 1)
+	local gridPaddingTop = 12
+	local gridPaddingBottom = 96
+	local estimatedContentHeight = gridPaddingTop
+		+ (rowCount * targetCellHeight)
+		+ (math.max(rowCount - 1, 0) * gapY)
+		+ gridPaddingBottom
 
 	if not isEmpty then
 		children.Layout = React.createElement("UIGridLayout", {
-			CellSize = UDim2.fromOffset(
-				math.floor(targetCellWidth),
-				math.floor(originalHeight * scale)
-			),
-			CellPadding = UDim2.fromOffset(gapX, 14),
+			CellSize = UDim2.fromOffset(math.floor(targetCellWidth), targetCellHeight),
+			CellPadding = UDim2.fromOffset(gapX, gapY),
 			FillDirection = Enum.FillDirection.Horizontal,
 			FillDirectionMaxCells = columns,
 			SortOrder = Enum.SortOrder.LayoutOrder,
@@ -58,10 +65,10 @@ local function CatalogGrid(props: CatalogGridProps)
 			end,
 		})
 		children.Padding = React.createElement("UIPadding", {
-			PaddingTop = UDim.new(0, 12),
-			PaddingBottom = UDim.new(0, 24),
-			PaddingLeft = UDim.new(0, 2),
-			PaddingRight = UDim.new(0, 2),
+			PaddingTop = UDim.new(0, gridPaddingTop),
+			PaddingBottom = UDim.new(0, gridPaddingBottom),
+			PaddingLeft = UDim.new(0, 8),
+			PaddingRight = UDim.new(0, 8),
 		})
 
 		if props.isLoading then
@@ -127,7 +134,10 @@ local function CatalogGrid(props: CatalogGridProps)
 		ScrollBarThickness = 6,
 		ScrollBarImageColor3 = Color3.fromRGB(154, 161, 173), -- TextMuted equivalent
 		CanvasSize = contentSizeBinding:map(function(size)
-			return UDim2.fromOffset(0, size.Y + 36) -- extra bottom padding + top padding
+			return UDim2.fromOffset(
+				0,
+				math.max(size.Y + gridPaddingTop + gridPaddingBottom, estimatedContentHeight)
+			)
 		end),
 		LayoutOrder = props.layoutOrder,
 		[React.Change.AbsoluteSize] = function(rbx)

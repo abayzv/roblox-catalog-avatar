@@ -130,6 +130,14 @@ local function cloneLocalCharacter(): Model?
 		return nil
 	end
 
+	if not character:FindFirstChildOfClass("Humanoid") then
+		character:WaitForChild("Humanoid", 5)
+	end
+
+	if not character:FindFirstChild("HumanoidRootPart") then
+		character:WaitForChild("HumanoidRootPart", 5)
+	end
+
 	local previousArchivable = character.Archivable
 	character.Archivable = true
 	local clone = character:Clone()
@@ -289,15 +297,10 @@ local function AvatarPreviewViewport()
 		BackgroundColor3 = Theme.Color.Panel,
 		ClipsDescendants = true,
 		Size = UDim2.fromScale(1, 1),
+		ZIndex = 10,
 	}, {
 		Corner = React.createElement("UICorner", {
 			CornerRadius = UDim.new(0, Theme.Radius.Panel),
-		}),
-
-		Stroke = React.createElement("UIStroke", {
-			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-			Color = Theme.Color.Border,
-			Thickness = 1,
 		}),
 
 		Padding = React.createElement("UIPadding", {
@@ -311,15 +314,10 @@ local function AvatarPreviewViewport()
 			BackgroundColor3 = Theme.Color.PanelSoft,
 			ClipsDescendants = true,
 			Size = UDim2.fromScale(1, 1),
+			ZIndex = 11,
 		}, {
 			Corner = React.createElement("UICorner", {
 				CornerRadius = UDim.new(0, Theme.Radius.LG),
-			}),
-
-			Stroke = React.createElement("UIStroke", {
-				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-				Color = Theme.Color.Border,
-				Thickness = 1,
 			}),
 
 			Gradient = React.createElement("UIGradient", {
@@ -337,6 +335,7 @@ local function AvatarPreviewViewport()
 				LightColor = Color3.fromRGB(255, 255, 255),
 				LightDirection = Vector3.new(-0.5, -0.9, -0.4),
 				Size = UDim2.fromScale(1, 1),
+				ZIndex = 12,
 				ref = viewportRef,
 
 				[React.Event.InputBegan] = beginDrag,

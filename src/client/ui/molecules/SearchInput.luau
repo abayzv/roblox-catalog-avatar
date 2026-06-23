@@ -14,8 +14,6 @@ export type SearchInputProps = {
 local function SearchInput(props: SearchInputProps)
 	local isFocused, setIsFocused = React.useState(false)
 
-	local strokeColor = isFocused and Color3.fromRGB(206, 172, 240) or Theme.Color.Border
-
 	return React.createElement(
 		"Frame",
 		{
@@ -29,7 +27,7 @@ local function SearchInput(props: SearchInputProps)
 			}),
 			UIStroke = React.createElement("UIStroke", {
 				Color = isFocused and Theme.Color.Purple or Theme.Color.Border,
-				Thickness = 1,
+				Thickness = if isFocused then 2 else 1,
 				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 			}),
 			Padding = React.createElement("UIPadding", {

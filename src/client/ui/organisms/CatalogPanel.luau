@@ -21,7 +21,7 @@ export type CatalogPanelProps = {
 }
 
 local HEADER_HEIGHT = 51
-local SEARCH_HEIGHT = 52
+local SEARCH_HEIGHT = 60
 local MAIN_CATEGORY_HEIGHT = 60
 local SUBCATEGORY_HEIGHT = 50
 local GRID_OFFSET = HEADER_HEIGHT
@@ -83,11 +83,6 @@ local function CatalogPanel(props: CatalogPanelProps)
 		React.createElement(React.Fragment, nil, {
 			UICorner = React.createElement("UICorner", {
 				CornerRadius = UDim.new(0, Theme.Radius.Panel),
-			}),
-			UIStroke = React.createElement("UIStroke", {
-				Color = Theme.Color.Border,
-				Thickness = 1,
-				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 			}),
 			Content = React.createElement("Frame", {
 				BackgroundTransparency = 1,
