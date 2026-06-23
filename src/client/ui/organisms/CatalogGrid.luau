@@ -14,6 +14,7 @@ export type CatalogItem = {
 export type CatalogGridProps = {
 	items: { CatalogItem }?,
 	isLoading: boolean?,
+	columns: number?,
 	onTryOn: ((item: CatalogItem) -> ())?,
 	layoutOrder: number?,
 }
@@ -29,7 +30,7 @@ local function CatalogGrid(props: CatalogGridProps)
 			CellSize = UDim2.fromOffset(248, 252),
 			CellPadding = UDim2.fromOffset(18, 14),
 			FillDirection = Enum.FillDirection.Horizontal,
-			FillDirectionMaxCells = 3,
+			FillDirectionMaxCells = props.columns or 3,
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			HorizontalAlignment = Enum.HorizontalAlignment.Left,
 			[React.Change.AbsoluteContentSize] = function(rbx)
@@ -44,7 +45,8 @@ local function CatalogGrid(props: CatalogGridProps)
 		})
 
 		if props.isLoading then
-			for i = 1, 9 do
+			local skeletonCount = props.columns and (props.columns * 3) or 9
+			for i = 1, skeletonCount do
 				children["Skeleton_" .. i] = React.createElement(ItemCardSkeleton, {
 					layoutOrder = i,
 				})

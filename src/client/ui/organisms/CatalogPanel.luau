@@ -20,7 +20,7 @@ local function CatalogPanel(props: CatalogPanelProps)
 		local items = {}
 		local queryLower = string.lower(state.searchQuery)
 
-		for i = 1, 12 do
+		for i = 1, 36 do
 			local name = state.activeMainCategory .. " " .. state.activeSubCategory .. " Item " .. i
 
 			local matchSearch = true
@@ -132,6 +132,7 @@ local function CatalogPanel(props: CatalogPanelProps)
 				Grid = React.createElement(CatalogGrid, {
 					items = MOCK_ITEMS,
 					isLoading = false,
+					columns = 6,
 					onTryOn = function(item)
 						actions.setSelectedItemId(item.id)
 						print("Try On", item.name, item.id)
