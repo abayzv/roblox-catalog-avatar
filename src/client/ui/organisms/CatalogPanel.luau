@@ -114,7 +114,7 @@ local function CatalogPanel(props: CatalogPanelProps)
 
 			-- 5. CatalogGrid
 			GridArea = React.createElement("Frame", {
-				Size = UDim2.new(1, 0, 1, -(51 + 16 + 52 + 18 + 48 + 16 + 38 + 16)),
+				Size = UDim2.new(1, 0, 1, -(51 + 16 + 52 + 18 + 52 + 16 + 42 + 16)),
 				BackgroundTransparency = 1,
 				LayoutOrder = 9,
 			}, {
