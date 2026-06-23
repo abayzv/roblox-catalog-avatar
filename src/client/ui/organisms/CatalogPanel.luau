@@ -7,29 +7,27 @@ local SearchToolbar = require(script.Parent.Parent.molecules.SearchToolbar)
 local MainCategoryTabs = require(script.Parent.MainCategoryTabs)
 local SubCategoryChips = require(script.Parent.SubCategoryChips)
 local CatalogGrid = require(script.Parent.CatalogGrid)
+local useCatalogState = require(script.Parent.Parent.hooks.useCatalogState)
 
 export type CatalogPanelProps = {
 	layoutOrder: number?,
 }
 
 local function CatalogPanel(props: CatalogPanelProps)
-	local activeTab, setActiveTab = React.useState("Item Catalog")
-	local activeMainCategory, setActiveMainCategory = React.useState("Clothing")
-	local activeSubCategory, setActiveSubCategory = React.useState("Jackets")
-	local searchQuery, setSearchQuery = React.useState("")
+	local state, actions = useCatalogState()
 
 	local MOCK_ITEMS = React.useMemo(function()
 		local items = {}
 		for i = 1, 12 do
 			table.insert(items, {
 				id = tostring(i),
-				name = activeMainCategory .. " Item " .. i,
+				name = state.activeMainCategory .. " Item " .. i,
 				price = math.random(50, 500),
 				image = "rbxassetid://18517062196",
 			})
 		end
 		return items
-	end, { activeMainCategory, activeSubCategory })
+	end, { state.activeMainCategory, state.activeSubCategory })
 
 	return React.createElement(
 		"Frame",
@@ -64,8 +62,8 @@ local function CatalogPanel(props: CatalogPanelProps)
 
 			-- 1. HeaderTabs
 			HeaderArea = React.createElement(HeaderTabs, {
-				activeTab = activeTab,
-				onTabSelected = setActiveTab,
+				activeTab = state.activeTab,
+				onTabSelected = actions.setActiveTab,
 				layoutOrder = 1,
 			}),
 
@@ -76,8 +74,8 @@ local function CatalogPanel(props: CatalogPanelProps)
 
 			-- 2. SearchToolbar
 			SearchArea = React.createElement(SearchToolbar, {
-				query = searchQuery,
-				onQueryChanged = setSearchQuery,
+				query = state.searchQuery,
+				onQueryChanged = actions.setSearchQuery,
 				onFilterActivated = function()
 					print("Filter activated")
 				end,
@@ -91,8 +89,8 @@ local function CatalogPanel(props: CatalogPanelProps)
 
 			-- 3. MainCategoryTabs
 			MainCategoryArea = React.createElement(MainCategoryTabs, {
-				activeCategory = activeMainCategory,
-				onCategorySelected = setActiveMainCategory,
+				activeCategory = state.activeMainCategory,
+				onCategorySelected = actions.setActiveMainCategory,
 				layoutOrder = 5,
 			}),
 
@@ -103,8 +101,8 @@ local function CatalogPanel(props: CatalogPanelProps)
 
 			-- 4. SubCategoryChips
 			SubCategoryArea = React.createElement(SubCategoryChips, {
-				activeSubCategory = activeSubCategory,
-				onSubCategorySelected = setActiveSubCategory,
+				activeSubCategory = state.activeSubCategory,
+				onSubCategorySelected = actions.setActiveSubCategory,
 				layoutOrder = 7,
 			}),
 
@@ -123,7 +121,8 @@ local function CatalogPanel(props: CatalogPanelProps)
 					items = MOCK_ITEMS,
 					isLoading = false,
 					onTryOn = function(item)
-						print("Try On", item.name)
+						actions.setSelectedItemId(item.id)
+						print("Try On", item.name, item.id)
 					end,
 				}),
 			}),
