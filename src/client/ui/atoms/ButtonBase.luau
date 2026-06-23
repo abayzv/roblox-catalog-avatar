@@ -14,6 +14,7 @@ export type ButtonBaseProps = {
 	layoutOrder: number?,
 	children: any?,
 	render: ((isHovered: boolean, isPressed: boolean) -> any)?,
+	automaticSize: Enum.AutomaticSize?,
 }
 
 local function ButtonBase(props: ButtonBaseProps)
@@ -64,6 +65,7 @@ local function ButtonBase(props: ButtonBaseProps)
 		Text = "",
 		AutoButtonColor = false,
 		Size = props.size or UDim2.fromScale(1, 1),
+		AutomaticSize = props.automaticSize,
 		BackgroundTransparency = 1,
 		LayoutOrder = props.layoutOrder,
 		Active = not disabled,
