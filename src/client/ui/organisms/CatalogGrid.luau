@@ -21,8 +21,11 @@ export type CatalogGridProps = {
 local function CatalogGrid(props: CatalogGridProps)
 	local contentSizeBinding, updateContentSize = React.useBinding(Vector2.new(0, 0))
 
-	local children = {
-		Layout = React.createElement("UIGridLayout", {
+	local children = {}
+	local isEmpty = props.items and #props.items == 0 and not props.isLoading
+
+	if not isEmpty then
+		children.Layout = React.createElement("UIGridLayout", {
 			CellSize = UDim2.fromOffset(248, 252),
 			CellPadding = UDim2.fromOffset(18, 14),
 			FillDirection = Enum.FillDirection.Horizontal,
@@ -32,35 +35,45 @@ local function CatalogGrid(props: CatalogGridProps)
 			[React.Change.AbsoluteContentSize] = function(rbx)
 				updateContentSize(rbx.AbsoluteContentSize)
 			end,
-		}),
-		Padding = React.createElement("UIPadding", {
+		})
+		children.Padding = React.createElement("UIPadding", {
 			PaddingTop = UDim.new(0, 12),
 			PaddingBottom = UDim.new(0, 24),
 			PaddingLeft = UDim.new(0, 2),
 			PaddingRight = UDim.new(0, 2),
-		}),
-	}
+		})
 
-	if props.isLoading then
-		for i = 1, 9 do
-			children["Skeleton_" .. i] = React.createElement(ItemCardSkeleton, {
-				layoutOrder = i,
-			})
+		if props.isLoading then
+			for i = 1, 9 do
+				children["Skeleton_" .. i] = React.createElement(ItemCardSkeleton, {
+					layoutOrder = i,
+				})
+			end
+		elseif props.items then
+			for i, item in ipairs(props.items) do
+				children["Item_" .. item.id] = React.createElement(ItemCard, {
+					name = item.name,
+					price = item.price,
+					image = item.image,
+					layoutOrder = i,
+					onTryOn = if props.onTryOn
+						then function()
+							props.onTryOn(item)
+						end
+						else nil,
+				})
+			end
 		end
-	elseif props.items then
-		for i, item in ipairs(props.items) do
-			children["Item_" .. item.id] = React.createElement(ItemCard, {
-				name = item.name,
-				price = item.price,
-				image = item.image,
-				layoutOrder = i,
-				onTryOn = if props.onTryOn
-					then function()
-						props.onTryOn(item)
-					end
-					else nil,
-			})
-		end
+	else
+		children.EmptyState = React.createElement("TextLabel", {
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+			Text = "No items match your criteria.",
+			TextColor3 = Theme.Color.TextMuted,
+			Font = Theme.Font.Regular,
+			TextSize = Theme.Text.Body,
+			TextWrapped = true,
+		})
 	end
 
 	return React.createElement("ScrollingFrame", {

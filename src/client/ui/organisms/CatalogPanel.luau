@@ -18,16 +18,27 @@ local function CatalogPanel(props: CatalogPanelProps)
 
 	local MOCK_ITEMS = React.useMemo(function()
 		local items = {}
+		local queryLower = string.lower(state.searchQuery)
+
 		for i = 1, 12 do
-			table.insert(items, {
-				id = tostring(i),
-				name = state.activeMainCategory .. " Item " .. i,
-				price = math.random(50, 500),
-				image = "rbxassetid://18517062196",
-			})
+			local name = state.activeMainCategory .. " " .. state.activeSubCategory .. " Item " .. i
+
+			local matchSearch = true
+			if queryLower ~= "" then
+				matchSearch = string.find(string.lower(name), queryLower, 1, true) ~= nil
+			end
+
+			if matchSearch then
+				table.insert(items, {
+					id = state.activeMainCategory .. "_" .. state.activeSubCategory .. "_" .. i,
+					name = name,
+					price = math.random(50, 500),
+					image = "rbxassetid://18517062196",
+				})
+			end
 		end
 		return items
-	end, { state.activeMainCategory, state.activeSubCategory })
+	end, { state.activeMainCategory, state.activeSubCategory, state.searchQuery })
 
 	return React.createElement(
 		"Frame",
