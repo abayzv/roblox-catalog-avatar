@@ -797,6 +797,7 @@ collapse_simple_statement = "Never"
 Guideline formatting:
 - Satu komponen per file.
 - Nama file PascalCase untuk komponen: `ItemCard.luau`.
+- Wajib membuat file story (`*.story.luau`) untuk setiap komponen atau gabungan komponen yang dibuat, agar dapat dipreview menggunakan UI Labs dengan format React native.
 - Props type di atas function.
 - Return JSX-style React element / `React.createElement` dibuat rapi.
 - Hindari inline angka magic terlalu banyak; ambil dari `Theme`.
