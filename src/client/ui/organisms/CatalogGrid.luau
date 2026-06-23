@@ -21,7 +21,7 @@ export type CatalogGridProps = {
 
 local function CatalogGrid(props: CatalogGridProps)
 	local contentSizeBinding, updateContentSize = React.useBinding(Vector2.new(0, 0))
-	local containerWidth, setContainerWidth = React.useState(804) -- default desktop assumption
+	local containerWidth = 804 -- Hardcoded to Desktop GridArea minus scrollbar (810 - 6)
 
 	local children = {}
 	local isEmpty = props.items and #props.items == 0 and not props.isLoading
@@ -122,11 +122,6 @@ local function CatalogGrid(props: CatalogGridProps)
 			return UDim2.fromOffset(0, size.Y + 36) -- extra bottom padding + top padding
 		end),
 		LayoutOrder = props.layoutOrder,
-		[React.Change.AbsoluteSize] = function(rbx)
-			if rbx.AbsoluteSize.X > 0 and math.abs(rbx.AbsoluteSize.X - containerWidth) > 1 then
-				setContainerWidth(rbx.AbsoluteSize.X)
-			end
-		end,
 	}, children)
 end
 
