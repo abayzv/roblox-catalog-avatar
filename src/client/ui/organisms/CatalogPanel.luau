@@ -43,7 +43,7 @@ local function CatalogPanel(props: CatalogPanelProps)
 	return React.createElement(
 		"Frame",
 		{
-			Size = UDim2.new(0, 858, 1, -16),
+			Size = UDim2.new(1, -144, 1, -16),
 			Position = UDim2.new(0, 72, 0.5, 0),
 			AnchorPoint = Vector2.new(0, 0.5),
 			BackgroundColor3 = Theme.Color.Panel,
@@ -51,6 +51,10 @@ local function CatalogPanel(props: CatalogPanelProps)
 			LayoutOrder = props.layoutOrder,
 		},
 		React.createElement(React.Fragment, nil, {
+			SizeConstraint = React.createElement("UISizeConstraint", {
+				MaxSize = Vector2.new(858, math.huge),
+				MinSize = Vector2.new(300, 0),
+			}),
 			UICorner = React.createElement("UICorner", {
 				CornerRadius = UDim.new(0, Theme.Radius.Panel),
 			}),
