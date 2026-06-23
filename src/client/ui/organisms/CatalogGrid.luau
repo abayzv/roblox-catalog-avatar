@@ -33,6 +33,10 @@ local function CatalogGrid(props: CatalogGridProps)
 				updateContentSize(rbx.AbsoluteContentSize)
 			end,
 		}),
+		Padding = React.createElement("UIPadding", {
+			PaddingTop = UDim.new(0, 12),
+			PaddingBottom = UDim.new(0, 24),
+		}),
 	}
 
 	if props.isLoading then
@@ -64,7 +68,7 @@ local function CatalogGrid(props: CatalogGridProps)
 		ScrollBarThickness = 6,
 		ScrollBarImageColor3 = Color3.fromRGB(154, 161, 173), -- TextMuted equivalent
 		CanvasSize = contentSizeBinding:map(function(size)
-			return UDim2.fromOffset(0, size.Y + 20) -- extra bottom padding
+			return UDim2.fromOffset(0, size.Y + 36) -- extra bottom padding + top padding
 		end),
 		LayoutOrder = props.layoutOrder,
 	}, children)

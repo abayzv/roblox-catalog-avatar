@@ -38,6 +38,7 @@ local function CatalogPanel(props: CatalogPanelProps)
 			Position = UDim2.new(0, 72, 0.5, 0),
 			AnchorPoint = Vector2.new(0, 0.5),
 			BackgroundColor3 = Theme.Color.Panel,
+			ClipsDescendants = true,
 			LayoutOrder = props.layoutOrder,
 		},
 		React.createElement(React.Fragment, nil, {

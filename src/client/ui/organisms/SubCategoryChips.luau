@@ -43,9 +43,14 @@ local function SubCategoryChips(props: SubCategoryChipsProps)
 		})
 	end
 
-	return React.createElement("Frame", {
+	return React.createElement("ScrollingFrame", {
 		Size = UDim2.new(1, 0, 0, 38),
 		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 0,
+		AutomaticCanvasSize = Enum.AutomaticSize.X,
+		CanvasSize = UDim2.new(0, 0, 0, 0),
+		ScrollingDirection = Enum.ScrollingDirection.X,
 		LayoutOrder = props.layoutOrder,
 	}, React.createElement(React.Fragment, nil, children))
 end
