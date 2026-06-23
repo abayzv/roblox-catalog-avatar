@@ -11,39 +11,22 @@ local function Story()
 		"Frame",
 		{
 			Size = UDim2.fromScale(1, 1),
-			BackgroundColor3 = Color3.fromRGB(245, 245, 245), -- Soft background
+			BackgroundTransparency = 1,
 		},
 		React.createElement(React.Fragment, nil, {
-			Layout = React.createElement("UIListLayout", {
-				HorizontalAlignment = Enum.HorizontalAlignment.Center,
-				VerticalAlignment = Enum.VerticalAlignment.Center,
+			Padding = React.createElement("UIPadding", {
+				PaddingTop = UDim.new(0, 40),
+				PaddingLeft = UDim.new(0, 40),
+				PaddingRight = UDim.new(0, 40),
+				PaddingBottom = UDim.new(0, 40),
 			}),
-			Container = React.createElement(
-				"Frame",
-				{
-					Size = UDim2.new(0, 500, 0, 0),
-					AutomaticSize = Enum.AutomaticSize.Y,
-					BackgroundColor3 = Color3.new(1, 1, 1),
-				},
-				React.createElement(React.Fragment, nil, {
-					UICorner = React.createElement("UICorner", {
-						CornerRadius = UDim.new(0, 16),
-					}),
-					Padding = React.createElement("UIPadding", {
-						PaddingTop = UDim.new(0, 40),
-						PaddingLeft = UDim.new(0, 40),
-						PaddingRight = UDim.new(0, 40),
-						PaddingBottom = UDim.new(0, 40),
-					}),
-					Toolbar = React.createElement(SearchToolbar, {
-						searchText = searchText,
-						onSearchTextChanged = setSearchText,
-						onFilterActivated = function()
-							print("Filter clicked")
-						end,
-					}),
-				})
-			),
+			Toolbar = React.createElement(SearchToolbar, {
+				searchText = searchText,
+				onSearchTextChanged = setSearchText,
+				onFilterActivated = function()
+					print("Filter clicked")
+				end,
+			}),
 		})
 	)
 end

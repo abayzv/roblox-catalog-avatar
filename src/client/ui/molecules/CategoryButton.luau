@@ -39,8 +39,6 @@ local function CategoryButton(props: CategoryButtonProps)
 					Size = UDim2.new(0, 128, 0, 48),
 					AutomaticSize = Enum.AutomaticSize.X,
 					BackgroundColor3 = bgColor,
-					AnchorPoint = Vector2.new(0.5, 0.5),
-					Position = UDim2.fromScale(0.5, 0.5),
 				},
 				React.createElement(React.Fragment, nil, {
 					UIScale = React.createElement("UIScale", {
