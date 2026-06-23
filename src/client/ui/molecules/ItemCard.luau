@@ -13,20 +13,29 @@ export type ItemCardProps = {
 }
 
 local function ItemCard(props: ItemCardProps)
+	local isHovered, setIsHovered = React.useState(false)
+
 	return React.createElement(
 		"Frame",
 		{
 			Size = UDim2.fromOffset(248, 252), -- Exactly matches guideline
 			BackgroundColor3 = Theme.Color.Panel,
 			LayoutOrder = props.layoutOrder,
+			Active = true,
+			[React.Event.MouseEnter] = function()
+				setIsHovered(true)
+			end,
+			[React.Event.MouseLeave] = function()
+				setIsHovered(false)
+			end,
 		},
 		React.createElement(React.Fragment, nil, {
 			UICorner = React.createElement("UICorner", {
 				CornerRadius = UDim.new(0, Theme.Radius.LG),
 			}),
 			UIStroke = React.createElement("UIStroke", {
-				Color = Theme.Color.Border,
-				Thickness = 1,
+				Color = isHovered and Theme.Color.Purple or Theme.Color.Border,
+				Thickness = isHovered and 2 or 1,
 				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 			}),
 			UIPadding = React.createElement("UIPadding", {
