@@ -11,19 +11,36 @@ local function Story()
 		"Frame",
 		{
 			Size = UDim2.fromScale(1, 1),
-			BackgroundTransparency = 1,
+			BackgroundColor3 = Color3.fromRGB(245, 245, 245), -- Soft background
 		},
 		React.createElement(React.Fragment, nil, {
-			Padding = React.createElement("UIPadding", {
-				PaddingTop = UDim.new(0, 20),
-				PaddingLeft = UDim.new(0, 20),
-				PaddingRight = UDim.new(0, 20),
-				PaddingBottom = UDim.new(0, 20),
+			Layout = React.createElement("UIListLayout", {
+				HorizontalAlignment = Enum.HorizontalAlignment.Center,
+				VerticalAlignment = Enum.VerticalAlignment.Center,
 			}),
-			Tabs = React.createElement(MainCategoryTabs, {
-				activeCategory = activeCategory,
-				onCategorySelected = setActiveCategory,
-			}),
+			Container = React.createElement(
+				"Frame",
+				{
+					Size = UDim2.new(0, 800, 0, 0),
+					AutomaticSize = Enum.AutomaticSize.Y,
+					BackgroundColor3 = Color3.new(1, 1, 1),
+				},
+				React.createElement(React.Fragment, nil, {
+					UICorner = React.createElement("UICorner", {
+						CornerRadius = UDim.new(0, 16),
+					}),
+					Padding = React.createElement("UIPadding", {
+						PaddingTop = UDim.new(0, 40),
+						PaddingLeft = UDim.new(0, 40),
+						PaddingRight = UDim.new(0, 40),
+						PaddingBottom = UDim.new(0, 40),
+					}),
+					Tabs = React.createElement(MainCategoryTabs, {
+						activeCategory = activeCategory,
+						onCategorySelected = setActiveCategory,
+					}),
+				})
+			),
 		})
 	)
 end
