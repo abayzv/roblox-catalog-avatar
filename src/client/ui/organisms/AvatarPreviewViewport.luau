@@ -7,6 +7,7 @@ local Icons = require(script.Parent.Parent.theme.Icons)
 local GlassButton = require(script.Parent.Parent.atoms.GlassButton)
 local usePreviewState = require(script.Parent.Parent.Parent.hooks.usePreviewState)
 local PreviewState = require(script.Parent.Parent.Parent.logic.PreviewState)
+local ApplyAvatarRemote = require(ReplicatedStorage.Shared.remotes.ApplyAvatarRemote)
 
 local LOCAL_PLAYER = Players.LocalPlayer
 local INITIAL_RIG_YAW = math.rad(180)
@@ -383,8 +384,15 @@ local function AvatarPreviewViewport()
 					color = Theme.Color.TextPrimary,
 					size = UDim2.fromScale(1, 1),
 					onActivated = function()
-						print("[CatalogPreview] Applying final preview items to server:", previewItems)
-						-- TODO: Call remote event to apply server-side appearance
+						print("[CatalogPreview] Sending apply request to server for preview items...")
+						local assetIds = {}
+						for _, item in pairs(previewItems) do
+							local assetId = item.assetId or tonumber(item.id:match("%d+")) or tonumber(item.id)
+							if assetId then
+								table.insert(assetIds, assetId)
+							end
+						end
+						ApplyAvatarRemote:FireServer(assetIds)
 					end,
 				}),
 			}),

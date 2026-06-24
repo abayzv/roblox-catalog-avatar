@@ -4,6 +4,9 @@
     "$className": "DataModel",
     "ReplicatedStorage": {
       "$className": "ReplicatedStorage",
+      "ApplyAvatarRemote": {
+        "$className": "RemoteEvent"
+      },
       "Packages": {
         "$path": "Packages"
       },
@@ -18,6 +21,12 @@
         "Client": {
           "$path": "src/client"
         }
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "Server": {
+        "$path": "src/server"
       }
     }
   }
