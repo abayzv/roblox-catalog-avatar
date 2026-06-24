@@ -24,12 +24,12 @@ local function PriceRow(props: PriceRowProps)
 				Padding = UDim.new(0, 6),
 				VerticalAlignment = Enum.VerticalAlignment.Center,
 			}),
-			RobuxIcon = React.createElement(Icon, {
+			RobuxIcon = typeof(props.price) == "number" and React.createElement(Icon, {
 				image = Icons.Robux,
 				size = 20,
 				layoutOrder = 1,
 				color = Theme.Color.TextPrimary,
-			}),
+			}) or nil,
 			PriceText = React.createElement("TextLabel", {
 				AutomaticSize = Enum.AutomaticSize.XY,
 				BackgroundTransparency = 1,

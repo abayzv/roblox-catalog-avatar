@@ -19,8 +19,8 @@ export type CatalogStateActions = {
 
 local function useCatalogState()
 	local activeTab, setActiveTab = React.useState("Item Catalog")
-	local activeMainCategory, setActiveMainCategory = React.useState("Clothing")
-	local activeSubCategory, setActiveSubCategory = React.useState("Jackets")
+	local activeMainCategory, setActiveMainCategory = React.useState("Modern Clothing")
+	local activeSubCategory, setActiveSubCategory = React.useState("All")
 	local searchQuery, setSearchQuery = React.useState("")
 	local selectedItemId, setSelectedItemId = React.useState(nil :: string?)
 

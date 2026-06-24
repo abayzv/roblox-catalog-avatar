@@ -339,8 +339,8 @@ local function AvatarPreviewViewport()
 	local isDirty = PreviewState.isDirty()
 	local previewKeyParts = {}
 
-	for itemId in pairs(previewItems) do
-		table.insert(previewKeyParts, itemId)
+	for itemId, item in pairs(previewItems) do
+		table.insert(previewKeyParts, `{itemId}:{item.propertyName or "nil"}`)
 	end
 	table.sort(previewKeyParts)
 

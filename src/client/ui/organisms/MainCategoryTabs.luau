@@ -11,12 +11,11 @@ export type MainCategoryTabsProps = {
 }
 
 local CATEGORIES = {
-	{ id = "Clothing", icon = Icons.Clothing },
-	{ id = "Accessories", icon = Icons.Accessories },
 	{ id = "Body", icon = Icons.Body },
-	{ id = "Faces", icon = Icons.Faces },
+	{ id = "Modern Clothing", icon = Icons.Clothing },
+	{ id = "Classic Clothing", icon = Icons.Clothing },
+	{ id = "Accessories", icon = Icons.Accessories },
 	{ id = "Animation", icon = Icons.Animation },
-	{ id = "Bundles", icon = Icons.Bundles },
 }
 
 local function MainCategoryTabs(props: MainCategoryTabsProps)

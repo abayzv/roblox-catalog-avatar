@@ -4,22 +4,24 @@ local Theme = require(script.Parent.Parent.theme.Theme)
 local SubCategoryChip = require(script.Parent.Parent.molecules.SubCategoryChip)
 
 export type SubCategoryChipsProps = {
+	activeMainCategory: string?,
 	activeSubCategory: string?,
 	onSubCategorySelected: ((subcat: string) -> ())?,
 	layoutOrder: number?,
 }
 
-local SUBCATEGORIES = {
-	"Jackets",
-	"Pants",
-	"Classic Shirts",
-	"Classic Pants",
-	"Shoes",
-	"Hats",
+local CATEGORY_MAP = {
+	["Body"] = { "All", "Character Bundles", "Heads", "Hair", "Faces" },
+	["Modern Clothing"] = { "All", "Jackets", "Sweaters", "Shirts", "Pants", "Shorts", "Shoe Bundles", "Dresses & Skirts" },
+	["Classic Clothing"] = { "All", "Classic Shirts", "Classic Pants", "Classic T-Shirts" },
+	["Accessories"] = { "All", "Hats", "Face", "Neck", "Shoulders", "Front", "Back", "Waist" },
+	["Animation"] = { "All", "Animation Bundles", "Emotes" },
 }
 
 local function SubCategoryChips(props: SubCategoryChipsProps)
-	local activeSubCategory = props.activeSubCategory or "Jackets"
+	local mainCat = props.activeMainCategory or "Modern Clothing"
+	local subcategories = CATEGORY_MAP[mainCat] or CATEGORY_MAP["Modern Clothing"]
+	local activeSubCategory = props.activeSubCategory or subcategories[1]
 
 	local children = {
 		Layout = React.createElement("UIListLayout", {
@@ -36,7 +38,7 @@ local function SubCategoryChips(props: SubCategoryChipsProps)
 		}),
 	}
 
-	for i, subcat in ipairs(SUBCATEGORIES) do
+	for i, subcat in ipairs(subcategories) do
 		children[subcat] = React.createElement(SubCategoryChip, {
 			text = subcat,
 			active = activeSubCategory == subcat,

@@ -12,6 +12,8 @@ export type CatalogItem = CatalogTypes.CatalogItem
 export type CatalogGridProps = {
 	items: { CatalogItem }?,
 	isLoading: boolean?,
+	isFetchingMore: boolean?,
+	fetchNextPage: (() -> ())?,
 	columns: number?,
 	onTryOn: ((item: CatalogItem) -> ())?,
 	layoutOrder: number?,
@@ -39,8 +41,15 @@ local function CatalogGrid(props: CatalogGridProps)
 	local targetCellWidth = math.max((usableWidth - (gapX * (columns - 1))) / columns, 1)
 	local scale = targetCellWidth / originalWidth
 	local targetCellHeight = math.floor(originalHeight * scale)
-	local itemCount = if props.isLoading then columns * 3 elseif props.items then #props.items else 0
-	local rowCount = math.max(math.ceil(itemCount / columns), 1)
+	
+	local totalItemsToRender = if props.items then #props.items else 0
+	if props.isLoading then
+		totalItemsToRender = columns * 3
+	elseif props.isFetchingMore then
+		totalItemsToRender += columns
+	end
+	
+	local rowCount = math.max(math.ceil(totalItemsToRender / columns), 1)
 	local gridPaddingTop = 12
 	local gridPaddingBottom = 96
 	local estimatedContentHeight = gridPaddingTop
@@ -68,11 +77,10 @@ local function CatalogGrid(props: CatalogGridProps)
 		})
 
 		if props.isLoading then
-			local skeletonCount = columns * 3
-			for i = 1, skeletonCount do
-				children["SkeletonWrapper_" .. i] = React.createElement("Frame", {
+			for i = 1, columns * 3 do
+				children["Skeleton_" .. i] = React.createElement("Frame", {
 					BackgroundTransparency = 1,
-					Size = UDim2.fromScale(1, 1),
+					Size = UDim2.fromOffset(math.floor(targetCellWidth), targetCellHeight),
 					LayoutOrder = i,
 				}, {
 					ScalerContainer = React.createElement("Frame", {
@@ -80,23 +88,19 @@ local function CatalogGrid(props: CatalogGridProps)
 						Size = UDim2.fromOffset(originalWidth, originalHeight),
 					}, {
 						UIScale = React.createElement("UIScale", { Scale = scale }),
-						Card = React.createElement(ItemCardSkeleton, {}),
+						Card = React.createElement(ItemCardSkeleton),
 					}),
 				})
 			end
-		elseif props.items then
+		elseif props.items and #props.items > 0 then
 			for i, item in ipairs(props.items) do
 				local previewKey = tostring(item.assetId or item.id)
 				local isPreviewing = previewItems[previewKey] ~= nil
 					or PreviewState.hasPreviewItem(item)
-				if item.assetId == 376524487 then
-					print(
-						`[CatalogGrid] Blonde hair card previewKey={previewKey}, isPreviewing={isPreviewing}`
-					)
-				end
-				children["ItemWrapper_" .. item.id] = React.createElement("Frame", {
+
+				children["Item_" .. item.id] = React.createElement("Frame", {
 					BackgroundTransparency = 1,
-					Size = UDim2.fromScale(1, 1),
+					Size = UDim2.fromOffset(math.floor(targetCellWidth), targetCellHeight),
 					LayoutOrder = i,
 				}, {
 					ScalerContainer = React.createElement("Frame", {
@@ -117,6 +121,24 @@ local function CatalogGrid(props: CatalogGridProps)
 						}),
 					}),
 				})
+			end
+			
+			if props.isFetchingMore then
+				for i = 1, columns do
+					children["Skeleton_More_" .. i] = React.createElement("Frame", {
+						BackgroundTransparency = 1,
+						Size = UDim2.fromOffset(math.floor(targetCellWidth), targetCellHeight),
+						LayoutOrder = #props.items + i,
+					}, {
+						ScalerContainer = React.createElement("Frame", {
+							BackgroundTransparency = 1,
+							Size = UDim2.fromOffset(originalWidth, originalHeight),
+						}, {
+							UIScale = React.createElement("UIScale", { Scale = scale }),
+							Card = React.createElement(ItemCardSkeleton),
+						}),
+					})
+				end
 			end
 		end
 	else
@@ -144,6 +166,16 @@ local function CatalogGrid(props: CatalogGridProps)
 			)
 		end),
 		LayoutOrder = props.layoutOrder,
+		[React.Change.CanvasPosition] = function(rbx)
+			if props.fetchNextPage and not props.isLoading and not props.isFetchingMore then
+				local canvasY = rbx.CanvasPosition.Y
+				local windowY = rbx.AbsoluteWindowSize.Y
+				local contentY = rbx.AbsoluteCanvasSize.Y
+				if contentY - (canvasY + windowY) < 200 then
+					props.fetchNextPage()
+				end
+			end
+		end,
 		[React.Change.AbsoluteSize] = function(rbx)
 			local nextWidth = rbx.AbsoluteSize.X / viewportScale
 			if nextWidth ~= containerWidth then
