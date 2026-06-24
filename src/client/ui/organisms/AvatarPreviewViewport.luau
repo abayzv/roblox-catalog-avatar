@@ -56,16 +56,24 @@ local function getItemBuckets(items)
 	local buckets = {}
 
 	for _, item in pairs(items) do
-		local assetId = item.assetId or tonumber(item.id)
-		local propertyName = item.propertyName
+		if item.bundleAssets then
+			for _, bAsset in ipairs(item.bundleAssets) do
+				if bAsset.propertyName then
+					addAssetToBucket(buckets, bAsset.propertyName, bAsset.id)
+				end
+			end
+		else
+			local assetId = item.assetId or tonumber(item.id)
+			local propertyName = item.propertyName
 
-		if assetId and propertyName then
-			addAssetToBucket(buckets, propertyName, assetId)
+			if assetId and propertyName then
+				addAssetToBucket(buckets, propertyName, assetId)
+			end
 		end
 	end
 
-	for _, assetIds in pairs(buckets) do
-		table.sort(assetIds)
+	for propertyName, bucket in pairs(buckets) do
+		table.sort(bucket)
 	end
 
 	return buckets
@@ -109,22 +117,7 @@ local function getTouchedProperties(previewItems, appliedItems)
 end
 
 
-local function removeTouchedPhysicalItems(rig: Model, touchedProperties)
-	for _, child in ipairs(rig:GetChildren()) do
-		if child:IsA("Accessory") then
-			local propertyName = ACCESSORY_TYPE_TO_PROPERTY[child.AccessoryType]
-			if propertyName and touchedProperties[propertyName] then
-				child:Destroy()
-			end
-		elseif child:IsA("Shirt") and touchedProperties.Shirt then
-			child:Destroy()
-		elseif child:IsA("Pants") and touchedProperties.Pants then
-			child:Destroy()
-		elseif child:IsA("ShirtGraphic") and touchedProperties.GraphicTShirt then
-			child:Destroy()
-		end
-	end
-end
+
 
 local function prepareRig(model: Model)
 	for _, descendant in ipairs(model:GetDescendants()) do
@@ -251,7 +244,16 @@ local function applyPreviewDescription(rig: Model, previewItems, appliedItems, c
 	table.sort(touchedNames)
 	print("[CatalogPreview] Viewport applying touched properties:", table.concat(touchedNames, ","))
 
-	removeTouchedPhysicalItems(rig, touchedProperties)
+	local old2DClothing = {}
+	for _, child in ipairs(rig:GetChildren()) do
+		if child:IsA("Shirt") and touchedProperties.Shirt then
+			table.insert(old2DClothing, child)
+		elseif child:IsA("Pants") and touchedProperties.Pants then
+			table.insert(old2DClothing, child)
+		elseif child:IsA("ShirtGraphic") and touchedProperties.GraphicTShirt then
+			table.insert(old2DClothing, child)
+		end
+	end
 
 	local accessories = description:GetAccessories(true)
 	local accessoriesModified = false
@@ -294,6 +296,10 @@ local function applyPreviewDescription(rig: Model, previewItems, appliedItems, c
 	local ok, err = pcall(function()
 		humanoid:ApplyDescription(description)
 	end)
+
+	for _, old in ipairs(old2DClothing) do
+		old:Destroy()
+	end
 
 	if not ok then
 		warn("[CatalogPreview] Failed to apply viewport description:", err)

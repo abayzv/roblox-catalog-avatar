@@ -133,11 +133,68 @@ local function enforceExclusivity(items: { [string]: CatalogItem }, newItemKey: 
 end
 
 local function ensurePropertyName(item: CatalogItem)
-	if item.propertyName then
+	if item.propertyName or item.bundleAssets then
 		return
 	end
 	local assetId = item.assetId or tonumber(item.id)
 	if not assetId then
+		return
+	end
+
+	if item.itemType == "Bundle" then
+		task.spawn(function()
+			local success, details = pcall(function()
+				return game:GetService("AssetService"):GetBundleDetailsAsync(assetId)
+			end)
+			if success and details and details.Items then
+				local bundleAssets = {}
+				for _, subItem in ipairs(details.Items) do
+					if subItem.Type == "Asset" then
+						local s, info = pcall(function()
+							return MarketplaceService:GetProductInfo(subItem.Id, Enum.InfoType.Asset)
+						end)
+						if s and info then
+							local propName = CatalogConfig.AssetTypeToProperty[info.AssetTypeId]
+							if propName then
+								table.insert(bundleAssets, {
+									id = subItem.Id,
+									name = subItem.Name,
+									assetType = tostring(info.AssetTypeId),
+									propertyName = propName,
+								})
+							end
+						end
+					end
+				end
+
+				if #bundleAssets > 0 then
+					local key = getItemKey(item)
+					local changed = false
+
+					if previewItems[key] then
+						local newItems = cloneItems(previewItems)
+						newItems[key].bundleAssets = bundleAssets
+						for _, bAsset in ipairs(bundleAssets) do
+							if bAsset.propertyName then
+								enforceExclusivity(newItems, key, bAsset.propertyName)
+							end
+						end
+						previewItems = newItems
+						changed = true
+					end
+
+					if appliedItems[key] then
+						local newApplied = cloneItems(appliedItems)
+						newApplied[key].bundleAssets = bundleAssets
+						appliedItems = newApplied
+					end
+
+					if changed then
+						notifyListeners()
+					end
+				end
+			end
+		end)
 		return
 	end
 
@@ -280,10 +337,19 @@ function PreviewState.getDesiredAssetIds(): { number }
 	local seen = {}
 
 	for _, item in pairs(previewItems) do
-		local assetId = item.assetId or tonumber(item.id)
-		if assetId and not seen[assetId] then
-			seen[assetId] = true
-			table.insert(assetIds, assetId)
+		if item.bundleAssets then
+			for _, bAsset in ipairs(item.bundleAssets) do
+				if not seen[bAsset.id] then
+					seen[bAsset.id] = true
+					table.insert(assetIds, bAsset.id)
+				end
+			end
+		else
+			local assetId = item.assetId or tonumber(item.id)
+			if assetId and not seen[assetId] then
+				seen[assetId] = true
+				table.insert(assetIds, assetId)
+			end
 		end
 	end
 

@@ -9,6 +9,15 @@ export type CatalogItem = {
 	subcategory: string?,
 	tags: { string }?,
 	availability: string?,
+	itemType: string?,
+	bundleAssets: {
+		{
+			id: number,
+			name: string,
+			assetType: string,
+			propertyName: string?,
+		}
+	}?,
 }
 
 export type CatalogUiState = {

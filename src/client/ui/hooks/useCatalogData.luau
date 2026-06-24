@@ -49,6 +49,7 @@ local function parseCatalogPages(pages: any, mainCategory: string, subCategory: 
 			category = mainCategory,
 			subcategory = subCategory,
 			availability = (priceText == "Off Sale") and "OffSale" or "InStock",
+			itemType = itemInfo.ItemType,
 		})
 	end
 	return parsedItems
