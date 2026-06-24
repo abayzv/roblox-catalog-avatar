@@ -9,6 +9,13 @@ local CatalogConfig = {
 		[8] = "HatAccessory", -- Hat
 		[11] = "Shirt", -- Shirt (Classic)
 		[12] = "Pants", -- Pants (Classic)
+		[17] = "Head", -- Head
+		[18] = "Face", -- Face
+		[27] = "Torso",
+		[28] = "RightArm",
+		[29] = "LeftArm",
+		[30] = "LeftLeg",
+		[31] = "RightLeg",
 		[41] = "HairAccessory",
 		[42] = "FaceAccessory",
 		[43] = "NeckAccessory",
@@ -25,6 +32,10 @@ local CatalogConfig = {
 		[70] = "LeftShoeAccessory",
 		[71] = "RightShoeAccessory",
 		[72] = "DressSkirtAccessory",
+		[76] = "EyebrowAccessory",
+		[77] = "EyelashAccessory",
+		[78] = "MoodAnimation",
+		[79] = "Head", -- Dynamic Head
 	},
 
 	-- Toggle this to true if the game requires players to actually own the items to apply them to their live character

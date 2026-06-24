@@ -30,6 +30,8 @@ local ACCESSORY_TYPE_TO_PROPERTY = {
 	[Enum.AccessoryType.LeftShoe] = "LeftShoeAccessory",
 	[Enum.AccessoryType.RightShoe] = "RightShoeAccessory",
 	[Enum.AccessoryType.DressSkirt] = "DressSkirtAccessory",
+	[Enum.AccessoryType.Eyebrow] = "EyebrowAccessory",
+	[Enum.AccessoryType.Eyelash] = "EyelashAccessory",
 }
 
 local PROPERTY_TO_ACCESSORY_TYPE = {}
@@ -113,7 +115,7 @@ local function getTouchedProperties(previewItems, appliedItems)
 		end
 	end
 
-	return touchedProperties, previewBuckets
+	return touchedProperties, previewBuckets, appliedBuckets
 end
 
 
@@ -228,7 +230,7 @@ local function applyPreviewDescription(rig: Model, previewItems, appliedItems, c
 	end
 
 	local description = humanoid:GetAppliedDescription()
-	local touchedProperties, previewBuckets = getTouchedProperties(previewItems, appliedItems)
+	local touchedProperties, previewBuckets, appliedBuckets = getTouchedProperties(previewItems, appliedItems)
 
 	if next(touchedProperties) == nil then
 		print(
@@ -244,17 +246,6 @@ local function applyPreviewDescription(rig: Model, previewItems, appliedItems, c
 	table.sort(touchedNames)
 	print("[CatalogPreview] Viewport applying touched properties:", table.concat(touchedNames, ","))
 
-	local old2DClothing = {}
-	for _, child in ipairs(rig:GetChildren()) do
-		if child:IsA("Shirt") and touchedProperties.Shirt then
-			table.insert(old2DClothing, child)
-		elseif child:IsA("Pants") and touchedProperties.Pants then
-			table.insert(old2DClothing, child)
-		elseif child:IsA("ShirtGraphic") and touchedProperties.GraphicTShirt then
-			table.insert(old2DClothing, child)
-		end
-	end
-
 	local accessories = description:GetAccessories(true)
 	local accessoriesModified = false
 
@@ -263,8 +254,11 @@ local function applyPreviewDescription(rig: Model, previewItems, appliedItems, c
 		local success = pcall(function() currentValue = description[propertyName] end)
 		
 		if success and type(currentValue) == "number" then
-			-- 2D Clothing (Shirt, Pants, GraphicTShirt)
-			local assetIds = previewBuckets[propertyName] or {}
+			-- 2D Clothing (Shirt, Pants, GraphicTShirt) & Body Parts (Head, Torso, LeftArm, etc)
+			local assetIds = previewBuckets[propertyName]
+			if not assetIds or #assetIds == 0 then
+				assetIds = appliedBuckets[propertyName] or {}
+			end
 			description[propertyName] = assetIds[#assetIds] or 0
 		else
 			local accType = PROPERTY_TO_ACCESSORY_TYPE[propertyName]
@@ -276,8 +270,12 @@ local function applyPreviewDescription(rig: Model, previewItems, appliedItems, c
 						table.remove(accessories, i)
 					end
 				end
-				-- Add new
-				local newIds = previewBuckets[propertyName] or {}
+				-- Add new (or restore applied)
+				local newIds = previewBuckets[propertyName]
+				if not newIds or #newIds == 0 then
+					newIds = appliedBuckets[propertyName] or {}
+				end
+				
 				for _, assetId in ipairs(newIds) do
 					table.insert(accessories, {
 						AccessoryType = accType,
@@ -296,10 +294,6 @@ local function applyPreviewDescription(rig: Model, previewItems, appliedItems, c
 	local ok, err = pcall(function()
 		humanoid:ApplyDescription(description)
 	end)
-
-	for _, old in ipairs(old2DClothing) do
-		old:Destroy()
-	end
 
 	if not ok then
 		warn("[CatalogPreview] Failed to apply viewport description:", err)
