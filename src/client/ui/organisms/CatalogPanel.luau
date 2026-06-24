@@ -44,9 +44,18 @@ local function CatalogPanel(props: CatalogPanelProps)
 
 		for i = 1, 36 do
 			local isFedoraTestItem = i == 1
-			local assetId = if isFedoraTestItem then 128159229 else nil
+			local isBlondeHairTestItem = i == 2
+			local assetId = if isFedoraTestItem
+				then 128159229
+				elseif isBlondeHairTestItem then 376524487
+				else nil
+			local propertyName = if isFedoraTestItem
+				then "HatAccessory"
+				elseif isBlondeHairTestItem then "HairAccessory"
+				else nil
 			local name = if isFedoraTestItem
 				then "Fedora Macan Tutul Salju"
+				elseif isBlondeHairTestItem then "Blonde Spiked Hair"
 				else state.activeMainCategory .. " " .. state.activeSubCategory .. " Item " .. i
 
 			local matchSearch = true
@@ -58,10 +67,11 @@ local function CatalogPanel(props: CatalogPanelProps)
 				table.insert(items, {
 					id = state.activeMainCategory .. "_" .. state.activeSubCategory .. "_" .. i,
 					assetId = assetId,
+					propertyName = propertyName,
 					name = name,
 					price = math.random(50, 500),
 					image = if assetId
-						then "rbxthumb://type=Asset&id=128159229&w=420&h=420"
+						then `rbxthumb://type=Asset&id={assetId}&w=420&h=420`
 						else "rbxassetid://18517062196",
 				})
 			end

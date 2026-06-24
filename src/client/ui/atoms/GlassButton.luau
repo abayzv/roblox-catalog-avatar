@@ -49,8 +49,14 @@ local function GlassButton(props: GlassButtonProps)
 				Padding = React.createElement("UIPadding", {
 					PaddingTop = UDim.new(0, Theme.Space.SM),
 					PaddingBottom = UDim.new(0, Theme.Space.SM),
-					PaddingLeft = UDim.new(0, if props.text then Theme.Space.MD else Theme.Space.SM),
-					PaddingRight = UDim.new(0, if props.text then Theme.Space.MD else Theme.Space.SM),
+					PaddingLeft = UDim.new(
+						0,
+						if props.text then Theme.Space.MD else Theme.Space.SM
+					),
+					PaddingRight = UDim.new(
+						0,
+						if props.text then Theme.Space.MD else Theme.Space.SM
+					),
 				}),
 
 				Content = React.createElement("Frame", {

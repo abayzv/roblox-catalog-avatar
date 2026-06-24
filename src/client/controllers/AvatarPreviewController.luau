@@ -4,8 +4,13 @@ local AvatarPreviewController = {}
 
 -- This function is called when UI clicks "Try On"
 function AvatarPreviewController.ToggleItemPreview(item)
-	if PreviewState.hasPreviewItem(item.id) then
-		PreviewState.removePreviewItem(item.id)
+	if not PreviewState.hasHydrated() then
+		warn("[CatalogPreview] Ignore try-on until equipped snapshot is loaded.")
+		return
+	end
+
+	if PreviewState.hasPreviewItem(item) then
+		PreviewState.removePreviewItem(item)
 	else
 		PreviewState.addPreviewItem(item)
 	end
@@ -13,7 +18,7 @@ end
 
 -- This function is called to reset the character to original appearance
 function AvatarPreviewController.ResetPreview()
-	PreviewState.clearPreview()
+	PreviewState.resetPreviewToApplied()
 end
 
 return AvatarPreviewController

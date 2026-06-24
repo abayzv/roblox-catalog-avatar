@@ -12,46 +12,127 @@ local ApplyAvatarRemote = require(ReplicatedStorage.Shared.remotes.ApplyAvatarRe
 local LOCAL_PLAYER = Players.LocalPlayer
 local INITIAL_RIG_YAW = math.rad(180)
 local DRAG_ROTATION_SPEED = 0.011
+local ACCESSORY_TYPE_TO_PROPERTY = {
+	[Enum.AccessoryType.Back] = "BackAccessory",
+	[Enum.AccessoryType.Face] = "FaceAccessory",
+	[Enum.AccessoryType.Front] = "FrontAccessory",
+	[Enum.AccessoryType.Hair] = "HairAccessory",
+	[Enum.AccessoryType.Hat] = "HatAccessory",
+	[Enum.AccessoryType.Neck] = "NeckAccessory",
+	[Enum.AccessoryType.Shoulder] = "ShouldersAccessory",
+	[Enum.AccessoryType.Waist] = "WaistAccessory",
+}
 local IDLE_ANIMATION_BY_RIG_TYPE = {
 	[Enum.HumanoidRigType.R6] = "rbxassetid://180435571",
 	[Enum.HumanoidRigType.R15] = "rbxassetid://507766666",
 }
 
-local function splitCsv(value: string?): { string }
-	local values = {}
-	if not value or value == "" then
-		return values
+local function addAssetToBucket(buckets, propertyName: string, assetId: number)
+	local bucket = buckets[propertyName]
+	if not bucket then
+		bucket = {}
+		buckets[propertyName] = bucket
 	end
 
-	for token in string.gmatch(value, "[^,]+") do
-		local trimmed = string.gsub(token, "^%s*(.-)%s*$", "%1")
-		if trimmed ~= "" then
-			table.insert(values, trimmed)
-		end
-	end
-
-	return values
+	table.insert(bucket, assetId)
 end
 
-local function joinUniqueCsv(existing: string?, assetIds: { string }): string
-	local seen = {}
-	local values = {}
+local function getItemBuckets(items)
+	local buckets = {}
 
-	for _, value in ipairs(splitCsv(existing)) do
-		if not seen[value] then
-			seen[value] = true
-			table.insert(values, value)
+	for _, item in pairs(items) do
+		local assetId = item.assetId or tonumber(item.id)
+		local propertyName = item.propertyName
+
+		if assetId and propertyName then
+			addAssetToBucket(buckets, propertyName, assetId)
 		end
 	end
 
-	for _, assetId in ipairs(assetIds) do
-		if assetId ~= "" and not seen[assetId] then
-			seen[assetId] = true
-			table.insert(values, assetId)
+	for _, assetIds in pairs(buckets) do
+		table.sort(assetIds)
+	end
+
+	return buckets
+end
+
+local function sameAssetIds(left: { number }?, right: { number }?): boolean
+	left = left or {}
+	right = right or {}
+
+	if #left ~= #right then
+		return false
+	end
+
+	for index, assetId in ipairs(left) do
+		if right[index] ~= assetId then
+			return false
 		end
 	end
 
-	return table.concat(values, ",")
+	return true
+end
+
+local function getTouchedProperties(previewItems, appliedItems)
+	local previewBuckets = getItemBuckets(previewItems)
+	local appliedBuckets = getItemBuckets(appliedItems)
+	local touchedProperties = {}
+
+	for propertyName, previewAssetIds in pairs(previewBuckets) do
+		if not sameAssetIds(previewAssetIds, appliedBuckets[propertyName]) then
+			touchedProperties[propertyName] = true
+		end
+	end
+
+	for propertyName, appliedAssetIds in pairs(appliedBuckets) do
+		if not sameAssetIds(appliedAssetIds, previewBuckets[propertyName]) then
+			touchedProperties[propertyName] = true
+		end
+	end
+
+	return touchedProperties, previewBuckets
+end
+
+local function setDescriptionProperty(
+	description: HumanoidDescription,
+	propertyName: string,
+	assetIds: { number }?
+)
+	assetIds = assetIds or {}
+
+	local success, currentValue = pcall(function()
+		return description[propertyName]
+	end)
+	if not success then
+		return
+	end
+
+	if type(currentValue) == "string" then
+		local values = {}
+		for _, assetId in ipairs(assetIds) do
+			table.insert(values, tostring(assetId))
+		end
+		description[propertyName] = table.concat(values, ",")
+	elseif type(currentValue) == "number" then
+		description[propertyName] = assetIds[#assetIds] or 0
+	end
+end
+
+local function removeTouchedPhysicalItems(rig: Model, touchedProperties)
+	for _, child in ipairs(rig:GetChildren()) do
+		if child:IsA("Accessory") then
+			local propertyName = ACCESSORY_TYPE_TO_PROPERTY[child.AccessoryType]
+			if propertyName and touchedProperties[propertyName] then
+				child:Destroy()
+			end
+		elseif child:IsA("Shirt") and touchedProperties.Shirt then
+			child:Destroy()
+		elseif child:IsA("Pants") and touchedProperties.Pants then
+			child:Destroy()
+		elseif child:IsA("ShirtGraphic") and touchedProperties.GraphicTShirt then
+			child:Destroy()
+		end
+	end
 end
 
 local function prepareRig(model: Model)
@@ -156,28 +237,34 @@ local function cloneLocalCharacter(): Model?
 	return clone
 end
 
-local function getPreviewAssetIds(previewItems): { string }
-	local assetIds = {}
-
-	for _, item in pairs(previewItems) do
-		local assetId = item.assetId
-		if assetId then
-			table.insert(assetIds, tostring(assetId))
-		end
-	end
-
-	return assetIds
-end
-
-local function applyPreviewDescription(rig: Model, previewItems, camera: Camera)
+local function applyPreviewDescription(rig: Model, previewItems, appliedItems, camera: Camera)
 	local humanoid = rig:FindFirstChildOfClass("Humanoid")
 	if not humanoid then
 		return
 	end
 
 	local description = humanoid:GetAppliedDescription()
-	description.HatAccessory =
-		joinUniqueCsv(description.HatAccessory, getPreviewAssetIds(previewItems))
+	local touchedProperties, previewBuckets = getTouchedProperties(previewItems, appliedItems)
+
+	if next(touchedProperties) == nil then
+		print(
+			"[CatalogPreview] Viewport has no touched appearance properties; keeping clone intact."
+		)
+		return
+	end
+
+	local touchedNames = {}
+	for propertyName in pairs(touchedProperties) do
+		table.insert(touchedNames, propertyName)
+	end
+	table.sort(touchedNames)
+	print("[CatalogPreview] Viewport applying touched properties:", table.concat(touchedNames, ","))
+
+	removeTouchedPhysicalItems(rig, touchedProperties)
+
+	for propertyName in pairs(touchedProperties) do
+		setDescriptionProperty(description, propertyName, previewBuckets[propertyName])
+	end
 
 	local ok, err = pcall(function()
 		humanoid:ApplyDescription(description)
@@ -197,7 +284,12 @@ local function applyPreviewDescription(rig: Model, previewItems, camera: Camera)
 	end)
 end
 
-local function setupViewport(viewport: ViewportFrame, previewItems)
+local function setupViewport(
+	viewport: ViewportFrame,
+	previewItems,
+	appliedItems,
+	shouldApplyPreview: boolean
+)
 	viewport:ClearAllChildren()
 
 	local camera = Instance.new("Camera")
@@ -217,7 +309,9 @@ local function setupViewport(viewport: ViewportFrame, previewItems)
 
 	rig.Parent = worldModel
 	frameCamera(camera, rig)
-	applyPreviewDescription(rig, previewItems, camera)
+	if shouldApplyPreview then
+		applyPreviewDescription(rig, previewItems, appliedItems, camera)
+	end
 	playIdleAnimation(rig)
 
 	return rig
@@ -240,6 +334,9 @@ local function AvatarPreviewViewport()
 	local lastDragXRef = React.useRef(0)
 	local yawRef = React.useRef(INITIAL_RIG_YAW)
 	local previewItems = usePreviewState()
+	local appliedItems = PreviewState.getAppliedItems()
+	local isHydrated = PreviewState.hasHydrated()
+	local isDirty = PreviewState.isDirty()
 	local previewKeyParts = {}
 
 	for itemId in pairs(previewItems) do
@@ -250,13 +347,41 @@ local function AvatarPreviewViewport()
 	local previewKey = table.concat(previewKeyParts, "|")
 
 	React.useEffect(function()
+		if PreviewState.hasHydrated() then
+			return nil
+		end
+
+		task.spawn(function()
+			local callSuccess, response = pcall(function()
+				return ApplyAvatarRemote:InvokeServer({
+					action = "GetEquipped",
+				})
+			end)
+
+			if callSuccess and type(response) == "table" and response.success then
+				if response.equippedItems then
+					PreviewState.hydrateAppliedItems(response.equippedItems)
+				else
+					PreviewState.hydrateAppliedAssetIds(response.equippedItemIds or {})
+				end
+			elseif callSuccess and type(response) == "table" then
+				warn("[CatalogPreview] Failed to load equipped snapshot:", response.message)
+			else
+				warn("[CatalogPreview] Failed to request equipped snapshot:", response)
+			end
+		end)
+
+		return nil
+	end, {})
+
+	React.useEffect(function()
 		local viewport = viewportRef.current
 		if not viewport then
 			return nil
 		end
 
 		yawRef.current = INITIAL_RIG_YAW
-		rigRef.current = setupViewport(viewport, previewItems)
+		rigRef.current = setupViewport(viewport, previewItems, appliedItems, isHydrated)
 
 		return function()
 			rigRef.current = nil
@@ -264,7 +389,7 @@ local function AvatarPreviewViewport()
 				viewport:ClearAllChildren()
 			end
 		end
-	end, { previewKey })
+	end, { previewKey, isHydrated })
 
 	local beginDrag = React.useCallback(function(_, input)
 		if not isPrimaryDragInput(input) then
@@ -364,7 +489,7 @@ local function AvatarPreviewViewport()
 				}),
 			}),
 
-			ActionArea = next(previewItems) ~= nil and React.createElement("Frame", {
+			ActionArea = isDirty and React.createElement("Frame", {
 				AnchorPoint = Vector2.new(0.5, 1),
 				Position = UDim2.new(0.5, 0, 1, -Theme.Space.XL),
 				BackgroundTransparency = 1,
@@ -384,29 +509,47 @@ local function AvatarPreviewViewport()
 					color = Theme.Color.TextPrimary,
 					size = UDim2.fromScale(1, 1),
 					onActivated = function()
-						print("[CatalogPreview] Sending apply request to server for preview items...")
-						local assetIds = {}
-						for _, item in pairs(previewItems) do
-							local assetId = item.assetId or tonumber(item.id:match("%d+")) or tonumber(item.id)
-							if assetId then
-								table.insert(assetIds, assetId)
-							end
+						if not PreviewState.hasHydrated() then
+							warn("[CatalogPreview] Ignore apply until equipped snapshot is loaded.")
+							return
 						end
-						
+
+						local assetIds = PreviewState.getDesiredAssetIds()
+						print(
+							"[CatalogPreview] Sending apply request to server for desired items..."
+						)
+
 						task.spawn(function()
 							local callSuccess, response = pcall(function()
-								return ApplyAvatarRemote:InvokeServer(assetIds)
+								return ApplyAvatarRemote:InvokeServer({
+									itemIds = assetIds,
+								})
 							end)
-							
+
 							if callSuccess and type(response) == "table" then
 								if response.success then
-									print("[CatalogPreview] ✅ Server accepted apply:", response.message)
-									-- Bisa tambahkan toast/notifikasi success di sini ke depannya
+									if response.equippedItems then
+										PreviewState.hydrateAppliedItems(response.equippedItems)
+									else
+										PreviewState.hydrateAppliedAssetIds(
+											response.equippedItemIds or assetIds
+										)
+									end
+									print(
+										"[CatalogPreview] Server accepted apply:",
+										response.message
+									)
 								else
-									warn("[CatalogPreview] ❌ Server rejected apply:", response.message)
+									warn(
+										"[CatalogPreview] Server rejected apply:",
+										response.message
+									)
 								end
 							else
-								warn("[CatalogPreview] ❌ Failed to communicate with server:", response)
+								warn(
+									"[CatalogPreview] Failed to communicate with server:",
+									response
+								)
 							end
 						end)
 					end,

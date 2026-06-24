@@ -4,6 +4,7 @@ local Theme = require(script.Parent.Parent.theme.Theme)
 local ItemCard = require(script.Parent.Parent.molecules.ItemCard)
 local ItemCardSkeleton = require(script.Parent.Parent.molecules.ItemCardSkeleton)
 local usePreviewState = require(script.Parent.Parent.Parent.hooks.usePreviewState)
+local PreviewState = require(script.Parent.Parent.Parent.logic.PreviewState)
 
 export type CatalogItem = {
 	id: string,
@@ -11,6 +12,7 @@ export type CatalogItem = {
 	price: number,
 	image: string,
 	assetId: number?,
+	propertyName: string?,
 }
 
 export type CatalogGridProps = {
@@ -90,6 +92,14 @@ local function CatalogGrid(props: CatalogGridProps)
 			end
 		elseif props.items then
 			for i, item in ipairs(props.items) do
+				local previewKey = tostring(item.assetId or item.id)
+				local isPreviewing = previewItems[previewKey] ~= nil
+					or PreviewState.hasPreviewItem(item)
+				if item.assetId == 376524487 then
+					print(
+						`[CatalogGrid] Blonde hair card previewKey={previewKey}, isPreviewing={isPreviewing}`
+					)
+				end
 				children["ItemWrapper_" .. item.id] = React.createElement("Frame", {
 					BackgroundTransparency = 1,
 					Size = UDim2.fromScale(1, 1),
@@ -104,7 +114,7 @@ local function CatalogGrid(props: CatalogGridProps)
 							name = item.name,
 							price = item.price,
 							image = item.image,
-							isPreviewing = previewItems[item.id] ~= nil,
+							isPreviewing = isPreviewing,
 							onTryOn = if props.onTryOn
 								then function()
 									props.onTryOn(item)
