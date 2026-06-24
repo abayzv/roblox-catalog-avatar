@@ -18,7 +18,7 @@ end
 
 -- This function is called to reset the character to original appearance
 function AvatarPreviewController.ResetPreview()
-	PreviewState.resetPreviewToApplied()
+	PreviewState.resetPreviewToOriginal()
 end
 
 return AvatarPreviewController

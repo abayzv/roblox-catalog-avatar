@@ -361,6 +361,9 @@ local function AvatarPreviewViewport()
 			if callSuccess and type(response) == "table" and response.success then
 				if response.equippedItems then
 					PreviewState.hydrateAppliedItems(response.equippedItems)
+					if response.originalItems then
+						PreviewState.hydrateOriginalItems(response.originalItems)
+					end
 				else
 					PreviewState.hydrateAppliedAssetIds(response.equippedItemIds or {})
 				end
@@ -484,7 +487,7 @@ local function AvatarPreviewViewport()
 					color = Theme.Color.TextSecondary,
 					size = UDim2.fromScale(1, 1),
 					onActivated = function()
-						PreviewState.clearPreview()
+						PreviewState.resetPreviewToOriginal()
 					end,
 				}),
 			}),

@@ -25,6 +25,7 @@ type EquippedState = {
 
 local MAX_APPLY_ITEMS = 20
 local appliedStates: { [number]: EquippedState } = {}
+local originalStates: { [number]: EquippedState } = {}
 local ACCESSORY_TYPE_TO_PROPERTY = {
 	[Enum.AccessoryType.Back] = "BackAccessory",
 	[Enum.AccessoryType.Face] = "FaceAccessory",
@@ -259,6 +260,9 @@ local function cacheState(
 	}
 
 	appliedStates[player.UserId] = state
+	if not originalStates[player.UserId] then
+		originalStates[player.UserId] = state
+	end
 	return state
 end
 
@@ -432,6 +436,8 @@ end
 
 local function handleGetEquipped(player: Player)
 	local state = getOrCreateState(player)
+	local originalState = originalStates[player.UserId]
+
 	if state then
 		print(
 			`[AvatarApplyService] Equipped snapshot for {player.Name}; items=[{describeItems(
@@ -446,6 +452,7 @@ local function handleGetEquipped(player: Player)
 		success = state ~= nil,
 		message = "Equipped snapshot loaded.",
 		equippedItems = if state then state.items else {},
+		originalItems = if originalState then originalState.items else {},
 		equippedItemIds = if state then state.itemIds else {},
 	}
 end
@@ -534,6 +541,7 @@ function AvatarApplyService.init()
 
 	Players.PlayerRemoving:Connect(function(player)
 		appliedStates[player.UserId] = nil
+		originalStates[player.UserId] = nil
 	end)
 
 	ApplyAvatarRemote.OnServerInvoke = function(player: Player, payload: any)

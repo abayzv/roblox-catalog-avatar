@@ -17,7 +17,7 @@ type EquippedItemPayload = {
 
 local previewItems: { [string]: CatalogItem } = {}
 local appliedItems: { [string]: CatalogItem } = {}
-local originalAppearance: any = nil
+local originalItems: { [string]: CatalogItem } = {}
 local hydrated = false
 
 local listeners = {}
@@ -175,6 +175,16 @@ function PreviewState.subscribe(callback: (
 	end
 end
 
+function PreviewState.hydrateOriginalItems(equippedItems: { EquippedItemPayload })
+	originalItems = makeItemsFromEquippedItems(equippedItems)
+	print(`[PreviewState] Hydrated original items: {describeItems(originalItems)}`)
+	notifyListeners()
+
+	for _, item in pairs(originalItems) do
+		ensurePropertyName(item)
+	end
+end
+
 function PreviewState.hydrateAppliedAssetIds(assetIds: { number })
 	appliedItems = makeItemsFromAssetIds(assetIds)
 	previewItems = cloneItems(appliedItems)
@@ -229,8 +239,8 @@ function PreviewState.clearPreview()
 	notifyListeners()
 end
 
-function PreviewState.resetPreviewToApplied()
-	previewItems = cloneItems(appliedItems)
+function PreviewState.resetPreviewToOriginal()
+	previewItems = cloneItems(originalItems)
 	notifyListeners()
 end
 
@@ -265,14 +275,6 @@ function PreviewState.getDesiredAssetIds(): { number }
 
 	table.sort(assetIds)
 	return assetIds
-end
-
-function PreviewState.setOriginalAppearance(appearance: any)
-	originalAppearance = appearance
-end
-
-function PreviewState.getOriginalAppearance()
-	return originalAppearance
 end
 
 return PreviewState
