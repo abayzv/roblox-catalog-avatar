@@ -176,8 +176,14 @@ local function playIdleAnimation(model: Model)
 
 	local animation = Instance.new("Animation")
 	animation.Name = "CatalogPreviewIdle"
-	animation.AnimationId = IDLE_ANIMATION_BY_RIG_TYPE[humanoid.RigType]
-		or IDLE_ANIMATION_BY_RIG_TYPE[Enum.HumanoidRigType.R15]
+	
+	local desc = humanoid:GetAppliedDescription()
+	if desc and desc.IdleAnimation and desc.IdleAnimation > 0 then
+		animation.AnimationId = "rbxassetid://" .. tostring(desc.IdleAnimation)
+	else
+		animation.AnimationId = IDLE_ANIMATION_BY_RIG_TYPE[humanoid.RigType]
+			or IDLE_ANIMATION_BY_RIG_TYPE[Enum.HumanoidRigType.R15]
+	end
 
 	local ok, trackOrError = pcall(function()
 		return animator:LoadAnimation(animation)
