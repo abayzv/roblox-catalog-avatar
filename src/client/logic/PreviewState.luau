@@ -117,6 +117,21 @@ end
 local MarketplaceService = game:GetService("MarketplaceService")
 local CatalogConfig = require(game:GetService("ReplicatedStorage").Shared.config.CatalogConfig)
 
+local NON_EXCLUSIVE_PROPERTIES = {
+	HatAccessory = true,
+	HairAccessory = true,
+}
+
+local function enforceExclusivity(items: { [string]: CatalogItem }, newItemKey: string, propName: string)
+	if not NON_EXCLUSIVE_PROPERTIES[propName] then
+		for otherKey, otherItem in pairs(items) do
+			if otherKey ~= newItemKey and otherItem.propertyName == propName then
+				items[otherKey] = nil
+			end
+		end
+	end
+end
+
 local function ensurePropertyName(item: CatalogItem)
 	if item.propertyName then
 		return
@@ -139,6 +154,7 @@ local function ensurePropertyName(item: CatalogItem)
 				if previewItems[key] then
 					local newItems = cloneItems(previewItems)
 					newItems[key].propertyName = propName
+					enforceExclusivity(newItems, key, propName)
 					previewItems = newItems
 					changed = true
 				end
@@ -212,6 +228,9 @@ function PreviewState.addPreviewItem(item: CatalogItem)
 	if not previewItems[key] then
 		local newItems = cloneItems(previewItems)
 		newItems[key] = item
+		if item.propertyName then
+			enforceExclusivity(newItems, key, item.propertyName)
+		end
 		previewItems = newItems
 		notifyListeners()
 		ensurePropertyName(item)

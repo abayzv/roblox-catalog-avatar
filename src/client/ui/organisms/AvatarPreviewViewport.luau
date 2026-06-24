@@ -31,6 +31,12 @@ local ACCESSORY_TYPE_TO_PROPERTY = {
 	[Enum.AccessoryType.RightShoe] = "RightShoeAccessory",
 	[Enum.AccessoryType.DressSkirt] = "DressSkirtAccessory",
 }
+
+local PROPERTY_TO_ACCESSORY_TYPE = {}
+for accType, propName in pairs(ACCESSORY_TYPE_TO_PROPERTY) do
+	PROPERTY_TO_ACCESSORY_TYPE[propName] = accType
+end
+
 local IDLE_ANIMATION_BY_RIG_TYPE = {
 	[Enum.HumanoidRigType.R6] = "rbxassetid://180435571",
 	[Enum.HumanoidRigType.R15] = "rbxassetid://507766666",
@@ -102,30 +108,6 @@ local function getTouchedProperties(previewItems, appliedItems)
 	return touchedProperties, previewBuckets
 end
 
-local function setDescriptionProperty(
-	description: HumanoidDescription,
-	propertyName: string,
-	assetIds: { number }?
-)
-	assetIds = assetIds or {}
-
-	local success, currentValue = pcall(function()
-		return description[propertyName]
-	end)
-	if not success then
-		return
-	end
-
-	if type(currentValue) == "string" then
-		local values = {}
-		for _, assetId in ipairs(assetIds) do
-			table.insert(values, tostring(assetId))
-		end
-		description[propertyName] = table.concat(values, ",")
-	elseif type(currentValue) == "number" then
-		description[propertyName] = assetIds[#assetIds] or 0
-	end
-end
 
 local function removeTouchedPhysicalItems(rig: Model, touchedProperties)
 	for _, child in ipairs(rig:GetChildren()) do
@@ -271,8 +253,42 @@ local function applyPreviewDescription(rig: Model, previewItems, appliedItems, c
 
 	removeTouchedPhysicalItems(rig, touchedProperties)
 
+	local accessories = description:GetAccessories(true)
+	local accessoriesModified = false
+
 	for propertyName in pairs(touchedProperties) do
-		setDescriptionProperty(description, propertyName, previewBuckets[propertyName])
+		local currentValue
+		local success = pcall(function() currentValue = description[propertyName] end)
+		
+		if success and type(currentValue) == "number" then
+			-- 2D Clothing (Shirt, Pants, GraphicTShirt)
+			local assetIds = previewBuckets[propertyName] or {}
+			description[propertyName] = assetIds[#assetIds] or 0
+		else
+			local accType = PROPERTY_TO_ACCESSORY_TYPE[propertyName]
+			if accType then
+				accessoriesModified = true
+				-- Remove old
+				for i = #accessories, 1, -1 do
+					if accessories[i].AccessoryType == accType then
+						table.remove(accessories, i)
+					end
+				end
+				-- Add new
+				local newIds = previewBuckets[propertyName] or {}
+				for _, assetId in ipairs(newIds) do
+					table.insert(accessories, {
+						AccessoryType = accType,
+						AssetId = assetId,
+						Order = 1,
+					})
+				end
+			end
+		end
+	end
+
+	if accessoriesModified then
+		description:SetAccessories(accessories, true)
 	end
 
 	local ok, err = pcall(function()
