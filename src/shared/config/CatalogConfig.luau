@@ -32,6 +32,7 @@ local CatalogConfig = {
 		[54] = "SwimAnimation",
 		[55] = "WalkAnimation",
 		[56] = "PoseAnimation",
+		[61] = "EmoteAnimation", -- Emote
 		[64] = "TShirtAccessory",
 		[65] = "ShirtAccessory",
 		[66] = "PantsAccessory",

@@ -160,7 +160,7 @@ local function frameCamera(camera: Camera, model: Model)
 	camera.CFrame = CFrame.new(cameraPosition, target)
 end
 
-local function playIdleAnimation(model: Model)
+local function playIdleAnimation(model: Model, previewItems)
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	if not humanoid then
 		return
@@ -173,9 +173,39 @@ local function playIdleAnimation(model: Model)
 	end
 
 	for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-		if track.Name == "CatalogPreviewIdle" then
+		if track.Name == "CatalogPreviewIdle" or track.Name == "CatalogPreviewEmote" then
 			track:Stop(0.1)
 		end
+	end
+
+	local previewEmoteAssetId = nil
+	if previewItems then
+		local buckets = getItemBuckets(previewItems)
+		if buckets["EmoteAnimation"] and #buckets["EmoteAnimation"] > 0 then
+			previewEmoteAssetId = buckets["EmoteAnimation"][#buckets["EmoteAnimation"]]
+		end
+	end
+
+	if previewEmoteAssetId then
+		local animation = Instance.new("Animation")
+		animation.Name = "CatalogPreviewEmote"
+		animation.AnimationId = "rbxassetid://" .. tostring(previewEmoteAssetId)
+
+		local ok, trackOrError = pcall(function()
+			return animator:LoadAnimation(animation)
+		end)
+
+		if ok then
+			local track = trackOrError
+			track.Looped = true
+			track.Priority = Enum.AnimationPriority.Action
+			track:Play(0.2, 1, 1)
+		else
+			warn("[CatalogPreview] Failed to play emote animation:", trackOrError)
+		end
+
+		animation:Destroy()
+		return
 	end
 
 	local animation = Instance.new("Animation")
@@ -328,7 +358,7 @@ local function applyPreviewDescription(rig: Model, previewItems, appliedItems, c
 			prepareRig(rig)
 			pivotRig(rig)
 			frameCamera(camera, rig)
-			playIdleAnimation(rig)
+			playIdleAnimation(rig, previewItems)
 		end
 	end)
 end
@@ -361,7 +391,7 @@ local function setupViewport(
 	if shouldApplyPreview then
 		applyPreviewDescription(rig, previewItems, appliedItems, camera)
 	end
-	playIdleAnimation(rig)
+	playIdleAnimation(rig, previewItems)
 
 	return rig
 end

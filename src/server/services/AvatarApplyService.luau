@@ -193,6 +193,18 @@ local function extractSupportedItems(
 	local seen = {}
 
 	for _, propertyName in ipairs(SUPPORTED_PROPERTIES) do
+		if propertyName == "EmoteAnimation" then
+			local emotes = description:GetEmotes()
+			if emotes then
+				for _, emoteData in pairs(emotes) do
+					for _, assetId in ipairs(emoteData) do
+						addSupportedItem(items, seen, assetId, propertyName)
+					end
+				end
+			end
+			continue
+		end
+
 		local success, currentValue = pcall(function()
 			return description[propertyName]
 		end)
@@ -394,6 +406,26 @@ local function setDescriptionProperty(
 	assetIds: { number }?
 )
 	assetIds = assetIds or {}
+	
+	if propertyName == "EmoteAnimation" then
+		local emotes = {}
+		for slot, id in ipairs(assetIds) do
+			if slot <= 8 then
+				emotes["Emote" .. tostring(slot)] = { id }
+			end
+		end
+		description:SetEmotes(emotes)
+		-- Also set equipped emotes? Usually just Setting them is enough for preview.
+		local equippedEmotes = {}
+		for slot = 1, math.min(#assetIds, 8) do
+			table.insert(equippedEmotes, {
+				Name = "Emote" .. tostring(slot),
+				Slot = slot,
+			})
+		end
+		description:SetEquippedEmotes(equippedEmotes)
+		return
+	end
 
 	local success, currentValue = pcall(function()
 		return description[propertyName]
