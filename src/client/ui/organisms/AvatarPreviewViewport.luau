@@ -21,6 +21,15 @@ local ACCESSORY_TYPE_TO_PROPERTY = {
 	[Enum.AccessoryType.Neck] = "NeckAccessory",
 	[Enum.AccessoryType.Shoulder] = "ShouldersAccessory",
 	[Enum.AccessoryType.Waist] = "WaistAccessory",
+	[Enum.AccessoryType.TShirt] = "TShirtAccessory",
+	[Enum.AccessoryType.Shirt] = "ShirtAccessory",
+	[Enum.AccessoryType.Pants] = "PantsAccessory",
+	[Enum.AccessoryType.Jacket] = "JacketAccessory",
+	[Enum.AccessoryType.Sweater] = "SweaterAccessory",
+	[Enum.AccessoryType.Shorts] = "ShortsAccessory",
+	[Enum.AccessoryType.LeftShoe] = "LeftShoeAccessory",
+	[Enum.AccessoryType.RightShoe] = "RightShoeAccessory",
+	[Enum.AccessoryType.DressSkirt] = "DressSkirtAccessory",
 }
 local IDLE_ANIMATION_BY_RIG_TYPE = {
 	[Enum.HumanoidRigType.R6] = "rbxassetid://180435571",
