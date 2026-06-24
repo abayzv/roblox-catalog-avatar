@@ -124,7 +124,11 @@ end
 local function prepareRig(model: Model)
 	for _, descendant in ipairs(model:GetDescendants()) do
 		if descendant:IsA("BaseScript") then
-			descendant:Destroy()
+			if descendant.Name == "Animate" then
+				descendant.Disabled = true
+			else
+				descendant:Destroy()
+			end
 		elseif descendant:IsA("BasePart") then
 			descendant.Anchored = descendant.Name == "HumanoidRootPart"
 			descendant.CanCollide = false
@@ -179,7 +183,21 @@ local function playIdleAnimation(model: Model)
 	
 	local desc = humanoid:GetAppliedDescription()
 	if desc and desc.IdleAnimation and desc.IdleAnimation > 0 then
-		animation.AnimationId = "rbxassetid://" .. tostring(desc.IdleAnimation)
+		local animate = model:FindFirstChild("Animate")
+		if animate then
+			local idleFolder = animate:FindFirstChild("idle")
+			if idleFolder then
+				local anim1 = idleFolder:FindFirstChild("Animation1")
+				if anim1 and anim1:IsA("Animation") and anim1.AnimationId ~= "" then
+					animation.AnimationId = anim1.AnimationId
+				end
+			end
+		end
+		
+		if animation.AnimationId == "" then
+			animation.AnimationId = IDLE_ANIMATION_BY_RIG_TYPE[humanoid.RigType]
+				or IDLE_ANIMATION_BY_RIG_TYPE[Enum.HumanoidRigType.R15]
+		end
 	else
 		animation.AnimationId = IDLE_ANIMATION_BY_RIG_TYPE[humanoid.RigType]
 			or IDLE_ANIMATION_BY_RIG_TYPE[Enum.HumanoidRigType.R15]
