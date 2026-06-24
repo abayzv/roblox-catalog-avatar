@@ -233,6 +233,7 @@ local function ensurePropertyName(item: CatalogItem)
 
 				if previewItems[key] then
 					local newItems = cloneItems(previewItems)
+					newItems[key] = cloneItem(newItems[key])
 					newItems[key].propertyName = propName
 					enforceExclusivity(newItems, key, propName)
 					previewItems = newItems
@@ -241,6 +242,7 @@ local function ensurePropertyName(item: CatalogItem)
 
 				if appliedItems[key] then
 					local newApplied = cloneItems(appliedItems)
+					newApplied[key] = cloneItem(newApplied[key])
 					newApplied[key].propertyName = propName
 					appliedItems = newApplied
 				end
@@ -307,6 +309,14 @@ function PreviewState.addPreviewItem(item: CatalogItem)
 	local key = getItemKey(item)
 	if not previewItems[key] then
 		local newItems = cloneItems(previewItems)
+		
+		-- Special rule: Try On ANY item resets (removes) the current Emote preview
+		for otherKey, otherItem in pairs(newItems) do
+			if itemHasProperty(otherItem, "EmoteAnimation") then
+				newItems[otherKey] = nil
+			end
+		end
+		
 		newItems[key] = item
 		if item.propertyName then
 			enforceExclusivity(newItems, key, item.propertyName)
@@ -362,12 +372,18 @@ function PreviewState.getDesiredAssetIds(): { number }
 	for _, item in pairs(previewItems) do
 		if (item.itemType == "Bundle" or item.itemType == Enum.AvatarItemType.Bundle) and item.bundleAssets then
 			for _, bAsset in ipairs(item.bundleAssets) do
+				if bAsset.propertyName == "EmoteAnimation" then
+					continue
+				end
 				if not seen[bAsset.id] then
 					seen[bAsset.id] = true
 					table.insert(assetIds, bAsset.id)
 				end
 			end
 		else
+			if item.propertyName == "EmoteAnimation" then
+				continue
+			end
 			local assetId = item.assetId or tonumber(item.id)
 			if assetId and not seen[assetId] then
 				seen[assetId] = true

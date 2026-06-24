@@ -160,7 +160,7 @@ local function frameCamera(camera: Camera, model: Model)
 	camera.CFrame = CFrame.new(cameraPosition, target)
 end
 
-local function playIdleAnimation(model: Model, previewItems)
+local function playIdleAnimation(model: Model, previewItems: table?)
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	if not humanoid then
 		return
@@ -211,26 +211,66 @@ local function playIdleAnimation(model: Model, previewItems)
 	local animation = Instance.new("Animation")
 	animation.Name = "CatalogPreviewIdle"
 	
-	local desc = humanoid:GetAppliedDescription()
-	if desc and desc.IdleAnimation and desc.IdleAnimation > 0 then
-		local animate = model:FindFirstChild("Animate")
-		if animate then
-			local idleFolder = animate:FindFirstChild("idle")
-			if idleFolder then
-				local anim1 = idleFolder:FindFirstChild("Animation1")
-				if anim1 and anim1:IsA("Animation") and anim1.AnimationId ~= "" then
-					animation.AnimationId = anim1.AnimationId
+	local emoteAssetId = nil
+	if previewItems then
+		for _, item in pairs(previewItems) do
+			if item.propertyName == "EmoteAnimation" then
+				emoteAssetId = item.assetId or tonumber(item.id)
+				break
+			elseif item.bundleAssets then
+				for _, bAsset in ipairs(item.bundleAssets) do
+					if bAsset.propertyName == "EmoteAnimation" then
+						emoteAssetId = bAsset.id or tonumber(bAsset.id)
+						break
+					end
 				end
+				if emoteAssetId then break end
 			end
 		end
+	end
+
+	if emoteAssetId then
+		-- Emote catalog IDs need server-side resolution to get the actual AnimationId
+		local resolvedAnimId = nil
+		local callSuccess, response = pcall(function()
+			return ApplyAvatarRemote:InvokeServer({
+				action = "ResolvePreviewAsset",
+				assetId = emoteAssetId
+			})
+		end)
+		if callSuccess and type(response) == "table" and response.success then
+			resolvedAnimId = response.result
+		end
 		
-		if animation.AnimationId == "" then
+		if resolvedAnimId then
+			animation.AnimationId = type(resolvedAnimId) == "string" and resolvedAnimId or ("rbxassetid://" .. resolvedAnimId)
+		else
+			warn("[CatalogPreview] Failed to resolve Emote ID for asset:", emoteAssetId)
+			animation:Destroy()
+			return
+		end
+	else
+		local desc = humanoid:GetAppliedDescription()
+		if desc and desc.IdleAnimation and desc.IdleAnimation > 0 then
+			local animate = model:FindFirstChild("Animate")
+			if animate then
+				local idleFolder = animate:FindFirstChild("idle")
+				if idleFolder then
+					local anim1 = idleFolder:FindFirstChild("Animation1")
+					if anim1 and anim1:IsA("Animation") and anim1.AnimationId ~= "" then
+						animation.AnimationId = anim1.AnimationId
+					end
+				end
+			end
+			
+			if animation.AnimationId == "" then
+				animation.AnimationId = IDLE_ANIMATION_BY_RIG_TYPE[humanoid.RigType]
+					or IDLE_ANIMATION_BY_RIG_TYPE[Enum.HumanoidRigType.R15]
+			end
+		else
 			animation.AnimationId = IDLE_ANIMATION_BY_RIG_TYPE[humanoid.RigType]
 				or IDLE_ANIMATION_BY_RIG_TYPE[Enum.HumanoidRigType.R15]
 		end
-	else
-		animation.AnimationId = IDLE_ANIMATION_BY_RIG_TYPE[humanoid.RigType]
-			or IDLE_ANIMATION_BY_RIG_TYPE[Enum.HumanoidRigType.R15]
 	end
 
 	local ok, trackOrError = pcall(function()
@@ -303,39 +343,60 @@ local function applyPreviewDescription(rig: Model, previewItems, appliedItems, c
 	local accessories = description:GetAccessories(true)
 	local accessoriesModified = false
 
+	local CLOTHING_PROPERTIES = { Shirt = true, Pants = true, GraphicTShirt = true }
+	local clothingToApply = {} -- { propertyName -> catalogAssetId }
+
+	-- Save existing clothing instances from the cloned rig before ApplyDescription destroys them
+	local savedClothing = {}
+	for _, child in ipairs(rig:GetChildren()) do
+		if child:IsA("Shirt") or child:IsA("Pants") or child:IsA("ShirtGraphic") then
+			child.Parent = nil -- unparent to prevent ApplyDescription from destroying them
+			table.insert(savedClothing, child)
+		end
+	end
+
 	for propertyName in pairs(touchedProperties) do
-		local currentValue
-		local success = pcall(function() currentValue = description[propertyName] end)
-		
-		if success and type(currentValue) == "number" then
-			-- 2D Clothing (Shirt, Pants, GraphicTShirt) & Body Parts (Head, Torso, LeftArm, etc)
+		-- Handle 2D Clothing separately (Shirt, Pants, GraphicTShirt)
+		if CLOTHING_PROPERTIES[propertyName] then
 			local assetIds = previewBuckets[propertyName]
 			if not assetIds or #assetIds == 0 then
 				assetIds = appliedBuckets[propertyName] or {}
 			end
-			description[propertyName] = assetIds[#assetIds] or 0
+			clothingToApply[propertyName] = assetIds[#assetIds] or 0
 		else
-			local accType = PROPERTY_TO_ACCESSORY_TYPE[propertyName]
-			if accType then
-				accessoriesModified = true
-				-- Remove old
-				for i = #accessories, 1, -1 do
-					if accessories[i].AccessoryType == accType then
-						table.remove(accessories, i)
+			local currentValue
+			local success = pcall(function() currentValue = description[propertyName] end)
+			
+			if success and type(currentValue) == "number" then
+				-- Body Parts (Head, Torso, LeftArm, etc) & other numeric properties
+				local assetIds = previewBuckets[propertyName]
+				if not assetIds or #assetIds == 0 then
+					assetIds = appliedBuckets[propertyName] or {}
+				end
+				description[propertyName] = assetIds[#assetIds] or 0
+			else
+				local accType = PROPERTY_TO_ACCESSORY_TYPE[propertyName]
+				if accType then
+					accessoriesModified = true
+					-- Remove old
+					for i = #accessories, 1, -1 do
+						if accessories[i].AccessoryType == accType then
+							table.remove(accessories, i)
+						end
 					end
-				end
-				-- Add new (or restore applied)
-				local newIds = previewBuckets[propertyName]
-				if not newIds or #newIds == 0 then
-					newIds = appliedBuckets[propertyName] or {}
-				end
-				
-				for _, assetId in ipairs(newIds) do
-					table.insert(accessories, {
-						AccessoryType = accType,
-						AssetId = assetId,
-						Order = 1,
-					})
+					-- Add new (or restore applied)
+					local newIds = previewBuckets[propertyName]
+					if not newIds or #newIds == 0 then
+						newIds = appliedBuckets[propertyName] or {}
+					end
+					
+					for _, assetId in ipairs(newIds) do
+						table.insert(accessories, {
+							AccessoryType = accType,
+							AssetId = assetId,
+							Order = 1,
+						})
+					end
 				end
 			end
 		end
@@ -345,12 +406,90 @@ local function applyPreviewDescription(rig: Model, previewItems, appliedItems, c
 		description:SetAccessories(accessories, true)
 	end
 
+	-- Zero out 2D clothing in description so ApplyDescription doesn't error on catalog IDs
+	description.Shirt = 0
+	description.Pants = 0
+	description.GraphicTShirt = 0
+
 	local ok, err = pcall(function()
 		humanoid:ApplyDescription(description)
 	end)
 
 	if not ok then
 		warn("[CatalogPreview] Failed to apply viewport description:", err)
+	end
+
+	-- Restore saved clothing for non-touched properties
+	for _, clothing in ipairs(savedClothing) do
+		local propName = nil
+		if clothing:IsA("Shirt") then propName = "Shirt"
+		elseif clothing:IsA("Pants") then propName = "Pants"
+		elseif clothing:IsA("ShirtGraphic") then propName = "GraphicTShirt"
+		end
+
+		if propName and not clothingToApply[propName] then
+			-- Not being changed, restore the original instance
+			clothing.Parent = rig
+		else
+			-- Will be replaced by preview item
+			clothing:Destroy()
+		end
+	end
+
+	-- Apply new 2D Clothing via server-resolved template IDs
+	for propertyName, catalogAssetId in pairs(clothingToApply) do
+		if catalogAssetId == 0 then
+			-- Remove clothing
+			if propertyName == "Shirt" then
+				local existing = rig:FindFirstChildOfClass("Shirt")
+				if existing then existing:Destroy() end
+			elseif propertyName == "Pants" then
+				local existing = rig:FindFirstChildOfClass("Pants")
+				if existing then existing:Destroy() end
+			elseif propertyName == "GraphicTShirt" then
+				local existing = rig:FindFirstChildOfClass("ShirtGraphic")
+				if existing then existing:Destroy() end
+			end
+		else
+			-- Resolve catalog ID to template ID via server
+			local templateId = nil
+			local callSuccess, response = pcall(function()
+				return ApplyAvatarRemote:InvokeServer({
+					action = "ResolvePreviewAsset",
+					assetId = catalogAssetId
+				})
+			end)
+			if callSuccess and type(response) == "table" and response.success then
+				templateId = response.result
+			end
+
+			if templateId then
+				if propertyName == "Shirt" then
+					local existing = rig:FindFirstChildOfClass("Shirt")
+					if not existing then
+						existing = Instance.new("Shirt")
+						existing.Parent = rig
+					end
+					existing.ShirtTemplate = "rbxassetid://" .. templateId
+				elseif propertyName == "Pants" then
+					local existing = rig:FindFirstChildOfClass("Pants")
+					if not existing then
+						existing = Instance.new("Pants")
+						existing.Parent = rig
+					end
+					existing.PantsTemplate = "rbxassetid://" .. templateId
+				elseif propertyName == "GraphicTShirt" then
+					local existing = rig:FindFirstChildOfClass("ShirtGraphic")
+					if not existing then
+						existing = Instance.new("ShirtGraphic")
+						existing.Parent = rig
+					end
+					existing.Graphic = "rbxassetid://" .. templateId
+				end
+			else
+				warn("[CatalogPreview] Failed to resolve 2D clothing template for:", propertyName, catalogAssetId)
+			end
+		end
 	end
 
 	task.defer(function()

@@ -588,8 +588,50 @@ function AvatarApplyService.init()
 	end)
 
 	ApplyAvatarRemote.OnServerInvoke = function(player: Player, payload: any)
-		if type(payload) == "table" and payload.action == "GetEquipped" then
-			return handleGetEquipped(player)
+		if type(payload) == "table" then
+			if payload.action == "GetEquipped" then
+				return handleGetEquipped(player)
+			elseif payload.action == "ResolvePreviewAsset" then
+				local assetId = tonumber(payload.assetId)
+				if not assetId then return { success = false } end
+				
+				local success, model = pcall(function()
+					return game:GetService("InsertService"):LoadAsset(assetId)
+				end)
+				
+				if success and model then
+					local anim = model:FindFirstChildOfClass("Animation", true)
+					if anim then
+						local animId = anim.AnimationId
+						model:Destroy()
+						return { success = true, result = animId }
+					end
+					
+					local clothing = model:FindFirstChildOfClass("Shirt", true)
+						or model:FindFirstChildOfClass("Pants", true)
+						or model:FindFirstChildOfClass("ShirtGraphic", true)
+					if clothing then
+						local template = clothing:IsA("ShirtGraphic") and clothing.Graphic or (clothing:IsA("Shirt") and clothing.ShirtTemplate or clothing.PantsTemplate)
+						local idStr = string.match(template, "%d+")
+						model:Destroy()
+						if idStr then
+							return { success = true, result = tonumber(idStr) }
+						end
+					end
+					
+					local decal = model:FindFirstChildOfClass("Decal", true)
+					if decal and decal.Name == "face" then
+						local idStr = string.match(decal.Texture, "%d+")
+						model:Destroy()
+						if idStr then
+							return { success = true, result = tonumber(idStr) }
+						end
+					end
+					
+					model:Destroy()
+				end
+				return { success = false }
+			end
 		end
 
 		return handleApply(player, payload)
