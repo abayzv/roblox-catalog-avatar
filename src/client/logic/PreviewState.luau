@@ -48,11 +48,19 @@ local function makeCatalogItemFromEquippedItem(equippedItem: EquippedItemPayload
 end
 
 local function cloneItems(items: { [string]: CatalogItem }): { [string]: CatalogItem }
-	local clone = {}
-	for key, item in pairs(items) do
-		clone[key] = item
+	local newItems = {}
+	for k, v in pairs(items) do
+		newItems[k] = v
 	end
-	return clone
+	return newItems
+end
+
+local function cloneItem(item: CatalogItem): CatalogItem
+	local newItem = {}
+	for k, v in pairs(item) do
+		newItem[k] = v
+	end
+	return newItem
 end
 
 local function makeItemsFromAssetIds(assetIds: { number }): { [string]: CatalogItem }
@@ -122,10 +130,24 @@ local NON_EXCLUSIVE_PROPERTIES = {
 	HairAccessory = true,
 }
 
+local function itemHasProperty(item: CatalogItem, propName: string): boolean
+	if item.propertyName == propName then
+		return true
+	end
+	if item.bundleAssets then
+		for _, bAsset in ipairs(item.bundleAssets) do
+			if bAsset.propertyName == propName then
+				return true
+			end
+		end
+	end
+	return false
+end
+
 local function enforceExclusivity(items: { [string]: CatalogItem }, newItemKey: string, propName: string)
 	if not NON_EXCLUSIVE_PROPERTIES[propName] then
 		for otherKey, otherItem in pairs(items) do
-			if otherKey ~= newItemKey and otherItem.propertyName == propName then
+			if otherKey ~= newItemKey and itemHasProperty(otherItem, propName) then
 				items[otherKey] = nil
 			end
 		end
@@ -141,7 +163,7 @@ local function ensurePropertyName(item: CatalogItem)
 		return
 	end
 
-	if item.itemType == "Bundle" then
+	if item.itemType == "Bundle" or item.itemType == Enum.AvatarItemType.Bundle then
 		task.spawn(function()
 			local success, details = pcall(function()
 				return game:GetService("AssetService"):GetBundleDetailsAsync(assetId)
@@ -173,6 +195,7 @@ local function ensurePropertyName(item: CatalogItem)
 
 					if previewItems[key] then
 						local newItems = cloneItems(previewItems)
+						newItems[key] = cloneItem(newItems[key])
 						newItems[key].bundleAssets = bundleAssets
 						for _, bAsset in ipairs(bundleAssets) do
 							if bAsset.propertyName then
@@ -337,7 +360,7 @@ function PreviewState.getDesiredAssetIds(): { number }
 	local seen = {}
 
 	for _, item in pairs(previewItems) do
-		if item.bundleAssets then
+		if (item.itemType == "Bundle" or item.itemType == Enum.AvatarItemType.Bundle) and item.bundleAssets then
 			for _, bAsset in ipairs(item.bundleAssets) do
 				if not seen[bAsset.id] then
 					seen[bAsset.id] = true

@@ -371,7 +371,15 @@ local function AvatarPreviewViewport()
 	local previewKeyParts = {}
 
 	for itemId, item in pairs(previewItems) do
-		table.insert(previewKeyParts, `{itemId}:{item.propertyName or "nil"}`)
+		if item.bundleAssets then
+			local bKeys = {}
+			for _, b in ipairs(item.bundleAssets) do
+				table.insert(bKeys, b.id)
+			end
+			table.insert(previewKeyParts, `{itemId}:bundle:{table.concat(bKeys, ",")}`)
+		else
+			table.insert(previewKeyParts, `{itemId}:{item.propertyName or "nil"}`)
+		end
 	end
 	table.sort(previewKeyParts)
 
