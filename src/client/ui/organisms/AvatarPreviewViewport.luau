@@ -3,7 +3,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 
 local Theme = require(script.Parent.Parent.theme.Theme)
+local Icons = require(script.Parent.Parent.theme.Icons)
+local GlassButton = require(script.Parent.Parent.atoms.GlassButton)
 local usePreviewState = require(script.Parent.Parent.Parent.hooks.usePreviewState)
+local PreviewState = require(script.Parent.Parent.Parent.logic.PreviewState)
 
 local LOCAL_PLAYER = Players.LocalPlayer
 local INITIAL_RIG_YAW = math.rad(180)
@@ -341,6 +344,49 @@ local function AvatarPreviewViewport()
 				[React.Event.InputBegan] = beginDrag,
 				[React.Event.InputChanged] = updateDrag,
 				[React.Event.InputEnded] = endDrag,
+			}),
+
+			ResetArea = next(previewItems) ~= nil and React.createElement("Frame", {
+				AnchorPoint = Vector2.new(1, 0),
+				Position = UDim2.new(1, -Theme.Space.MD, 0, Theme.Space.MD),
+				Size = UDim2.fromOffset(48, 48),
+				BackgroundTransparency = 1,
+				ZIndex = 13,
+			}, {
+				ResetButton = React.createElement(GlassButton, {
+					icon = Icons.Reset,
+					color = Theme.Color.TextSecondary,
+					size = UDim2.fromScale(1, 1),
+					onActivated = function()
+						PreviewState.clearPreview()
+					end,
+				}),
+			}),
+
+			ActionArea = next(previewItems) ~= nil and React.createElement("Frame", {
+				AnchorPoint = Vector2.new(0.5, 1),
+				Position = UDim2.new(0.5, 0, 1, -Theme.Space.XL),
+				BackgroundTransparency = 1,
+				Size = UDim2.new(1, -(Theme.Space.XL * 2), 0, 48),
+				ZIndex = 13,
+			}, {
+				Layout = React.createElement("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					HorizontalAlignment = Enum.HorizontalAlignment.Center,
+					VerticalAlignment = Enum.VerticalAlignment.Center,
+					Padding = UDim.new(0, Theme.Space.MD),
+				}),
+
+				ApplyButton = React.createElement(GlassButton, {
+					text = "Apply",
+					icon = Icons.Apply,
+					color = Theme.Color.TextPrimary,
+					size = UDim2.fromScale(1, 1),
+					onActivated = function()
+						print("[CatalogPreview] Applying final preview items to server:", previewItems)
+						-- TODO: Call remote event to apply server-side appearance
+					end,
+				}),
 			}),
 		}),
 	})

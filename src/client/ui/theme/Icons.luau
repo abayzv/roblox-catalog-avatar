@@ -10,6 +10,8 @@ local Icons = {
 	Animation = "rbxassetid://1114393432",
 	Bundles = "rbxassetid://78111289121317",
 	Robux = "rbxassetid://11560341132",
+	Reset = "rbxassetid://6723921202", -- TODO: Update with real icon asset ID
+	Apply = "rbxassetid://11768914234", -- TODO: Update with real icon asset ID
 }
 
 return Icons

@@ -1,16 +1,17 @@
 # Roblox Item Catalog V2
 
-Roblox item catalog system with a UI-first workflow. The catalog UI is built as a client React-lua app, while avatar try-on preview is planned to run on the active local character first. Other players should only see changes after the player confirms with `Apply` and the server validates the final selection.
+Roblox item catalog system with a UI-first workflow. The catalog UI is built as a client React-lua app, while avatar try-on preview runs in a client-only `ViewportFrame` clone. Other players should only see changes after the player confirms with `Apply` and the server validates the final selection.
 
 ## Current Focus
 
 1. Repository foundation
 2. Catalog UI design system
 3. Static catalog panel with mock data
-4. Client-only try-on preview on the active character
+4. Client-only try-on preview in a viewport clone
 5. Server-visible apply flow
 
 See `roblox_item_catalog_milestones.md` for the issue-by-issue roadmap.
+See `roblox_ui_layout_guide.md` for the reusable fullscreen frame/layout guide.
 
 ## Setup
 
@@ -68,6 +69,6 @@ stylua.toml
 ## Architecture Notes
 
 - UI components should stay presentational.
-- `Try On` should preview on `Players.LocalPlayer.Character` only.
+- `Try On` should preview on a client-only viewport clone.
 - `Apply` should be the first step that contacts the server.
 - The server must validate item ids before applying anything visible to other players.
