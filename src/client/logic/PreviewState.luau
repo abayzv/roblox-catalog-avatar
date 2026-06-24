@@ -1,13 +1,8 @@
 local PreviewState = {}
 
-export type CatalogItem = {
-	id: string,
-	name: string,
-	price: number | string,
-	image: string,
-	assetId: number?,
-	propertyName: string?,
-}
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CatalogTypes = require(ReplicatedStorage.Shared.types.CatalogTypes)
+export type CatalogItem = CatalogTypes.CatalogItem
 
 type EquippedItemPayload = {
 	assetId: number,

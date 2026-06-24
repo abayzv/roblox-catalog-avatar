@@ -6,14 +6,8 @@ local ItemCardSkeleton = require(script.Parent.Parent.molecules.ItemCardSkeleton
 local usePreviewState = require(script.Parent.Parent.Parent.hooks.usePreviewState)
 local PreviewState = require(script.Parent.Parent.Parent.logic.PreviewState)
 
-export type CatalogItem = {
-	id: string,
-	name: string,
-	price: number,
-	image: string,
-	assetId: number?,
-	propertyName: string?,
-}
+local CatalogTypes = require(ReplicatedStorage.Shared.types.CatalogTypes)
+export type CatalogItem = CatalogTypes.CatalogItem
 
 export type CatalogGridProps = {
 	items: { CatalogItem }?,

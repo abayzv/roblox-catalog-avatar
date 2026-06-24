@@ -1,11 +1,14 @@
 export type CatalogItem = {
 	id: string,
 	name: string,
-	price: number,
+	price: number | string,
 	image: string,
 	assetId: number?,
-	category: string,
-	subcategory: string,
+	propertyName: string?,
+	category: string?,
+	subcategory: string?,
+	tags: { string }?,
+	availability: string?,
 }
 
 export type CatalogUiState = {

@@ -11,6 +11,10 @@ for i = 1, 12 do
 		name = "Awesome Roblox Item " .. i,
 		price = math.random(50, 500),
 		image = "rbxassetid://18517062196",
+		category = "Accessories",
+		subcategory = "Hats",
+		tags = { "mock", "test" },
+		availability = "InStock",
 	})
 end
 

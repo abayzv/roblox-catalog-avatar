@@ -73,6 +73,10 @@ local function CatalogPanel(props: CatalogPanelProps)
 					image = if assetId
 						then `rbxthumb://type=Asset&id={assetId}&w=420&h=420`
 						else "rbxassetid://18517062196",
+					category = state.activeMainCategory,
+					subcategory = state.activeSubCategory,
+					tags = { "mock", "test" },
+					availability = "InStock",
 				})
 			end
 		end

@@ -9,16 +9,28 @@ local MOCK_ITEMS = {
 		name = "Black Puffer Jacket",
 		price = 150,
 		image = "rbxassetid://18517062196", -- Mock image
+		category = "Clothing",
+		subcategory = "Jackets",
+		tags = { "mock", "test" },
+		availability = "InStock",
 	},
 	{
 		name = "Pastel Purple Hoodie With Very Long Name That Will Truncate",
 		price = 200,
 		image = "rbxassetid://18517062196", -- Mock image
+		category = "Clothing",
+		subcategory = "Sweaters",
+		tags = { "mock", "test" },
+		availability = "InStock",
 	},
 	{
 		name = "Denim Jacket - Light Wash",
 		price = 80,
 		image = "rbxassetid://18517062196", -- Mock image
+		category = "Clothing",
+		subcategory = "Jackets",
+		tags = { "mock", "test" },
+		availability = "InStock",
 	},
 }
 
