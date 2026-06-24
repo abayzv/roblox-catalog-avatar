@@ -5,7 +5,7 @@
     "ReplicatedStorage": {
       "$className": "ReplicatedStorage",
       "ApplyAvatarRemote": {
-        "$className": "RemoteEvent"
+        "$className": "RemoteFunction"
       },
       "Packages": {
         "$path": "Packages"

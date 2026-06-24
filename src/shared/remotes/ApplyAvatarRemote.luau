@@ -1,2 +1,2 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-return ReplicatedStorage:WaitForChild("ApplyAvatarRemote") :: RemoteEvent
+return ReplicatedStorage:WaitForChild("ApplyAvatarRemote") :: RemoteFunction

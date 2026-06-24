@@ -392,7 +392,23 @@ local function AvatarPreviewViewport()
 								table.insert(assetIds, assetId)
 							end
 						end
-						ApplyAvatarRemote:FireServer(assetIds)
+						
+						task.spawn(function()
+							local callSuccess, response = pcall(function()
+								return ApplyAvatarRemote:InvokeServer(assetIds)
+							end)
+							
+							if callSuccess and type(response) == "table" then
+								if response.success then
+									print("[CatalogPreview] ✅ Server accepted apply:", response.message)
+									-- Bisa tambahkan toast/notifikasi success di sini ke depannya
+								else
+									warn("[CatalogPreview] ❌ Server rejected apply:", response.message)
+								end
+							else
+								warn("[CatalogPreview] ❌ Failed to communicate with server:", response)
+							end
+						end)
 					end,
 				}),
 			}),
