@@ -5,7 +5,7 @@ local AvatarPreviewViewport = require(script.Parent.Parent.organisms.AvatarPrevi
 
 local CATALOG_WIDTH_SCALE = 0.68
 local PREVIEW_WIDTH_SCALE = 1 - CATALOG_WIDTH_SCALE
-local SCREEN_PADDING_SCALE = 0.03
+local SCREEN_PADDING_SCALE = 0.01
 local CATALOG_DESIGN_SIZE = Vector2.new(858, 814)
 local MIN_CATALOG_SCALE = 0.35
 
@@ -27,16 +27,11 @@ local function CatalogScreen()
 		BackgroundTransparency = 1,
 		Size = UDim2.fromScale(1, 1),
 	}, {
-		InputBlocker = React.createElement("TextButton", {
-			AutoButtonColor = false,
-			Active = true,
-			BackgroundTransparency = 1,
-			BorderSizePixel = 0,
-			Modal = true,
-			Selectable = false,
-			Size = UDim2.fromScale(1, 1),
-			Text = "",
-			ZIndex = 1,
+		Padding = React.createElement("UIPadding", {
+			PaddingTop = UDim.new(SCREEN_PADDING_SCALE, 0),
+			PaddingBottom = UDim.new(SCREEN_PADDING_SCALE, 0),
+			PaddingLeft = UDim.new(SCREEN_PADDING_SCALE, 0),
+			PaddingRight = UDim.new(SCREEN_PADDING_SCALE, 0),
 		}),
 
 		CatalogArea = React.createElement("Frame", {
@@ -47,9 +42,9 @@ local function CatalogScreen()
 			ZIndex = 10,
 		}, {
 			Padding = React.createElement("UIPadding", {
-				PaddingTop = UDim.new(SCREEN_PADDING_SCALE, 0),
-				PaddingBottom = UDim.new(SCREEN_PADDING_SCALE, 0),
-				PaddingLeft = UDim.new(SCREEN_PADDING_SCALE, 0),
+				PaddingTop = UDim.new(0, 0),
+				PaddingBottom = UDim.new(0, 0),
+				PaddingLeft = UDim.new(0, 0),
 				PaddingRight = UDim.new(SCREEN_PADDING_SCALE, 0),
 			}),
 
@@ -76,10 +71,10 @@ local function CatalogScreen()
 			ZIndex = 10,
 		}, {
 			Padding = React.createElement("UIPadding", {
-				PaddingTop = UDim.new(SCREEN_PADDING_SCALE, 0),
-				PaddingBottom = UDim.new(SCREEN_PADDING_SCALE, 0),
+				PaddingTop = UDim.new(0, 0),
+				PaddingBottom = UDim.new(0, 0),
 				PaddingLeft = UDim.new(SCREEN_PADDING_SCALE, 0),
-				PaddingRight = UDim.new(SCREEN_PADDING_SCALE, 0),
+				PaddingRight = UDim.new(0, 0),
 			}),
 
 			Preview = React.createElement(AvatarPreviewViewport),
