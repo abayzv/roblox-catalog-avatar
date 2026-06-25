@@ -3,6 +3,7 @@ local CatalogTypes = require(ReplicatedStorage.Shared.types.CatalogTypes)
 local PreviewTypes = require(ReplicatedStorage.Shared.types.PreviewTypes)
 local CatalogConfig = require(ReplicatedStorage.Shared.config.CatalogConfig)
 local AvatarEditorService = game:GetService("AvatarEditorService")
+local ResolveEmotesRemote = require(ReplicatedStorage.Shared.remotes.ResolveEmotesRemote)
 
 local PreviewPayloadResolver = {}
 
@@ -103,7 +104,7 @@ function PreviewPayloadResolver.resolveBatch(items: { CatalogTypes.CatalogItem }
 					id = id,
 					itemType = "Asset",
 					kind = "Emote",
-					emoteAnimationId = id,
+					emoteAnimationId = id, -- Temporarily store Asset ID, will resolve later
 				}
 			else
 				payloads[item.key] = {
@@ -156,6 +157,33 @@ function PreviewPayloadResolver.resolveBatch(items: { CatalogTypes.CatalogItem }
 				animations = if next(animations) then animations else nil,
 				assetIds = if #assetIds > 0 then assetIds else nil,
 			}
+		end
+	end
+
+	local emotesToResolve = {}
+	for _, payload in pairs(payloads) do
+		if payload.kind == "Emote" and payload.emoteAnimationId then
+			table.insert(emotesToResolve, payload.emoteAnimationId)
+		end
+	end
+
+	if #emotesToResolve > 0 then
+		local success, resolvedMap = pcall(function()
+			return ResolveEmotesRemote:InvokeServer(emotesToResolve)
+		end)
+		
+		if success and type(resolvedMap) == "table" then
+			for _, payload in pairs(payloads) do
+				if payload.kind == "Emote" and payload.emoteAnimationId then
+					local resolvedId = resolvedMap[tostring(payload.emoteAnimationId)]
+					if resolvedId then
+						payload.emoteAnimationId = tonumber(resolvedId)
+					else
+						warn("[PreviewPayloadResolver] Failed to resolve animation ID for emote", payload.emoteAnimationId)
+						payload.kind = "Failed" -- Mark as failed if we can't get the animation ID
+					end
+				end
+			end
 		end
 	end
 

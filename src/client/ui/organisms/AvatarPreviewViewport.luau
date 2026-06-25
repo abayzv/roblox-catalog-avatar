@@ -22,6 +22,22 @@ local ACCESSORY_TYPE_TO_PROPERTY = {
 	[Enum.AccessoryType.Shoulder] = "ShouldersAccessory",
 	[Enum.AccessoryType.Waist] = "WaistAccessory",
 }
+
+local PROPERTY_TO_ACCESSORY_TYPE = {}
+for accType, prop in pairs(ACCESSORY_TYPE_TO_PROPERTY) do
+	PROPERTY_TO_ACCESSORY_TYPE[prop] = accType
+end
+
+local PROPERTY_TO_ATTACHMENT_NAME = {
+	BackAccessory = "BodyBackAttachment",
+	FaceAccessory = "FaceFrontAttachment",
+	FrontAccessory = "BodyFrontAttachment",
+	HairAccessory = "HairAttachment",
+	HatAccessory = "HatAttachment",
+	NeckAccessory = "NeckAttachment",
+	WaistAccessory = "WaistCenterAttachment",
+}
+
 local IDLE_ANIMATION_BY_RIG_TYPE = {
 	[Enum.HumanoidRigType.R6] = "rbxassetid://180435571",
 	[Enum.HumanoidRigType.R15] = "rbxassetid://507766666",
@@ -232,16 +248,47 @@ local function applyPreviewDescription(rig: Model, previewPayloads, appliedEntri
 		end
 	end
 
-	local originalParent = rig.Parent
-	local oldCFrame = rig:GetPivot()
-	
-	rig:PivotTo(CFrame.new(0, 50000, 0))
-	rig.Parent = game:GetService("Workspace")
-
 	task.spawn(function()
+		local originalParent = rig.Parent
+		local originalCFrame = rig:GetPivot()
+
+		rig.Parent = game.Workspace
+		rig:PivotTo(CFrame.new(0, -1000, 0))
+
+		local previewedProperties = {}
+		for _, payload in pairs(previewPayloads) do
+			if payload.propertyName then
+				previewedProperties[payload.propertyName] = true
+			end
+		end
+
+		for _, descendant in ipairs(rig:GetChildren()) do
+			if descendant:IsA("Accessory") then
+				for prop in pairs(previewedProperties) do
+					local match = false
+					local accType = PROPERTY_TO_ACCESSORY_TYPE[prop]
+					if accType and descendant.AccessoryType == accType then
+						match = true
+					end
+					if not match and descendant.AccessoryType == Enum.AccessoryType.Unknown then
+						local handle = descendant:FindFirstChild("Handle")
+						if handle then
+							local attName = PROPERTY_TO_ATTACHMENT_NAME[prop]
+							if attName and handle:FindFirstChild(attName) then
+								match = true
+							end
+						end
+					end
+					if match then
+						descendant:Destroy()
+						break
+					end
+				end
+			end
+		end
+
 		print("[CatalogPreview] Calling ApplyDescription...")
 		local ok, err = pcall(function()
-			humanoid:RemoveAccessories()
 			humanoid:ApplyDescription(description)
 		end)
 		print("[CatalogPreview] ApplyDescription finished! ok:", ok)
@@ -251,7 +298,7 @@ local function applyPreviewDescription(rig: Model, previewPayloads, appliedEntri
 		end
 
 		rig.Parent = originalParent
-		rig:PivotTo(oldCFrame)
+		rig:PivotTo(originalCFrame)
 
 		if rig.Parent then
 			prepareRig(rig)

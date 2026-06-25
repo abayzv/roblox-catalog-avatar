@@ -7,6 +7,9 @@
       "ApplyAvatarRemote": {
         "$className": "RemoteFunction"
       },
+      "ResolveEmotesRemote": {
+        "$className": "RemoteFunction"
+      },
       "Packages": {
         "$path": "Packages"
       },
