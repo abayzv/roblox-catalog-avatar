@@ -160,7 +160,7 @@ local function frameCamera(camera: Camera, model: Model)
 	camera.CFrame = CFrame.new(cameraPosition, target)
 end
 
-local function playIdleAnimation(model: Model, previewItems: table?)
+local function playIdleAnimation(model: Model, previewItems: table?, appliedItems: table?)
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	if not humanoid then
 		return
@@ -184,15 +184,19 @@ local function playIdleAnimation(model: Model, previewItems: table?)
 	
 	local emoteAssetId = nil
 	if previewItems then
-		for _, item in pairs(previewItems) do
+		for key, item in pairs(previewItems) do
 			if item.propertyName == "EmoteAnimation" then
-				emoteAssetId = item.assetId or tonumber(item.id)
-				break
+				if not (appliedItems and appliedItems[key]) then
+					emoteAssetId = item.assetId or tonumber(item.id)
+					break
+				end
 			elseif item.bundleAssets then
 				for _, bAsset in ipairs(item.bundleAssets) do
 					if bAsset.propertyName == "EmoteAnimation" then
-						emoteAssetId = bAsset.id or tonumber(bAsset.id)
-						break
+						if not (appliedItems and appliedItems[key]) then
+							emoteAssetId = bAsset.id or tonumber(bAsset.id)
+							break
+						end
 					end
 				end
 				if emoteAssetId then break end
@@ -501,7 +505,7 @@ local function setupViewport(
 			frameCamera(camera, rig)
 			
 			task.spawn(function()
-				playIdleAnimation(rig, previewItems)
+				playIdleAnimation(rig, previewItems, appliedItems)
 			end)
 		end
 	end)
