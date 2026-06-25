@@ -8,117 +8,11 @@ local GlassButton = require(script.Parent.Parent.atoms.GlassButton)
 local usePreviewState = require(script.Parent.Parent.Parent.hooks.usePreviewState)
 local PreviewState = require(script.Parent.Parent.Parent.logic.PreviewState)
 local ApplyAvatarRemote = require(ReplicatedStorage.Shared.remotes.ApplyAvatarRemote)
+local PreviewAppliers = require(script.Parent.Parent.Parent.logic.PreviewAppliers)
 
 local LOCAL_PLAYER = Players.LocalPlayer
 local INITIAL_RIG_YAW = math.rad(180)
 local DRAG_ROTATION_SPEED = 0.011
-local ACCESSORY_TYPE_TO_PROPERTY = {
-	[Enum.AccessoryType.Back] = "BackAccessory",
-	[Enum.AccessoryType.Face] = "FaceAccessory",
-	[Enum.AccessoryType.Front] = "FrontAccessory",
-	[Enum.AccessoryType.Hair] = "HairAccessory",
-	[Enum.AccessoryType.Hat] = "HatAccessory",
-	[Enum.AccessoryType.Neck] = "NeckAccessory",
-	[Enum.AccessoryType.Shoulder] = "ShouldersAccessory",
-	[Enum.AccessoryType.Waist] = "WaistAccessory",
-	[Enum.AccessoryType.TShirt] = "TShirtAccessory",
-	[Enum.AccessoryType.Shirt] = "ShirtAccessory",
-	[Enum.AccessoryType.Pants] = "PantsAccessory",
-	[Enum.AccessoryType.Jacket] = "JacketAccessory",
-	[Enum.AccessoryType.Sweater] = "SweaterAccessory",
-	[Enum.AccessoryType.Shorts] = "ShortsAccessory",
-	[Enum.AccessoryType.LeftShoe] = "LeftShoeAccessory",
-	[Enum.AccessoryType.RightShoe] = "RightShoeAccessory",
-	[Enum.AccessoryType.DressSkirt] = "DressSkirtAccessory",
-	[Enum.AccessoryType.Eyebrow] = "EyebrowAccessory",
-	[Enum.AccessoryType.Eyelash] = "EyelashAccessory",
-}
-
-local PROPERTY_TO_ACCESSORY_TYPE = {}
-for accType, propName in pairs(ACCESSORY_TYPE_TO_PROPERTY) do
-	PROPERTY_TO_ACCESSORY_TYPE[propName] = accType
-end
-
-local resolvedAssetCache = {}
-
-local IDLE_ANIMATION_BY_RIG_TYPE = {
-	[Enum.HumanoidRigType.R6] = "rbxassetid://180435571",
-	[Enum.HumanoidRigType.R15] = "rbxassetid://507766666",
-}
-
-local function addAssetToBucket(buckets, propertyName: string, assetId: number)
-	local bucket = buckets[propertyName]
-	if not bucket then
-		bucket = {}
-		buckets[propertyName] = bucket
-	end
-
-	table.insert(bucket, assetId)
-end
-
-local function getItemBuckets(items)
-	local buckets = {}
-
-	for _, item in pairs(items) do
-		if item.bundleAssets then
-			for _, bAsset in ipairs(item.bundleAssets) do
-				if bAsset.propertyName then
-					addAssetToBucket(buckets, bAsset.propertyName, bAsset.id)
-				end
-			end
-		else
-			local assetId = item.assetId or tonumber(item.id)
-			local propertyName = item.propertyName
-
-			if assetId and propertyName then
-				addAssetToBucket(buckets, propertyName, assetId)
-			end
-		end
-	end
-
-	for propertyName, bucket in pairs(buckets) do
-		table.sort(bucket)
-	end
-
-	return buckets
-end
-
-local function sameAssetIds(left: { number }?, right: { number }?): boolean
-	left = left or {}
-	right = right or {}
-
-	if #left ~= #right then
-		return false
-	end
-
-	for index, assetId in ipairs(left) do
-		if right[index] ~= assetId then
-			return false
-		end
-	end
-
-	return true
-end
-
-local function getTouchedProperties(previewItems, appliedItems)
-	local previewBuckets = getItemBuckets(previewItems)
-	local appliedBuckets = getItemBuckets(appliedItems)
-	local touchedProperties = {}
-
-	for propertyName, previewAssetIds in pairs(previewBuckets) do
-		if not sameAssetIds(previewAssetIds, appliedBuckets[propertyName]) then
-			touchedProperties[propertyName] = true
-		end
-	end
-
-	for propertyName, appliedAssetIds in pairs(appliedBuckets) do
-		if not sameAssetIds(appliedAssetIds, previewBuckets[propertyName]) then
-			touchedProperties[propertyName] = true
-		end
-	end
-
-	return touchedProperties, previewBuckets, appliedBuckets
-end
 
 
 
@@ -162,113 +56,6 @@ local function frameCamera(camera: Camera, model: Model)
 	camera.CFrame = CFrame.new(cameraPosition, target)
 end
 
-local function playIdleAnimation(model: Model, previewItems: table?, appliedItems: table?)
-	local humanoid = model:FindFirstChildOfClass("Humanoid")
-	if not humanoid then
-		return
-	end
-
-	local animator = humanoid:FindFirstChildOfClass("Animator")
-	if not animator then
-		animator = Instance.new("Animator")
-		animator.Parent = humanoid
-	end
-
-	for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-		if track.Name == "CatalogPreviewIdle" or track.Name == "CatalogPreviewEmote" then
-			track:Stop(0.1)
-		end
-	end
-
-
-	local animation = Instance.new("Animation")
-	animation.Name = "CatalogPreviewIdle"
-	
-	local emoteAssetId = nil
-	if previewItems then
-		for key, item in pairs(previewItems) do
-			if item.propertyName == "EmoteAnimation" then
-				if not (appliedItems and appliedItems[key]) then
-					emoteAssetId = item.assetId or tonumber(item.id)
-					break
-				end
-			elseif item.bundleAssets then
-				for _, bAsset in ipairs(item.bundleAssets) do
-					if bAsset.propertyName == "EmoteAnimation" then
-						if not (appliedItems and appliedItems[key]) then
-							emoteAssetId = bAsset.id or tonumber(bAsset.id)
-							break
-						end
-					end
-				end
-				if emoteAssetId then break end
-			end
-		end
-	end
-
-	if emoteAssetId then
-		-- Emote catalog IDs need server-side resolution to get the actual AnimationId
-		local resolvedAnimId = resolvedAssetCache[emoteAssetId]
-		if not resolvedAnimId then
-			local callSuccess, response = pcall(function()
-				return ApplyAvatarRemote:InvokeServer({
-					action = "ResolvePreviewAsset",
-					assetId = emoteAssetId
-				})
-			end)
-			if callSuccess and type(response) == "table" and response.success then
-				resolvedAnimId = response.result
-				resolvedAssetCache[emoteAssetId] = resolvedAnimId
-			end
-		end
-		
-		if resolvedAnimId then
-			animation.AnimationId = type(resolvedAnimId) == "string" and resolvedAnimId or ("rbxassetid://" .. resolvedAnimId)
-		else
-			warn("[CatalogPreview] Failed to resolve Emote ID for asset:", emoteAssetId)
-			animation:Destroy()
-			return
-		end
-	else
-		local desc = humanoid:GetAppliedDescription()
-		if desc and desc.IdleAnimation and desc.IdleAnimation > 0 then
-			local animate = model:FindFirstChild("Animate")
-			if animate then
-				local idleFolder = animate:FindFirstChild("idle")
-				if idleFolder then
-					local anim1 = idleFolder:FindFirstChild("Animation1")
-					if anim1 and anim1:IsA("Animation") and anim1.AnimationId ~= "" then
-						animation.AnimationId = anim1.AnimationId
-					end
-				end
-			end
-			
-			if animation.AnimationId == "" then
-				animation.AnimationId = IDLE_ANIMATION_BY_RIG_TYPE[humanoid.RigType]
-					or IDLE_ANIMATION_BY_RIG_TYPE[Enum.HumanoidRigType.R15]
-			end
-		else
-			animation.AnimationId = IDLE_ANIMATION_BY_RIG_TYPE[humanoid.RigType]
-				or IDLE_ANIMATION_BY_RIG_TYPE[Enum.HumanoidRigType.R15]
-		end
-	end
-
-	local ok, trackOrError = pcall(function()
-		return animator:LoadAnimation(animation)
-	end)
-
-	if ok then
-		local track = trackOrError
-		track.Looped = true
-		track.Priority = Enum.AnimationPriority.Idle
-		track:Play(0.2, 1, 1)
-	else
-		warn("[CatalogPreview] Failed to play viewport idle animation:", trackOrError)
-	end
-
-	animation:Destroy()
-end
-
 local function cloneLocalCharacter(): Model?
 	local character = LOCAL_PLAYER.Character or LOCAL_PLAYER.CharacterAdded:Wait()
 	if not character then
@@ -288,192 +75,7 @@ local function cloneLocalCharacter(): Model?
 	local clone = character:Clone()
 	character.Archivable = previousArchivable
 
-	if clone then
-		clone.Name = "CatalogPreviewRig"
-		prepareRig(clone)
-		pivotRig(clone)
-	end
-
 	return clone
-end
-
-local function applyPreviewDescription(rig: Model, previewItems, appliedItems, camera: Camera)
-	local humanoid = rig:FindFirstChildOfClass("Humanoid")
-	if not humanoid then
-		return
-	end
-
-	local description = humanoid:GetAppliedDescription()
-	local touchedProperties, previewBuckets, appliedBuckets = getTouchedProperties(previewItems, appliedItems)
-
-	if next(touchedProperties) == nil then
-		print(
-			"[CatalogPreview] Viewport has no touched appearance properties; keeping clone intact."
-		)
-		return
-	end
-
-	local touchedNames = {}
-	for propertyName in pairs(touchedProperties) do
-		table.insert(touchedNames, propertyName)
-	end
-	table.sort(touchedNames)
-	print("[CatalogPreview] Viewport applying touched properties:", table.concat(touchedNames, ","))
-
-	local accessories = description:GetAccessories(true)
-	local accessoriesModified = false
-
-	local CLOTHING_PROPERTIES = { Shirt = true, Pants = true, GraphicTShirt = true }
-	local clothingToApply = {} -- { propertyName -> catalogAssetId }
-
-	-- Save existing clothing instances from the cloned rig before ApplyDescription destroys them
-	local savedClothing = {}
-	for _, child in ipairs(rig:GetChildren()) do
-		if child:IsA("Shirt") or child:IsA("Pants") or child:IsA("ShirtGraphic") then
-			child.Parent = nil -- unparent to prevent ApplyDescription from destroying them
-			table.insert(savedClothing, child)
-		end
-	end
-
-	for propertyName in pairs(touchedProperties) do
-		-- Handle 2D Clothing separately (Shirt, Pants, GraphicTShirt)
-		if CLOTHING_PROPERTIES[propertyName] then
-			local assetIds = previewBuckets[propertyName]
-			if not assetIds or #assetIds == 0 then
-				assetIds = appliedBuckets[propertyName] or {}
-			end
-			clothingToApply[propertyName] = assetIds[#assetIds] or 0
-		else
-			local currentValue
-			local success = pcall(function() currentValue = description[propertyName] end)
-			
-			if success and type(currentValue) == "number" then
-				-- Body Parts (Head, Torso, LeftArm, etc) & other numeric properties
-				local assetIds = previewBuckets[propertyName]
-				if not assetIds or #assetIds == 0 then
-					assetIds = appliedBuckets[propertyName] or {}
-				end
-				description[propertyName] = assetIds[#assetIds] or 0
-			else
-				local accType = PROPERTY_TO_ACCESSORY_TYPE[propertyName]
-				if accType then
-					accessoriesModified = true
-					-- Remove old
-					for i = #accessories, 1, -1 do
-						if accessories[i].AccessoryType == accType then
-							table.remove(accessories, i)
-						end
-					end
-					-- Add new (or restore applied)
-					local newIds = previewBuckets[propertyName]
-					if not newIds or #newIds == 0 then
-						newIds = appliedBuckets[propertyName] or {}
-					end
-					
-					for _, assetId in ipairs(newIds) do
-						table.insert(accessories, {
-							AccessoryType = accType,
-							AssetId = assetId,
-							Order = 1,
-						})
-					end
-				end
-			end
-		end
-	end
-
-	if accessoriesModified then
-		description:SetAccessories(accessories, true)
-	end
-
-	-- Zero out 2D clothing in description so ApplyDescription doesn't error on catalog IDs
-	description.Shirt = 0
-	description.Pants = 0
-	description.GraphicTShirt = 0
-
-	local ok, err = pcall(function()
-		humanoid:ApplyDescription(description)
-	end)
-
-	if not ok then
-		warn("[CatalogPreview] Failed to apply viewport description:", err)
-	end
-
-	-- Restore saved clothing for non-touched properties
-	for _, clothing in ipairs(savedClothing) do
-		local propName = nil
-		if clothing:IsA("Shirt") then propName = "Shirt"
-		elseif clothing:IsA("Pants") then propName = "Pants"
-		elseif clothing:IsA("ShirtGraphic") then propName = "GraphicTShirt"
-		end
-
-		if propName and not clothingToApply[propName] then
-			-- Not being changed, restore the original instance
-			clothing.Parent = rig
-		else
-			-- Will be replaced by preview item
-			clothing:Destroy()
-		end
-	end
-
-	-- Apply new 2D Clothing via server-resolved template IDs
-	for propertyName, catalogAssetId in pairs(clothingToApply) do
-		if catalogAssetId == 0 then
-			-- Remove clothing
-			if propertyName == "Shirt" then
-				local existing = rig:FindFirstChildOfClass("Shirt")
-				if existing then existing:Destroy() end
-			elseif propertyName == "Pants" then
-				local existing = rig:FindFirstChildOfClass("Pants")
-				if existing then existing:Destroy() end
-			elseif propertyName == "GraphicTShirt" then
-				local existing = rig:FindFirstChildOfClass("ShirtGraphic")
-				if existing then existing:Destroy() end
-			end
-		else
-			-- Resolve catalog ID to template ID via server
-			local templateId = resolvedAssetCache[catalogAssetId]
-			if not templateId then
-				local callSuccess, response = pcall(function()
-					return ApplyAvatarRemote:InvokeServer({
-						action = "ResolvePreviewAsset",
-						assetId = catalogAssetId
-					})
-				end)
-				if callSuccess and type(response) == "table" and response.success then
-					templateId = response.result
-					resolvedAssetCache[catalogAssetId] = templateId
-				end
-			end
-
-			if templateId then
-				if propertyName == "Shirt" then
-					local existing = rig:FindFirstChildOfClass("Shirt")
-					if not existing then
-						existing = Instance.new("Shirt")
-						existing.Parent = rig
-					end
-					existing.ShirtTemplate = "rbxassetid://" .. templateId
-				elseif propertyName == "Pants" then
-					local existing = rig:FindFirstChildOfClass("Pants")
-					if not existing then
-						existing = Instance.new("Pants")
-						existing.Parent = rig
-					end
-					existing.PantsTemplate = "rbxassetid://" .. templateId
-				elseif propertyName == "GraphicTShirt" then
-					local existing = rig:FindFirstChildOfClass("ShirtGraphic")
-					if not existing then
-						existing = Instance.new("ShirtGraphic")
-						existing.Parent = rig
-					end
-					existing.Graphic = "rbxassetid://" .. templateId
-				end
-			else
-				warn("[CatalogPreview] Failed to resolve 2D clothing template for:", propertyName, catalogAssetId)
-			end
-		end
-	end
 end
 
 
@@ -492,6 +94,7 @@ local function AvatarPreviewViewport()
 	local viewportRef = React.useRef(nil)
 	local rigRef = React.useRef(nil)
 	local cameraRef = React.useRef(nil)
+	local updateVersionRef = React.useRef(0)
 	local draggingRef = React.useRef(false)
 	local lastDragXRef = React.useRef(0)
 	local yawRef = React.useRef(INITIAL_RIG_YAW)
@@ -565,13 +168,10 @@ local function AvatarPreviewViewport()
 		worldModel.Name = "PreviewWorld"
 		worldModel.Parent = viewport
 
-		local rig = cloneLocalCharacter()
-		if rig then
-			rig.Parent = worldModel
-			rigRef.current = rig
-		end
-
 		return function()
+			if rigRef.current then
+				rigRef.current:Destroy()
+			end
 			rigRef.current = nil
 			cameraRef.current = nil
 			viewport:ClearAllChildren()
@@ -582,22 +182,76 @@ local function AvatarPreviewViewport()
 	React.useEffect(function()
 		if not isHydrated then return end
 
-		local rig = rigRef.current
+		local viewport = viewportRef.current
 		local camera = cameraRef.current
 		
-		if rig and camera then
+		if viewport and camera then
 			yawRef.current = INITIAL_RIG_YAW
-			applyPreviewDescription(rig, previewItems, appliedItems, camera)
-
-			task.defer(function()
-				if rig.Parent then
-					prepareRig(rig)
-					pivotRig(rig, yawRef.current)
-					frameCamera(camera, rig)
+			
+			local currentVersion = updateVersionRef.current + 1
+			updateVersionRef.current = currentVersion
+			
+			task.spawn(function()
+				-- 1. Clone fresh rig
+				local newRig = cloneLocalCharacter()
+				if not newRig then return end
+				
+				-- 2. Parent to Workspace first (hidden) for physics/welding of layered clothing
+				newRig:PivotTo(CFrame.new(0, 10000, 0))
+				newRig.Parent = workspace
+				
+				-- 3. Build & apply description
+				local humanoid = newRig:FindFirstChildOfClass("Humanoid")
+				if not humanoid then
+					newRig:Destroy()
+					return
+				end
+				
+				local description = humanoid:GetAppliedDescription()
+				
+				local previewBuckets = PreviewAppliers.getItemBuckets(previewItems)
+				local appliedBuckets = PreviewAppliers.getItemBuckets(appliedItems)
+				
+				PreviewAppliers.applyBodyParts(description, previewBuckets, appliedBuckets)
+				PreviewAppliers.applyAccessories(description, previewBuckets, appliedBuckets)
+				
+				local ok, err = pcall(function()
+					humanoid:ApplyDescription(description)
+				end)
+				if not ok then
+					warn("[CatalogPreview] Failed to apply description:", err)
+				end
+				
+				-- If another update started while we were yielding, discard this rig
+				if updateVersionRef.current ~= currentVersion then
+					newRig:Destroy()
+					return
+				end
+				
+				-- 4. Apply classic clothing manual (after ApplyDescription)
+				PreviewAppliers.applyClassicClothing(newRig, previewBuckets, appliedBuckets)
+				
+				-- 5. Prepare and move to ViewportFrame
+				prepareRig(newRig)
+				pivotRig(newRig, yawRef.current)
+				
+				local worldModel = viewport:FindFirstChild("PreviewWorld")
+				if worldModel then
+					if rigRef.current and rigRef.current.Parent then
+						rigRef.current:Destroy()
+					end
 					
+					newRig.Parent = worldModel
+					rigRef.current = newRig
+					
+					frameCamera(camera, newRig)
+					
+					-- 6. Play animation
 					task.spawn(function()
-						playIdleAnimation(rig, previewItems, appliedItems)
+						PreviewAppliers.playAnimation(newRig, previewItems, appliedItems)
 					end)
+				else
+					newRig:Destroy()
 				end
 			end)
 		end
