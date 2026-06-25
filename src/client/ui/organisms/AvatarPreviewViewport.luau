@@ -91,7 +91,32 @@ local function setDescriptionProperty(
 	local success, currentValue = pcall(function()
 		return description[propertyName]
 	end)
+	
 	if not success then
+		local accessoryName = propertyName:gsub("Accessory", "")
+		if accessoryName == "Shoulders" then accessoryName = "Shoulder" end
+		
+		local successEnum, enumItem = pcall(function()
+			return Enum.AccessoryType[accessoryName]
+		end)
+		
+		if successEnum and enumItem then
+			local accs = description:GetAccessories(true)
+			for i = #accs, 1, -1 do
+				if accs[i].AccessoryType == enumItem then
+					table.remove(accs, i)
+				end
+			end
+			for i, assetId in ipairs(assetIds) do
+				table.insert(accs, {
+					AccessoryType = enumItem,
+					AssetId = assetId,
+					IsLayered = true,
+					Order = i
+				})
+			end
+			description:SetAccessories(accs, true)
+		end
 		return
 	end
 
@@ -228,7 +253,7 @@ local function applyPreviewDescription(rig: Model, previewPayloads, appliedEntri
 		print(`[CatalogPreview] Payload key={key} kind={payload.kind} prop={payload.propertyName} assetIds={payload.assetIds and table.concat(payload.assetIds, ",") or "nil"}`)
 		if payload.propertyName and payload.assetIds then
 			setDescriptionProperty(description, payload.propertyName, payload.assetIds)
-			print(`[CatalogPreview]   -> Set {payload.propertyName} = {description[payload.propertyName]}`)
+			print(`[CatalogPreview]   -> Processed {payload.propertyName}`)
 		end
 		
 		if payload.bodyParts then
