@@ -39,6 +39,8 @@ for accType, propName in pairs(ACCESSORY_TYPE_TO_PROPERTY) do
 	PROPERTY_TO_ACCESSORY_TYPE[propName] = accType
 end
 
+local resolvedAssetCache = {}
+
 local IDLE_ANIMATION_BY_RIG_TYPE = {
 	[Enum.HumanoidRigType.R6] = "rbxassetid://180435571",
 	[Enum.HumanoidRigType.R15] = "rbxassetid://507766666",
@@ -206,15 +208,18 @@ local function playIdleAnimation(model: Model, previewItems: table?, appliedItem
 
 	if emoteAssetId then
 		-- Emote catalog IDs need server-side resolution to get the actual AnimationId
-		local resolvedAnimId = nil
-		local callSuccess, response = pcall(function()
-			return ApplyAvatarRemote:InvokeServer({
-				action = "ResolvePreviewAsset",
-				assetId = emoteAssetId
-			})
-		end)
-		if callSuccess and type(response) == "table" and response.success then
-			resolvedAnimId = response.result
+		local resolvedAnimId = resolvedAssetCache[emoteAssetId]
+		if not resolvedAnimId then
+			local callSuccess, response = pcall(function()
+				return ApplyAvatarRemote:InvokeServer({
+					action = "ResolvePreviewAsset",
+					assetId = emoteAssetId
+				})
+			end)
+			if callSuccess and type(response) == "table" and response.success then
+				resolvedAnimId = response.result
+				resolvedAssetCache[emoteAssetId] = resolvedAnimId
+			end
 		end
 		
 		if resolvedAnimId then
@@ -427,15 +432,18 @@ local function applyPreviewDescription(rig: Model, previewItems, appliedItems, c
 			end
 		else
 			-- Resolve catalog ID to template ID via server
-			local templateId = nil
-			local callSuccess, response = pcall(function()
-				return ApplyAvatarRemote:InvokeServer({
-					action = "ResolvePreviewAsset",
-					assetId = catalogAssetId
-				})
-			end)
-			if callSuccess and type(response) == "table" and response.success then
-				templateId = response.result
+			local templateId = resolvedAssetCache[catalogAssetId]
+			if not templateId then
+				local callSuccess, response = pcall(function()
+					return ApplyAvatarRemote:InvokeServer({
+						action = "ResolvePreviewAsset",
+						assetId = catalogAssetId
+					})
+				end)
+				if callSuccess and type(response) == "table" and response.success then
+					templateId = response.result
+					resolvedAssetCache[catalogAssetId] = templateId
+				end
 			end
 
 			if templateId then
@@ -468,50 +476,7 @@ local function applyPreviewDescription(rig: Model, previewItems, appliedItems, c
 	end
 end
 
-local function setupViewport(
-	viewport: ViewportFrame,
-	previewItems,
-	appliedItems,
-	shouldApplyPreview: boolean
-)
-	viewport:ClearAllChildren()
 
-	local camera = Instance.new("Camera")
-	camera.Name = "PreviewCamera"
-	camera.FieldOfView = 31
-	camera.Parent = viewport
-	viewport.CurrentCamera = camera
-
-	local worldModel = Instance.new("WorldModel")
-	worldModel.Name = "PreviewWorld"
-	worldModel.Parent = viewport
-
-	local rig = cloneLocalCharacter()
-	if not rig then
-		return nil
-	end
-
-	rig.Parent = worldModel
-	
-	if shouldApplyPreview then
-		applyPreviewDescription(rig, previewItems, appliedItems, camera)
-	end
-
-	-- Always prepare rig and play animation, even if applyPreviewDescription returns early
-	task.defer(function()
-		if rig.Parent then
-			prepareRig(rig)
-			pivotRig(rig)
-			frameCamera(camera, rig)
-			
-			task.spawn(function()
-				playIdleAnimation(rig, previewItems, appliedItems)
-			end)
-		end
-	end)
-
-	return rig
-end
 
 local function isPrimaryDragInput(input: InputObject): boolean
 	return input.UserInputType == Enum.UserInputType.MouseButton1
@@ -526,6 +491,7 @@ end
 local function AvatarPreviewViewport()
 	local viewportRef = React.useRef(nil)
 	local rigRef = React.useRef(nil)
+	local cameraRef = React.useRef(nil)
 	local draggingRef = React.useRef(false)
 	local lastDragXRef = React.useRef(0)
 	local yawRef = React.useRef(INITIAL_RIG_YAW)
@@ -581,20 +547,59 @@ local function AvatarPreviewViewport()
 		return nil
 	end, {})
 
+	-- Mount/Unmount effect to create persistent Viewport instances
 	React.useEffect(function()
 		local viewport = viewportRef.current
-		if not viewport then
-			return nil
-		end
+		if not viewport then return end
 
-		yawRef.current = INITIAL_RIG_YAW
-		rigRef.current = setupViewport(viewport, previewItems, appliedItems, isHydrated)
+		viewport:ClearAllChildren()
+
+		local camera = Instance.new("Camera")
+		camera.Name = "PreviewCamera"
+		camera.FieldOfView = 31
+		camera.Parent = viewport
+		viewport.CurrentCamera = camera
+		cameraRef.current = camera
+
+		local worldModel = Instance.new("WorldModel")
+		worldModel.Name = "PreviewWorld"
+		worldModel.Parent = viewport
+
+		local rig = cloneLocalCharacter()
+		if rig then
+			rig.Parent = worldModel
+			rigRef.current = rig
+		end
 
 		return function()
 			rigRef.current = nil
-			if viewport then
-				viewport:ClearAllChildren()
-			end
+			cameraRef.current = nil
+			viewport:ClearAllChildren()
+		end
+	end, {})
+
+	-- Update effect to apply descriptions when state changes
+	React.useEffect(function()
+		if not isHydrated then return end
+
+		local rig = rigRef.current
+		local camera = cameraRef.current
+		
+		if rig and camera then
+			yawRef.current = INITIAL_RIG_YAW
+			applyPreviewDescription(rig, previewItems, appliedItems, camera)
+
+			task.defer(function()
+				if rig.Parent then
+					prepareRig(rig)
+					pivotRig(rig, yawRef.current)
+					frameCamera(camera, rig)
+					
+					task.spawn(function()
+						playIdleAnimation(rig, previewItems, appliedItems)
+					end)
+				end
+			end)
 		end
 	end, { previewKey, isHydrated })
 

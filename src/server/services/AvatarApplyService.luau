@@ -26,6 +26,7 @@ type EquippedState = {
 local MAX_APPLY_ITEMS = 20
 local appliedStates: { [number]: EquippedState } = {}
 local originalStates: { [number]: EquippedState } = {}
+local resolvedAssetCache: { [number]: number } = {}
 local ACCESSORY_TYPE_TO_PROPERTY = {
 	[Enum.AccessoryType.Back] = "BackAccessory",
 	[Enum.AccessoryType.Face] = "FaceAccessory",
@@ -595,6 +596,10 @@ function AvatarApplyService.init()
 				local assetId = tonumber(payload.assetId)
 				if not assetId then return { success = false } end
 				
+				if resolvedAssetCache[assetId] then
+					return { success = true, result = resolvedAssetCache[assetId] }
+				end
+
 				local success, model = pcall(function()
 					return game:GetService("InsertService"):LoadAsset(assetId)
 				end)
@@ -604,7 +609,13 @@ function AvatarApplyService.init()
 					if anim then
 						local animId = anim.AnimationId
 						model:Destroy()
-						return { success = true, result = animId }
+						local numId = tonumber(string.match(animId, "%d+"))
+						if numId then
+							resolvedAssetCache[assetId] = numId
+							return { success = true, result = numId }
+						else
+							return { success = true, result = animId }
+						end
 					end
 					
 					local clothing = model:FindFirstChildOfClass("Shirt", true)
@@ -615,6 +626,7 @@ function AvatarApplyService.init()
 						local idStr = string.match(template, "%d+")
 						model:Destroy()
 						if idStr then
+							resolvedAssetCache[assetId] = tonumber(idStr)
 							return { success = true, result = tonumber(idStr) }
 						end
 					end
@@ -624,6 +636,7 @@ function AvatarApplyService.init()
 						local idStr = string.match(decal.Texture, "%d+")
 						model:Destroy()
 						if idStr then
+							resolvedAssetCache[assetId] = tonumber(idStr)
 							return { success = true, result = tonumber(idStr) }
 						end
 					end
