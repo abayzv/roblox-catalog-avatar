@@ -37,6 +37,25 @@ local IDLE_ANIMATION_BY_RIG_TYPE = {
 
 local CLOTHING_PROPERTIES = { Shirt = true, Pants = true, GraphicTShirt = true }
 
+-- Rigid accessories should be written back as rigid accessories, not as layered items.
+-- If HairAccessory is inserted as layered while the old HairAccessory CSV still exists,
+-- the viewport can show the old hair + new hair at the same time.
+local LAYERED_ACCESSORY_PROPERTIES = {
+	TShirtAccessory = true,
+	ShirtAccessory = true,
+	PantsAccessory = true,
+	JacketAccessory = true,
+	SweaterAccessory = true,
+	ShortsAccessory = true,
+	LeftShoeAccessory = true,
+	RightShoeAccessory = true,
+	DressSkirtAccessory = true,
+}
+
+local SINGLE_ACCESSORY_PROPERTIES = {
+	HairAccessory = true,
+}
+
 -- Client-side cache for resolved asset IDs (Template IDs / Animation IDs)
 local resolvedAssetCache = {}
 
@@ -121,8 +140,74 @@ function PreviewAppliers.applyBodyParts(description: HumanoidDescription, previe
 	end
 end
 
+local function getAccessoryIdsForProperty(propertyName: string, previewBuckets, appliedBuckets)
+	local newIds = previewBuckets[propertyName]
+
+	if not newIds or #newIds == 0 then
+		newIds = appliedBuckets[propertyName] or {}
+	end
+
+	if SINGLE_ACCESSORY_PROPERTIES[propertyName] and #newIds > 1 then
+		return { newIds[#newIds] }
+	end
+
+	return newIds
+end
+
+local function joinCsv(assetIds)
+	local values = {}
+
+	for _, assetId in ipairs(assetIds or {}) do
+		table.insert(values, tostring(assetId))
+	end
+
+	return table.concat(values, ",")
+end
+
+local function setLegacyAccessoryProperty(
+	description: HumanoidDescription,
+	propertyName: string,
+	assetIds
+)
+	pcall(function()
+		if type(description[propertyName]) == "string" then
+			description[propertyName] = joinCsv(assetIds)
+		end
+	end)
+end
+
+local function isHairAccessoryInstance(accessory: Instance): boolean
+	if not accessory:IsA("Accessory") then
+		return false
+	end
+
+	local ok, accessoryType = pcall(function()
+		return accessory.AccessoryType
+	end)
+
+	if ok and accessoryType == Enum.AccessoryType.Hair then
+		return true
+	end
+
+	local handle = accessory:FindFirstChild("Handle")
+	if handle and handle:FindFirstChild("HairAttachment", true) then
+		return true
+	end
+
+	return accessory:FindFirstChild("HairAttachment", true) ~= nil
+end
+
+local function clearLegacyAccessoryProperty(description: HumanoidDescription, propertyName: string)
+	pcall(function()
+		if type(description[propertyName]) == "string" then
+			description[propertyName] = ""
+		end
+	end)
+end
+
 function PreviewAppliers.applyAccessories(description: HumanoidDescription, previewBuckets, appliedBuckets)
 	local accessories = description:GetAccessories(true)
+	local rigidAccessoryIdsByProperty = {}
 
 	-- We collect all unique property names for accessories involved
 	local touchedProps = {}
@@ -135,31 +220,61 @@ function PreviewAppliers.applyAccessories(description: HumanoidDescription, prev
 
 	for propertyName in pairs(touchedProps) do
 		local accType = PROPERTY_TO_ACCESSORY_TYPE[propertyName]
-		
-		-- 1. Remove all old accessories of this type
+
+		-- Remove old entries of the same accessory type from AccessoryBlob.
+		-- Rigid accessories like HairAccessory will be written back through the
+		-- normal CSV property instead of SetAccessories(), because that path
+		-- reliably replaces the player's existing rigid hair.
 		for i = #accessories, 1, -1 do
 			if accessories[i].AccessoryType == accType then
 				table.remove(accessories, i)
 			end
 		end
-		
-		-- 2. Add new (or restore applied)
-		local newIds = previewBuckets[propertyName]
-		if not newIds or #newIds == 0 then
-			newIds = appliedBuckets[propertyName] or {}
-		end
-		
-		for order, assetId in ipairs(newIds) do
-			table.insert(accessories, {
-				AccessoryType = accType,
-				AssetId = assetId,
-				IsLayered = true,
-				Order = order,
-			})
+
+		local newIds = getAccessoryIdsForProperty(propertyName, previewBuckets, appliedBuckets)
+		local isLayered = LAYERED_ACCESSORY_PROPERTIES[propertyName] == true
+
+		if isLayered then
+			clearLegacyAccessoryProperty(description, propertyName)
+
+			for order, assetId in ipairs(newIds) do
+				table.insert(accessories, {
+					AccessoryType = accType,
+					AssetId = assetId,
+					IsLayered = true,
+					Order = order,
+				})
+			end
+		else
+			rigidAccessoryIdsByProperty[propertyName] = newIds
 		end
 	end
 
 	description:SetAccessories(accessories, true)
+
+	-- Apply rigid accessories after SetAccessories(), because SetAccessories(true)
+	-- can rewrite rigid accessory CSV properties based on the blob.
+	-- HairAccessory is intentionally single-slot via getAccessoryIdsForProperty().
+	for propertyName, assetIds in pairs(rigidAccessoryIdsByProperty) do
+		setLegacyAccessoryProperty(description, propertyName, assetIds)
+	end
+end
+
+function PreviewAppliers.cleanupRigAccessoriesForPreview(rig: Model, previewBuckets, appliedBuckets)
+	-- The viewport rig is cloned from the live character, so it can already contain
+	-- a physical Hair Accessory instance. On some avatars, ApplyDescriptionReset()
+	-- does not remove that old instance before adding the new hair, causing stack.
+	-- Destroying only existing hair before applying the new description makes the
+	-- preview deterministic while keeping other accessories intact.
+	if not previewBuckets.HairAccessory and not appliedBuckets.HairAccessory then
+		return
+	end
+
+	for _, child in ipairs(rig:GetChildren()) do
+		if isHairAccessoryInstance(child) then
+			child:Destroy()
+		end
+	end
 end
 
 function PreviewAppliers.applyClassicClothing(rig: Model, previewBuckets, appliedBuckets)

@@ -23,10 +23,28 @@ type EquippedState = {
 	itemIds: { number },
 }
 
-local MAX_APPLY_ITEMS = 20
+local MAX_APPLY_ITEMS = 120
 local appliedStates: { [number]: EquippedState } = {}
 local originalStates: { [number]: EquippedState } = {}
 local resolvedAssetCache: { [number]: number } = {}
+
+type CachedProductValidation = {
+	ok: boolean,
+	assetTypeId: number?,
+	name: string?,
+	message: string?,
+}
+
+local productValidationCache: { [number]: CachedProductValidation } = {}
+local productValidationInFlight: { [number]: boolean } = {}
+local ownershipValidationCache: { [number]: { [number]: boolean } } = {}
+
+local PRELOAD_APPLY_ITEMS_LIMIT = 120
+local PRELOAD_THROTTLE_SECONDS = 0.03
+
+-- true = safer fallback: if client preload did not run, Apply still works, but may be slow once.
+-- false = strict cache-only apply: faster failure if item was never preloaded.
+local APPLY_FETCH_ON_MISSING_CACHE = true
 
 local ACCESSORY_TYPE_TO_PROPERTY = {
 	[Enum.AccessoryType.Back] = "BackAccessory",
@@ -176,8 +194,18 @@ local function getDesiredIdsFromPayload(payload: any): { number }?
 		return nil
 	end
 
+	-- Apply/preload payloads may come from different client callsites.
+	-- Keep this tolerant so cache prewarming and real apply use the exact same parser.
 	if payload.itemIds ~= nil then
 		return normalizeAssetIds(payload.itemIds)
+	end
+
+	if payload.assetIds ~= nil then
+		return normalizeAssetIds(payload.assetIds)
+	end
+
+	if payload.ids ~= nil then
+		return normalizeAssetIds(payload.ids)
 	end
 
 	return normalizeAssetIds(payload)
@@ -402,41 +430,159 @@ local function getOrCreateState(player: Player): EquippedState?
 	return nil
 end
 
-local function validateProduct(player: Player, assetId: number): (boolean, ProductInfo?, string?)
+local function fetchAndCacheProductValidation(assetId: number): CachedProductValidation
+	local cached = productValidationCache[assetId]
+	if cached then
+		return cached
+	end
+
+	while productValidationInFlight[assetId] do
+		task.wait(0.05)
+
+		cached = productValidationCache[assetId]
+		if cached then
+			return cached
+		end
+	end
+
+	productValidationInFlight[assetId] = true
+
 	local success, productInfo = pcall(function()
 		return MarketplaceService:GetProductInfo(assetId, Enum.InfoType.Asset)
 	end)
 
+	local result: CachedProductValidation
+
 	if not success or not productInfo then
 		warn(`[AvatarApplyService] Failed to fetch info for AssetId: {assetId}`)
-		return false, nil, `Gagal memuat data untuk item dengan ID: {assetId}.`
-	end
+		result = {
+			ok = false,
+			message = `Gagal memuat data untuk item dengan ID: {assetId}.`,
+		}
+	else
+		local assetTypeId = productInfo.AssetTypeId
+		local propertyName = CatalogConfig.AssetTypeToProperty[assetTypeId]
 
-	local assetTypeId = productInfo.AssetTypeId
-	local propertyName = CatalogConfig.AssetTypeToProperty[assetTypeId]
+		if not propertyName then
+			warn(
+				`[AvatarApplyService] Unsupported AssetTypeId: {assetTypeId} (Asset: {assetId})`
+			)
 
-	if not propertyName then
-		warn(
-			`[AvatarApplyService] Player {player.Name} tried to equip unsupported AssetTypeId: {assetTypeId} (Asset: {assetId})`
-		)
-		return false, nil, `Item "{productInfo.Name}" bukan merupakan item wearable yang didukung.`
-	end
-
-	if CatalogConfig.RequireOwnership then
-		local ownsAsset = false
-		local successOwn = pcall(function()
-			ownsAsset = MarketplaceService:PlayerOwnsAsset(player, assetId)
-		end)
-
-		if not successOwn or not ownsAsset then
-			return false, nil, `Anda belum memiliki item "{productInfo.Name}".`
+			result = {
+				ok = false,
+				assetTypeId = assetTypeId,
+				name = productInfo.Name,
+				message = `Item "{productInfo.Name}" bukan merupakan item wearable yang didukung.`,
+			}
+		else
+			result = {
+				ok = true,
+				assetTypeId = assetTypeId,
+				name = productInfo.Name,
+			}
 		end
 	end
 
-	return true, productInfo :: ProductInfo, nil
+	productValidationCache[assetId] = result
+	productValidationInFlight[assetId] = nil
+
+	return result
 end
 
+local function playerOwnsAssetCached(player: Player, assetId: number): boolean
+	local userCache = ownershipValidationCache[player.UserId]
+
+	if not userCache then
+		userCache = {}
+		ownershipValidationCache[player.UserId] = userCache
+	end
+
+	if userCache[assetId] ~= nil then
+		return userCache[assetId]
+	end
+
+	local ownsAsset = false
+	local success = pcall(function()
+		ownsAsset = MarketplaceService:PlayerOwnsAsset(player, assetId)
+	end)
+
+	local result = success and ownsAsset
+	userCache[assetId] = result
+
+	return result
+end
+
+local function validateProductForPreload(player: Player, assetId: number)
+	local cached = fetchAndCacheProductValidation(assetId)
+
+	if not cached.ok then
+		return
+	end
+
+	if CatalogConfig.RequireOwnership then
+		playerOwnsAssetCached(player, assetId)
+	end
+end
+
+local function getPreloadedValidationForApply(
+	player: Player,
+	assetId: number
+): (boolean, ProductInfo?, string?)
+	local cached = productValidationCache[assetId]
+	local startedAt = os.clock()
+
+	-- If preload is already running, wait briefly instead of failing instantly.
+	while not cached and productValidationInFlight[assetId] and os.clock() - startedAt < 3 do
+		task.wait(0.05)
+		cached = productValidationCache[assetId]
+	end
+
+	if not cached then
+		warn(
+			`[AvatarApplyService] Asset {assetId} was not preloaded before Apply. Falling back={APPLY_FETCH_ON_MISSING_CACHE}.`
+		)
+
+		if not APPLY_FETCH_ON_MISSING_CACHE then
+			task.spawn(function()
+				validateProductForPreload(player, assetId)
+			end)
+
+			return false, nil, `Item {assetId} belum masuk cache preload. Coba apply lagi sebentar.`
+		end
+
+		cached = fetchAndCacheProductValidation(assetId)
+	end
+
+	if not cached.ok then
+		return false, nil, cached.message
+	end
+
+	if CatalogConfig.RequireOwnership then
+		local ownsAsset = playerOwnsAssetCached(player, assetId)
+
+		if not ownsAsset then
+			return false, nil, `Anda belum memiliki item "{cached.name or tostring(assetId)}".`
+		end
+	end
+
+	return true, {
+		AssetTypeId = cached.assetTypeId :: number,
+		Name = cached.name or tostring(assetId),
+	}, nil
+end
+
+local SINGLE_SLOT_ACCESSORY_PROPERTIES = {
+	-- UX rule: user can wear multiple hats, but only one hair should be active.
+	-- This is a server-side safety net; client PreviewState should also enforce it.
+	HairAccessory = true,
+}
+
 local function applyAssetToBuckets(buckets, propertyName: string, assetId: number)
+	if SINGLE_SLOT_ACCESSORY_PROPERTIES[propertyName] then
+		buckets[propertyName] = { assetId }
+		return
+	end
+
 	local bucket = buckets[propertyName]
 	if not bucket then
 		bucket = {}
@@ -454,6 +600,16 @@ local function itemsToBuckets(items: { EquippedItem })
 	end
 
 	return buckets
+end
+
+local function itemsToPropertyByAssetId(items: { EquippedItem }): { [number]: string }
+	local propertyByAssetId = {}
+
+	for _, item in ipairs(items) do
+		propertyByAssetId[item.assetId] = item.propertyName
+	end
+
+	return propertyByAssetId
 end
 
 local function sameAssetIds(left: { number }?, right: { number }?): boolean
@@ -479,6 +635,10 @@ local function setDescriptionProperty(
 	assetIds: { number }?
 )
 	assetIds = assetIds or {}
+
+	if SINGLE_SLOT_ACCESSORY_PROPERTIES[propertyName] and #assetIds > 1 then
+		assetIds = { assetIds[#assetIds] }
+	end
 
 	if propertyName == "EmoteAnimation" then
 		local emotes = {}
@@ -534,16 +694,30 @@ local function buildDescriptionFromDesiredIds(
 	local description = baseDescription:Clone()
 
 	local currentBuckets = itemsToBuckets(currentItems)
+	local currentPropertyByAssetId = itemsToPropertyByAssetId(currentItems)
 	local desiredBuckets = {}
 	local touchedProperties = {}
 
 	for _, assetId in ipairs(desiredIds) do
-		local ok, productInfo, message = validateProduct(player, assetId)
-		if not ok or not productInfo then
-			return false, nil, message
+		-- Most apply payloads contain the whole desired outfit, not only the newly selected item.
+		-- Items that are already attached to the live character are trusted and re-bucketed
+		-- from the current snapshot, so Apply does not call MarketplaceService for every
+		-- existing body part/accessory on the player's avatar.
+		local propertyName = currentPropertyByAssetId[assetId]
+
+		if not propertyName then
+			local ok, productInfo, message = getPreloadedValidationForApply(player, assetId)
+			if not ok or not productInfo then
+				return false, nil, message
+			end
+
+			propertyName = CatalogConfig.AssetTypeToProperty[productInfo.AssetTypeId]
 		end
 
-		local propertyName = CatalogConfig.AssetTypeToProperty[productInfo.AssetTypeId]
+		if not propertyName then
+			return false, nil, `Item {assetId} tidak punya property avatar yang didukung.`
+		end
+
 		touchedProperties[propertyName] = true
 		applyAssetToBuckets(desiredBuckets, propertyName, assetId)
 	end
@@ -584,6 +758,75 @@ local function handleGetEquipped(player: Player)
 	}
 end
 
+
+local function handlePreloadCatalogItems(player: Player, payload: any)
+	local itemIds = getDesiredIdsFromPayload(payload)
+
+	if not itemIds then
+		return {
+			success = false,
+			message = "Format payload preload tidak valid.",
+		}
+	end
+
+	if #itemIds > PRELOAD_APPLY_ITEMS_LIMIT then
+		local limited = {}
+
+		for index = 1, PRELOAD_APPLY_ITEMS_LIMIT do
+			table.insert(limited, itemIds[index])
+		end
+
+		itemIds = limited
+	end
+
+	print(
+		`[AvatarApplyService] Preload requested by {player.Name}; ids=[{table.concat(itemIds, ",")}]`
+	)
+
+	task.spawn(function()
+		local okCount = 0
+		local failCount = 0
+
+		for _, assetId in ipairs(itemIds) do
+			if player.Parent == nil then
+				break
+			end
+
+			local success, err = pcall(function()
+				validateProductForPreload(player, assetId)
+			end)
+
+			if success then
+				local cached = productValidationCache[assetId]
+
+				if cached and cached.ok then
+					okCount += 1
+				else
+					failCount += 1
+					warn(
+						`[AvatarApplyService] Preload invalid asset {assetId}: {cached and cached.message or "no cache"}`
+					)
+				end
+			else
+				failCount += 1
+				warn(`[AvatarApplyService] Preload error for {assetId}: {err}`)
+			end
+
+			task.wait(PRELOAD_THROTTLE_SECONDS)
+		end
+
+		print(
+			`[AvatarApplyService] Preload finished for {player.Name}; ok={okCount}, failed={failCount}`
+		)
+	end)
+
+	return {
+		success = true,
+		message = "Preload started.",
+		requestedCount = #itemIds,
+	}
+end
+
 local function handleApply(player: Player, payload: any)
 	local desiredIds = getDesiredIdsFromPayload(payload)
 	if not desiredIds then
@@ -592,7 +835,7 @@ local function handleApply(player: Player, payload: any)
 	end
 
 	if #desiredIds > MAX_APPLY_ITEMS then
-		return { success = false, message = "Terlalu banyak item yang dipilih sekaligus." }
+		return { success = false, message = `Terlalu banyak item yang dipilih sekaligus ({#desiredIds}/{MAX_APPLY_ITEMS}).` }
 	end
 
 	local character, humanoid = getCharacterHumanoid(player)
@@ -669,12 +912,15 @@ function AvatarApplyService.init()
 	Players.PlayerRemoving:Connect(function(player)
 		appliedStates[player.UserId] = nil
 		originalStates[player.UserId] = nil
+		ownershipValidationCache[player.UserId] = nil
 	end)
 
 	ApplyAvatarRemote.OnServerInvoke = function(player: Player, payload: any)
 		if type(payload) == "table" then
 			if payload.action == "GetEquipped" then
 				return handleGetEquipped(player)
+			elseif payload.action == "PreloadCatalogItems" then
+				return handlePreloadCatalogItems(player, payload)
 			elseif payload.action == "ResolvePreviewAsset" then
 				local assetId = tonumber(payload.assetId)
 				if not assetId then return { success = false } end

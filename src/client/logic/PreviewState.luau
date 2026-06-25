@@ -127,7 +127,7 @@ local CatalogConfig = require(game:GetService("ReplicatedStorage").Shared.config
 
 local NON_EXCLUSIVE_PROPERTIES = {
 	HatAccessory = true,
-	HairAccessory = true,
+	-- HairAccessory = true,
 }
 
 local function itemHasProperty(item: CatalogItem, propName: string): boolean

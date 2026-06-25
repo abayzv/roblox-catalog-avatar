@@ -102,6 +102,7 @@ local function AvatarPreviewViewport()
 	local appliedItems = PreviewState.getAppliedItems()
 	local isHydrated = PreviewState.hasHydrated()
 	local isDirty = PreviewState.isDirty()
+	local preloadVersionRef = React.useRef(0)
 	local previewKeyParts = {}
 
 	for itemId, item in pairs(previewItems) do
@@ -118,6 +119,48 @@ local function AvatarPreviewViewport()
 	table.sort(previewKeyParts)
 
 	local previewKey = table.concat(previewKeyParts, "|")
+
+	React.useEffect(function()
+		if not isHydrated then
+			return nil
+		end
+
+		preloadVersionRef.current = preloadVersionRef.current + 1
+		local preloadVersion = preloadVersionRef.current
+
+		task.delay(0.15, function()
+			if preloadVersionRef.current ~= preloadVersion then
+				return
+			end
+
+			local assetIds = PreviewState.getDesiredAssetIds()
+
+			if #assetIds == 0 then
+				return
+			end
+
+			task.spawn(function()
+				local callSuccess, response = pcall(function()
+					return ApplyAvatarRemote:InvokeServer({
+						action = "PreloadCatalogItems",
+						itemIds = assetIds,
+					})
+				end)
+
+				if callSuccess and type(response) == "table" and response.success then
+					print(
+						`[CatalogPreview] Requested preview preload: {response.requestedCount or #assetIds} ids`
+					)
+				elseif callSuccess and type(response) == "table" then
+					warn("[CatalogPreview] Preview preload rejected:", response.message)
+				else
+					warn("[CatalogPreview] Preview preload failed:", response)
+				end
+			end)
+		end)
+
+		return nil
+	end, { previewKey, isHydrated })
 
 	React.useEffect(function()
 		if PreviewState.hasHydrated() then
@@ -214,10 +257,24 @@ local function AvatarPreviewViewport()
 				
 				PreviewAppliers.applyBodyParts(description, previewBuckets, appliedBuckets)
 				PreviewAppliers.applyAccessories(description, previewBuckets, appliedBuckets)
+
+				if PreviewAppliers.cleanupRigAccessoriesForPreview then
+					PreviewAppliers.cleanupRigAccessoriesForPreview(newRig, previewBuckets, appliedBuckets)
+				end
 				
 				local ok, err = pcall(function()
-					humanoid:ApplyDescription(description)
+					-- Reset is important for cloned viewport rigs. Without reset, old accessories
+					-- from the cloned character can stay in the model while the new
+					-- HumanoidDescription adds another accessory, which makes hair stack.
+					humanoid:ApplyDescriptionReset(description)
 				end)
+
+				if not ok then
+					ok, err = pcall(function()
+						humanoid:ApplyDescription(description)
+					end)
+				end
+
 				if not ok then
 					warn("[CatalogPreview] Failed to apply description:", err)
 				end
