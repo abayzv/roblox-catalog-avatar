@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CatalogTypes = require(ReplicatedStorage.Shared.types.CatalogTypes)
 local PreviewPayloadResolver = require(script.Parent.PreviewPayloadResolver)
 local PreviewPayloadCache = require(script.Parent.PreviewPayloadCache)
+local ContentPrewarmQueue = require(script.Parent.ContentPrewarmQueue)
 
 local CatalogWarmupQueue = {}
 
@@ -42,6 +43,17 @@ local function processQueue()
 			
 			if #itemsToResolve > 0 then
 				local payloadsMap = PreviewPayloadResolver.resolveBatch(itemsToResolve)
+				
+				-- Extract a list of payloads for prewarming
+				local prewarmList = {}
+				for _, item in ipairs(itemsToResolve) do
+					if payloadsMap[item.key] then
+						table.insert(prewarmList, payloadsMap[item.key])
+					end
+				end
+				
+				-- Prewarm the first 15 items to cache physical assets
+				ContentPrewarmQueue.queueItems(prewarmList, 15)
 				
 				-- Apply payloads to cache, checking tokens again
 				for _, entry in ipairs(batchEntries) do
