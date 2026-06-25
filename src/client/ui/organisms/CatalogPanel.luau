@@ -8,6 +8,7 @@ local MainCategoryTabs = require(script.Parent.MainCategoryTabs)
 local SubCategoryChips = require(script.Parent.SubCategoryChips)
 local CatalogGrid = require(script.Parent.CatalogGrid)
 local useCatalogState = require(script.Parent.Parent.hooks.useCatalogState)
+local useCatalogItems = require(script.Parent.Parent.Parent.hooks.useCatalogItems)
 
 local AvatarPreviewController =
 	require(script.Parent.Parent.Parent.controllers.AvatarPreviewController)
@@ -38,50 +39,7 @@ local function CatalogPanel(props: CatalogPanelProps)
 	local contentScale = props.contentScale or 1
 	local contentSizeScale = if contentScale > 0 then 1 / contentScale else 1
 
-	local MOCK_ITEMS = React.useMemo(function()
-		local items = {}
-		local queryLower = string.lower(state.searchQuery)
-
-		for i = 1, 36 do
-			local isFedoraTestItem = i == 1
-			local isBlondeHairTestItem = i == 2
-			local assetId = if isFedoraTestItem
-				then 128159229
-				elseif isBlondeHairTestItem then 376524487
-				else nil
-			local propertyName = if isFedoraTestItem
-				then "HatAccessory"
-				elseif isBlondeHairTestItem then "HairAccessory"
-				else nil
-			local name = if isFedoraTestItem
-				then "Fedora Macan Tutul Salju"
-				elseif isBlondeHairTestItem then "Blonde Spiked Hair"
-				else state.activeMainCategory .. " " .. state.activeSubCategory .. " Item " .. i
-
-			local matchSearch = true
-			if queryLower ~= "" then
-				matchSearch = string.find(string.lower(name), queryLower, 1, true) ~= nil
-			end
-
-			if matchSearch then
-				table.insert(items, {
-					id = state.activeMainCategory .. "_" .. state.activeSubCategory .. "_" .. i,
-					assetId = assetId,
-					propertyName = propertyName,
-					name = name,
-					price = math.random(50, 500),
-					image = if assetId
-						then `rbxthumb://type=Asset&id={assetId}&w=420&h=420`
-						else "rbxassetid://18517062196",
-					category = state.activeMainCategory,
-					subcategory = state.activeSubCategory,
-					tags = { "mock", "test" },
-					availability = "InStock",
-				})
-			end
-		end
-		return items
-	end, { state.activeMainCategory, state.activeSubCategory, state.searchQuery })
+	local catalogData = useCatalogItems(state.activeMainCategory, state.activeSubCategory, state.searchQuery)
 
 	return React.createElement(
 		"Frame",
@@ -159,6 +117,7 @@ local function CatalogPanel(props: CatalogPanelProps)
 				}),
 
 				SubCategoryArea = React.createElement(SubCategoryChips, {
+					activeMainCategory = state.activeMainCategory,
 					activeSubCategory = state.activeSubCategory,
 					onSubCategorySelected = actions.setActiveSubCategory,
 					layoutOrder = 7,
@@ -176,8 +135,13 @@ local function CatalogPanel(props: CatalogPanelProps)
 					LayoutOrder = 9,
 				}, {
 					Grid = React.createElement(CatalogGrid, {
-						items = MOCK_ITEMS,
-						isLoading = false,
+						items = catalogData.items,
+						readyKeys = catalogData.readyKeys,
+						isLoading = catalogData.status == "Loading",
+						isFetchingNextPage = catalogData.status == "FetchingNextPage",
+						hasNextPage = catalogData.hasNextPage,
+						isLimitReached = catalogData.isLimitReached,
+						onLoadNextPage = catalogData.loadNextPage,
 						columns = 5,
 						viewportScale = contentScale,
 						onTryOn = function(item)

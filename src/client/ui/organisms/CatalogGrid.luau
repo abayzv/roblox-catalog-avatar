@@ -11,7 +11,12 @@ export type CatalogItem = CatalogTypes.CatalogItem
 
 export type CatalogGridProps = {
 	items: { CatalogItem }?,
+	readyKeys: { [string]: boolean }?,
 	isLoading: boolean?,
+	isFetchingNextPage: boolean?,
+	hasNextPage: boolean?,
+	isLimitReached: boolean?,
+	onLoadNextPage: (() -> ())?,
 	columns: number?,
 	onTryOn: ((item: CatalogItem) -> ())?,
 	layoutOrder: number?,
@@ -21,7 +26,8 @@ export type CatalogGridProps = {
 local function CatalogGrid(props: CatalogGridProps)
 	local contentSizeBinding, updateContentSize = React.useBinding(Vector2.new(0, 0))
 	local containerWidth, setContainerWidth = React.useState(804)
-	local previewItems = usePreviewState()
+	local previewPayloads = usePreviewState()
+	local lastScrollTime = React.useRef(0)
 
 	local children = {}
 	local isEmpty = props.items and #props.items == 0 and not props.isLoading
@@ -40,6 +46,9 @@ local function CatalogGrid(props: CatalogGridProps)
 	local scale = targetCellWidth / originalWidth
 	local targetCellHeight = math.floor(originalHeight * scale)
 	local itemCount = if props.isLoading then columns * 3 elseif props.items then #props.items else 0
+	if props.isFetchingNextPage then
+		itemCount += columns
+	end
 	local rowCount = math.max(math.ceil(itemCount / columns), 1)
 	local gridPaddingTop = 12
 	local gridPaddingBottom = 96
@@ -86,37 +95,68 @@ local function CatalogGrid(props: CatalogGridProps)
 			end
 		elseif props.items then
 			for i, item in ipairs(props.items) do
-				local previewKey = tostring(item.assetId or item.id)
-				local isPreviewing = previewItems[previewKey] ~= nil
-					or PreviewState.hasPreviewItem(item)
-				if item.assetId == 376524487 then
-					print(
-						`[CatalogGrid] Blonde hair card previewKey={previewKey}, isPreviewing={isPreviewing}`
-					)
-				end
-				children["ItemWrapper_" .. item.id] = React.createElement("Frame", {
-					BackgroundTransparency = 1,
-					Size = UDim2.fromScale(1, 1),
-					LayoutOrder = i,
-				}, {
-					ScalerContainer = React.createElement("Frame", {
+				local isReady = props.readyKeys and item.key and props.readyKeys[item.key]
+				
+				if isReady then
+					local isPreviewing = previewPayloads[item.key] ~= nil
+						or PreviewState.hasPreviewPayload(item.key)
+					children["ItemWrapper_" .. item.id] = React.createElement("Frame", {
 						BackgroundTransparency = 1,
-						Size = UDim2.fromOffset(originalWidth, originalHeight),
+						Size = UDim2.fromScale(1, 1),
+						LayoutOrder = i,
 					}, {
-						UIScale = React.createElement("UIScale", { Scale = scale }),
-						Card = React.createElement(ItemCard, {
-							name = item.name,
-							price = item.price,
-							image = item.image,
-							isPreviewing = isPreviewing,
-							onTryOn = if props.onTryOn
-								then function()
-									props.onTryOn(item)
-								end
-								else nil,
+						ScalerContainer = React.createElement("Frame", {
+							BackgroundTransparency = 1,
+							Size = UDim2.fromOffset(originalWidth, originalHeight),
+						}, {
+							UIScale = React.createElement("UIScale", { Scale = scale }),
+							Card = React.createElement(ItemCard, {
+								name = item.name,
+								price = item.price,
+								image = item.image,
+								isPreviewing = isPreviewing,
+								onTryOn = if props.onTryOn
+									then function()
+										props.onTryOn(item)
+									end
+									else nil,
+							}),
 						}),
-					}),
-				})
+					})
+				else
+					children["SkeletonWrapper_" .. item.id] = React.createElement("Frame", {
+						BackgroundTransparency = 1,
+						Size = UDim2.fromScale(1, 1),
+						LayoutOrder = i,
+					}, {
+						ScalerContainer = React.createElement("Frame", {
+							BackgroundTransparency = 1,
+							Size = UDim2.fromOffset(originalWidth, originalHeight),
+						}, {
+							UIScale = React.createElement("UIScale", { Scale = scale }),
+							Card = React.createElement(ItemCardSkeleton, {}),
+						}),
+					})
+				end
+			end
+			
+			if props.isFetchingNextPage then
+				local offset = #props.items
+				for i = 1, columns do
+					children["NextPageSkeletonWrapper_" .. i] = React.createElement("Frame", {
+						BackgroundTransparency = 1,
+						Size = UDim2.fromScale(1, 1),
+						LayoutOrder = offset + i,
+					}, {
+						ScalerContainer = React.createElement("Frame", {
+							BackgroundTransparency = 1,
+							Size = UDim2.fromOffset(originalWidth, originalHeight),
+						}, {
+							UIScale = React.createElement("UIScale", { Scale = scale }),
+							Card = React.createElement(ItemCardSkeleton, {}),
+						}),
+					})
+				end
 			end
 		end
 	else
@@ -131,12 +171,12 @@ local function CatalogGrid(props: CatalogGridProps)
 		})
 	end
 
-	return React.createElement("ScrollingFrame", {
+	local gridFrame = React.createElement("ScrollingFrame", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 6,
-		ScrollBarImageColor3 = Color3.fromRGB(154, 161, 173), -- TextMuted equivalent
+		ScrollBarImageColor3 = Color3.fromRGB(154, 161, 173),
 		CanvasSize = contentSizeBinding:map(function(size)
 			return UDim2.fromOffset(
 				0,
@@ -150,7 +190,21 @@ local function CatalogGrid(props: CatalogGridProps)
 				setContainerWidth(nextWidth)
 			end
 		end,
+		[React.Change.CanvasPosition] = function(rbx)
+			local maxY = rbx.CanvasSize.Y.Offset - rbx.AbsoluteWindowSize.Y
+			if maxY > 0 and rbx.CanvasPosition.Y >= maxY * 0.7 then
+				local currentTime = os.clock()
+				if currentTime - lastScrollTime.current > 0.5 then
+					lastScrollTime.current = currentTime
+					if props.hasNextPage and not props.isFetchingNextPage and props.onLoadNextPage then
+						props.onLoadNextPage()
+					end
+				end
+			end
+		end,
 	}, children)
+	
+	return gridFrame
 end
 
 return CatalogGrid

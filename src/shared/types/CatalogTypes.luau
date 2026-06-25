@@ -1,8 +1,17 @@
+local CatalogTypes = {}
+
+export type AvatarItemType = "Asset" | "Bundle"
+export type ItemKey = string
+
 export type CatalogItem = {
-	id: string,
+	key: ItemKey?,
+	itemType: AvatarItemType?,
+	id: string | number,
+
 	name: string,
 	price: number | string,
 	image: string,
+
 	assetId: number?,
 	propertyName: string?,
 	category: string?,
@@ -20,4 +29,24 @@ export type CatalogUiState = {
 	selectedItemId: string?,
 }
 
-return {}
+function CatalogTypes.makeItemKey(itemType: AvatarItemType, id: number | string): string
+	return `{itemType}:{id}`
+end
+
+function CatalogTypes.parseItemKey(key: string): { itemType: AvatarItemType, id: number }?
+	local parts = string.split(key, ":")
+	if #parts == 2 then
+		local itemType = parts[1]
+		local id = tonumber(parts[2])
+		if (itemType == "Asset" or itemType == "Bundle") and id ~= nil then
+			return { itemType = itemType :: AvatarItemType, id = id }
+		end
+	end
+	return nil
+end
+
+function CatalogTypes.isValidItemKey(key: string): boolean
+	return CatalogTypes.parseItemKey(key) ~= nil
+end
+
+return CatalogTypes

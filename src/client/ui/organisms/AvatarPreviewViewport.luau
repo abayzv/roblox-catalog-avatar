@@ -237,51 +237,10 @@ local function cloneLocalCharacter(): Model?
 	return clone
 end
 
-local function applyPreviewDescription(rig: Model, previewItems, appliedItems, camera: Camera)
-	local humanoid = rig:FindFirstChildOfClass("Humanoid")
-	if not humanoid then
-		return
-	end
-
-	local description = humanoid:GetAppliedDescription()
-	local touchedProperties, previewBuckets = getTouchedProperties(previewItems, appliedItems)
-
-	if next(touchedProperties) == nil then
-		print(
-			"[CatalogPreview] Viewport has no touched appearance properties; keeping clone intact."
-		)
-		return
-	end
-
-	local touchedNames = {}
-	for propertyName in pairs(touchedProperties) do
-		table.insert(touchedNames, propertyName)
-	end
-	table.sort(touchedNames)
-	print("[CatalogPreview] Viewport applying touched properties:", table.concat(touchedNames, ","))
-
-	removeTouchedPhysicalItems(rig, touchedProperties)
-
-	for propertyName in pairs(touchedProperties) do
-		setDescriptionProperty(description, propertyName, previewBuckets[propertyName])
-	end
-
-	local ok, err = pcall(function()
-		humanoid:ApplyDescription(description)
-	end)
-
-	if not ok then
-		warn("[CatalogPreview] Failed to apply viewport description:", err)
-	end
-
-	task.defer(function()
-		if rig.Parent then
-			prepareRig(rig)
-			pivotRig(rig)
-			frameCamera(camera, rig)
-			playIdleAnimation(rig)
-		end
-	end)
+local function applyPreviewDescription(rig: Model, previewPayloads, appliedEntries, camera: Camera)
+	-- [Phase 5] Temporarily disabled while we implement the new Viewport logic
+	-- The old logic expected simple asset IDs, but we now use complex payloads.
+	-- This will be implemented in Phase 5.
 end
 
 local function setupViewport(
@@ -333,14 +292,14 @@ local function AvatarPreviewViewport()
 	local draggingRef = React.useRef(false)
 	local lastDragXRef = React.useRef(0)
 	local yawRef = React.useRef(INITIAL_RIG_YAW)
-	local previewItems = usePreviewState()
-	local appliedItems = PreviewState.getAppliedItems()
+	local previewPayloads = usePreviewState()
+	local appliedEntries = PreviewState.getAppliedEntries()
 	local isHydrated = PreviewState.hasHydrated()
 	local isDirty = PreviewState.isDirty()
 	local previewKeyParts = {}
 
-	for itemId in pairs(previewItems) do
-		table.insert(previewKeyParts, itemId)
+	for key in pairs(previewPayloads) do
+		table.insert(previewKeyParts, key)
 	end
 	table.sort(previewKeyParts)
 
@@ -360,12 +319,30 @@ local function AvatarPreviewViewport()
 
 			if callSuccess and type(response) == "table" and response.success then
 				if response.equippedItems then
-					PreviewState.hydrateAppliedItems(response.equippedItems)
+					local mappedEquipped = {}
+					for _, item in ipairs(response.equippedItems) do
+						table.insert(mappedEquipped, {
+							key = tostring(item.assetId),
+							id = item.assetId,
+							itemType = "Asset"
+						})
+					end
+					PreviewState.hydrateAppliedEntries(mappedEquipped)
+					
 					if response.originalItems then
-						PreviewState.hydrateOriginalItems(response.originalItems)
+						local mappedOriginal = {}
+						for _, item in ipairs(response.originalItems) do
+							table.insert(mappedOriginal, {
+								key = tostring(item.assetId),
+								id = item.assetId,
+								itemType = "Asset"
+							})
+						end
+						PreviewState.hydrateOriginalEntries(mappedOriginal)
 					end
 				else
-					PreviewState.hydrateAppliedAssetIds(response.equippedItemIds or {})
+					-- Mock hydration if it's returning old format
+					PreviewState.hydrateAppliedEntries({})
 				end
 			elseif callSuccess and type(response) == "table" then
 				warn("[CatalogPreview] Failed to load equipped snapshot:", response.message)
@@ -384,7 +361,7 @@ local function AvatarPreviewViewport()
 		end
 
 		yawRef.current = INITIAL_RIG_YAW
-		rigRef.current = setupViewport(viewport, previewItems, appliedItems, isHydrated)
+		rigRef.current = setupViewport(viewport, previewPayloads, appliedEntries, isHydrated)
 
 		return function()
 			rigRef.current = nil
@@ -475,7 +452,7 @@ local function AvatarPreviewViewport()
 				[React.Event.InputEnded] = endDrag,
 			}),
 
-			ResetArea = next(previewItems) ~= nil and React.createElement("Frame", {
+			ResetArea = next(previewPayloads) ~= nil and React.createElement("Frame", {
 				AnchorPoint = Vector2.new(1, 0),
 				Position = UDim2.new(1, -Theme.Space.MD, 0, Theme.Space.MD),
 				Size = UDim2.fromOffset(48, 48),
@@ -517,7 +494,7 @@ local function AvatarPreviewViewport()
 							return
 						end
 
-						local assetIds = PreviewState.getDesiredAssetIds()
+						local entries = PreviewState.getDesiredEntries()
 						print(
 							"[CatalogPreview] Sending apply request to server for desired items..."
 						)
@@ -525,18 +502,24 @@ local function AvatarPreviewViewport()
 						task.spawn(function()
 							local callSuccess, response = pcall(function()
 								return ApplyAvatarRemote:InvokeServer({
-									itemIds = assetIds,
+									entries = entries,
 								})
 							end)
 
 							if callSuccess and type(response) == "table" then
 								if response.success then
 									if response.equippedItems then
-										PreviewState.hydrateAppliedItems(response.equippedItems)
+										local mappedEquipped = {}
+										for _, item in ipairs(response.equippedItems) do
+											table.insert(mappedEquipped, {
+												key = tostring(item.assetId),
+												id = item.assetId,
+												itemType = "Asset"
+											})
+										end
+										PreviewState.hydrateAppliedEntries(mappedEquipped)
 									else
-										PreviewState.hydrateAppliedAssetIds(
-											response.equippedItemIds or assetIds
-										)
+										PreviewState.hydrateAppliedEntries(entries)
 									end
 									print(
 										"[CatalogPreview] Server accepted apply:",

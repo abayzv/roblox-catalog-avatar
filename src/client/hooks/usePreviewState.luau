@@ -3,16 +3,16 @@ local React = require(ReplicatedStorage.Packages.React)
 local PreviewState = require(script.Parent.Parent.logic.PreviewState)
 
 local function usePreviewState()
-	local previewItems, setPreviewItems = React.useState(PreviewState.getPreviewItems())
+	local previewPayloads, setPreviewPayloads = React.useState(PreviewState.getPreviewPayloads())
 
 	React.useEffect(function()
-		local unsubscribe = PreviewState.subscribe(function(newPreviewItems)
-			setPreviewItems(newPreviewItems)
+		local unsubscribe = PreviewState.subscribe(function(newPreviewPayloads)
+			setPreviewPayloads(newPreviewPayloads)
 		end)
 		return unsubscribe
 	end, {})
 
-	return previewItems
+	return previewPayloads
 end
 
 return usePreviewState

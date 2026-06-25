@@ -17,12 +17,41 @@ export type CatalogStateActions = {
 	setSelectedItemId: (id: string?) -> (),
 }
 
+local MAIN_TO_SUB = {
+	All = {
+		"Featured", "Recommended", "Premium"
+	},
+	Body = {
+		"Body Bundles", "Hair", "Head", "Faces"
+	},
+	["Modern Clothing"] = {
+		"T-Shirt", "Shirt", "Pants", "Jacket", "Sweater", "Shorts", "Dress / Skirt", "Shoes Bundle"
+	},
+	["Classic Clothing"] = {
+		"Classic T-Shirt", "Classic Shirt", "Classic Pants"
+	},
+	Accessory = {
+		"Hats", "Face Accessories", "Neck", "Shoulder", "Front", "Back", "Waist"
+	},
+	Animation = {
+		"Emotes", "Animation Bundles"
+	}
+}
+
 local function useCatalogState()
 	local activeTab, setActiveTab = React.useState("Item Catalog")
-	local activeMainCategory, setActiveMainCategory = React.useState("Clothing")
-	local activeSubCategory, setActiveSubCategory = React.useState("Jackets")
+	local activeMainCategory, setActiveMainCategoryInternal = React.useState("All")
+	local activeSubCategory, setActiveSubCategory = React.useState("Featured")
 	local searchQuery, setSearchQuery = React.useState("")
 	local selectedItemId, setSelectedItemId = React.useState(nil :: string?)
+
+	local function setActiveMainCategory(category: string)
+		setActiveMainCategoryInternal(category)
+		local defaultSub = MAIN_TO_SUB[category]
+		if defaultSub and defaultSub[1] then
+			setActiveSubCategory(defaultSub[1])
+		end
+	end
 
 	local state: CatalogState = {
 		activeTab = activeTab,

@@ -9,6 +9,17 @@ local CatalogConfig = {
 		[8] = "HatAccessory", -- Hat
 		[11] = "Shirt", -- Shirt (Classic)
 		[12] = "Pants", -- Pants (Classic)
+		
+		-- Body Parts
+		[17] = "Head",
+		[18] = "Face",
+		[27] = "Torso",
+		[28] = "RightArm",
+		[29] = "LeftArm",
+		[30] = "LeftLeg",
+		[31] = "RightLeg",
+
+		-- Accessories
 		[41] = "HairAccessory",
 		[42] = "FaceAccessory",
 		[43] = "NeckAccessory",
@@ -16,6 +27,18 @@ local CatalogConfig = {
 		[45] = "FrontAccessory",
 		[46] = "BackAccessory",
 		[47] = "WaistAccessory",
+
+		-- Animations
+		[48] = "ClimbAnimation",
+		[50] = "FallAnimation",
+		[51] = "IdleAnimation",
+		[52] = "JumpAnimation",
+		[53] = "RunAnimation",
+		[54] = "SwimAnimation",
+		[55] = "WalkAnimation",
+		[61] = "EmoteAnimation",
+
+		-- Layered Clothing
 		[64] = "TShirtAccessory",
 		[65] = "ShirtAccessory",
 		[66] = "PantsAccessory",

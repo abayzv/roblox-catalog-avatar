@@ -1,4 +1,5 @@
 local PreviewState = require(script.Parent.Parent.logic.PreviewState)
+local PreviewPayloadCache = require(script.Parent.Parent.services.PreviewPayloadCache)
 
 local AvatarPreviewController = {}
 
@@ -9,10 +10,17 @@ function AvatarPreviewController.ToggleItemPreview(item)
 		return
 	end
 
-	if PreviewState.hasPreviewItem(item) then
-		PreviewState.removePreviewItem(item)
+	local key = item.key or tostring(item.id)
+	
+	if PreviewState.hasPreviewPayload(key) then
+		PreviewState.removePreviewPayload(key)
 	else
-		PreviewState.addPreviewItem(item)
+		local payload = PreviewPayloadCache.get(key)
+		if payload then
+			PreviewState.addPreviewPayload(payload)
+		else
+			warn(`[CatalogPreview] Cannot preview item {key}; payload is not yet cached.`)
+		end
 	end
 end
 
