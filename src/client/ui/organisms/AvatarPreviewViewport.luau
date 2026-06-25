@@ -284,6 +284,10 @@ local function applyPreviewDescription(rig: Model, previewPayloads, appliedEntri
 						break
 					end
 				end
+			elseif descendant:IsA("Shirt") or descendant:IsA("Pants") or descendant:IsA("ShirtGraphic") then
+				-- Destroying 2D clothing forces ApplyDescription to recreate them,
+				-- which is required for ViewportFrame to render texture updates.
+				descendant:Destroy()
 			end
 		end
 
