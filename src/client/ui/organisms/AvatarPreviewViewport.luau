@@ -27,70 +27,42 @@ local IDLE_ANIMATION_BY_RIG_TYPE = {
 	[Enum.HumanoidRigType.R15] = "rbxassetid://507766666",
 }
 
-local function addAssetToBucket(buckets, propertyName: string, assetId: number)
-	local bucket = buckets[propertyName]
-	if not bucket then
-		bucket = {}
-		buckets[propertyName] = bucket
+local function playEmoteAnimation(model: Model, emoteId: number)
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return
 	end
 
-	table.insert(bucket, assetId)
-end
+	local animator = humanoid:FindFirstChildOfClass("Animator")
+	if not animator then
+		animator = Instance.new("Animator")
+		animator.Parent = humanoid
+	end
 
-local function getItemBuckets(items)
-	local buckets = {}
-
-	for _, item in pairs(items) do
-		local assetId = item.assetId or tonumber(item.id)
-		local propertyName = item.propertyName
-
-		if assetId and propertyName then
-			addAssetToBucket(buckets, propertyName, assetId)
+	for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+		if track.Name == "CatalogPreviewIdle" or track.Name == "CatalogPreviewEmote" then
+			track:Stop(0.1)
 		end
 	end
 
-	for _, assetIds in pairs(buckets) do
-		table.sort(assetIds)
+	local animation = Instance.new("Animation")
+	animation.Name = "CatalogPreviewEmote"
+	animation.AnimationId = "rbxassetid://" .. tostring(emoteId)
+
+	local ok, trackOrError = pcall(function()
+		return animator:LoadAnimation(animation)
+	end)
+
+	if ok then
+		local track = trackOrError
+		track.Looped = true
+		track.Priority = Enum.AnimationPriority.Action
+		track:Play(0.2, 1, 1)
+	else
+		warn("[CatalogPreview] Failed to play emote animation:", trackOrError)
 	end
 
-	return buckets
-end
-
-local function sameAssetIds(left: { number }?, right: { number }?): boolean
-	left = left or {}
-	right = right or {}
-
-	if #left ~= #right then
-		return false
-	end
-
-	for index, assetId in ipairs(left) do
-		if right[index] ~= assetId then
-			return false
-		end
-	end
-
-	return true
-end
-
-local function getTouchedProperties(previewItems, appliedItems)
-	local previewBuckets = getItemBuckets(previewItems)
-	local appliedBuckets = getItemBuckets(appliedItems)
-	local touchedProperties = {}
-
-	for propertyName, previewAssetIds in pairs(previewBuckets) do
-		if not sameAssetIds(previewAssetIds, appliedBuckets[propertyName]) then
-			touchedProperties[propertyName] = true
-		end
-	end
-
-	for propertyName, appliedAssetIds in pairs(appliedBuckets) do
-		if not sameAssetIds(appliedAssetIds, previewBuckets[propertyName]) then
-			touchedProperties[propertyName] = true
-		end
-	end
-
-	return touchedProperties, previewBuckets
+	animation:Destroy()
 end
 
 local function setDescriptionProperty(
@@ -118,22 +90,7 @@ local function setDescriptionProperty(
 	end
 end
 
-local function removeTouchedPhysicalItems(rig: Model, touchedProperties)
-	for _, child in ipairs(rig:GetChildren()) do
-		if child:IsA("Accessory") then
-			local propertyName = ACCESSORY_TYPE_TO_PROPERTY[child.AccessoryType]
-			if propertyName and touchedProperties[propertyName] then
-				child:Destroy()
-			end
-		elseif child:IsA("Shirt") and touchedProperties.Shirt then
-			child:Destroy()
-		elseif child:IsA("Pants") and touchedProperties.Pants then
-			child:Destroy()
-		elseif child:IsA("ShirtGraphic") and touchedProperties.GraphicTShirt then
-			child:Destroy()
-		end
-	end
-end
+-- Removed removeTouchedPhysicalItems
 
 local function prepareRig(model: Model)
 	for _, descendant in ipairs(model:GetDescendants()) do
@@ -183,7 +140,7 @@ local function playIdleAnimation(model: Model)
 	end
 
 	for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-		if track.Name == "CatalogPreviewIdle" then
+		if track.Name == "CatalogPreviewIdle" or track.Name == "CatalogPreviewEmote" then
 			track:Stop(0.1)
 		end
 	end
@@ -237,17 +194,83 @@ local function cloneLocalCharacter(): Model?
 	return clone
 end
 
-local function applyPreviewDescription(rig: Model, previewPayloads, appliedEntries, camera: Camera)
-	-- [Phase 5] Temporarily disabled while we implement the new Viewport logic
-	-- The old logic expected simple asset IDs, but we now use complex payloads.
-	-- This will be implemented in Phase 5.
+local function applyPreviewDescription(rig: Model, previewPayloads, appliedEntries, camera: Camera, onComplete: () -> ())
+	local humanoid = rig:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return end
+
+	local liveCharacter = LOCAL_PLAYER.Character
+	local liveHumanoid = liveCharacter and liveCharacter:FindFirstChildOfClass("Humanoid")
+	if not liveHumanoid then return end
+
+	local description = liveHumanoid:GetAppliedDescription()
+	if not description then 
+		description = Instance.new("HumanoidDescription")
+	end
+
+	print("[CatalogPreview] Applying preview payloads. Count:", select(2, next(previewPayloads)) ~= nil and "has items" or "EMPTY")
+	for key, payload in pairs(previewPayloads) do
+		print(`[CatalogPreview] Payload key={key} kind={payload.kind} prop={payload.propertyName} assetIds={payload.assetIds and table.concat(payload.assetIds, ",") or "nil"}`)
+		if payload.propertyName and payload.assetIds then
+			setDescriptionProperty(description, payload.propertyName, payload.assetIds)
+			print(`[CatalogPreview]   -> Set {payload.propertyName} = {description[payload.propertyName]}`)
+		end
+		
+		if payload.bodyParts then
+			for partName, assetId in pairs(payload.bodyParts) do
+				pcall(function()
+					description[partName] = assetId
+				end)
+			end
+		end
+
+		if payload.animations then
+			for animName, assetId in pairs(payload.animations) do
+				pcall(function()
+					description[animName] = assetId
+				end)
+			end
+		end
+	end
+
+	local originalParent = rig.Parent
+	local oldCFrame = rig:GetPivot()
+	
+	rig:PivotTo(CFrame.new(0, 50000, 0))
+	rig.Parent = game:GetService("Workspace")
+
+	task.spawn(function()
+		print("[CatalogPreview] Calling ApplyDescription...")
+		local ok, err = pcall(function()
+			humanoid:RemoveAccessories()
+			humanoid:ApplyDescription(description)
+		end)
+		print("[CatalogPreview] ApplyDescription finished! ok:", ok)
+
+		if not ok then
+			warn("[CatalogPreview] Failed to apply viewport description:", err)
+		end
+
+		rig.Parent = originalParent
+		rig:PivotTo(oldCFrame)
+
+		if rig.Parent then
+			prepareRig(rig)
+			pivotRig(rig)
+			frameCamera(camera, rig)
+			
+			if onComplete then
+				onComplete()
+			end
+		end
+	end)
 end
 
 local function setupViewport(
 	viewport: ViewportFrame,
-	previewItems,
-	appliedItems,
-	shouldApplyPreview: boolean
+	previewPayloads,
+	appliedEntries,
+	shouldApplyPreview: boolean,
+	activeEmote: PreviewTypes.PreviewPayload?
 )
 	viewport:ClearAllChildren()
 
@@ -268,10 +291,22 @@ local function setupViewport(
 
 	rig.Parent = worldModel
 	frameCamera(camera, rig)
+	
 	if shouldApplyPreview then
-		applyPreviewDescription(rig, previewItems, appliedItems, camera)
+		applyPreviewDescription(rig, previewPayloads, appliedEntries, camera, function()
+			if activeEmote and activeEmote.emoteAnimationId then
+				playEmoteAnimation(rig, activeEmote.emoteAnimationId)
+			else
+				playIdleAnimation(rig)
+			end
+		end)
+	else
+		if activeEmote and activeEmote.emoteAnimationId then
+			playEmoteAnimation(rig, activeEmote.emoteAnimationId)
+		else
+			playIdleAnimation(rig)
+		end
 	end
-	playIdleAnimation(rig)
 
 	return rig
 end
@@ -292,7 +327,7 @@ local function AvatarPreviewViewport()
 	local draggingRef = React.useRef(false)
 	local lastDragXRef = React.useRef(0)
 	local yawRef = React.useRef(INITIAL_RIG_YAW)
-	local previewPayloads = usePreviewState()
+	local previewPayloads, activeEmote = usePreviewState()
 	local appliedEntries = PreviewState.getAppliedEntries()
 	local isHydrated = PreviewState.hasHydrated()
 	local isDirty = PreviewState.isDirty()
@@ -304,6 +339,7 @@ local function AvatarPreviewViewport()
 	table.sort(previewKeyParts)
 
 	local previewKey = table.concat(previewKeyParts, "|")
+	local activeEmoteKey = activeEmote and activeEmote.key or ""
 
 	React.useEffect(function()
 		if PreviewState.hasHydrated() then
@@ -316,6 +352,8 @@ local function AvatarPreviewViewport()
 					action = "GetEquipped",
 				})
 			end)
+			
+			print("GetEquipped callSuccess:", callSuccess, "response:", response)
 
 			if callSuccess and type(response) == "table" and response.success then
 				if response.equippedItems then
@@ -327,7 +365,9 @@ local function AvatarPreviewViewport()
 							itemType = "Asset"
 						})
 					end
+					print("Mapped Equipped length:", #mappedEquipped)
 					PreviewState.hydrateAppliedEntries(mappedEquipped)
+					print("Hydrated applied entries successfully")
 					
 					if response.originalItems then
 						local mappedOriginal = {}
@@ -361,7 +401,7 @@ local function AvatarPreviewViewport()
 		end
 
 		yawRef.current = INITIAL_RIG_YAW
-		rigRef.current = setupViewport(viewport, previewPayloads, appliedEntries, isHydrated)
+		rigRef.current = setupViewport(viewport, previewPayloads, appliedEntries, isHydrated, activeEmote)
 
 		return function()
 			rigRef.current = nil
@@ -369,7 +409,7 @@ local function AvatarPreviewViewport()
 				viewport:ClearAllChildren()
 			end
 		end
-	end, { previewKey, isHydrated })
+	end, { previewKey, isHydrated, activeEmoteKey })
 
 	local beginDrag = React.useCallback(function(_, input)
 		if not isPrimaryDragInput(input) then

@@ -12,13 +12,14 @@ local PreviewState = {}
 local previewPayloads: { [ItemKey]: PreviewPayload } = {}
 local appliedEntries: { [ItemKey]: DesiredOutfitEntry } = {}
 local originalEntries: { [ItemKey]: DesiredOutfitEntry } = {}
+local activeEmote: PreviewPayload? = nil
 
 local hydrated = false
 local listeners = {}
 
 local function notifyListeners()
 	for _, listener in ipairs(listeners) do
-		task.spawn(listener, previewPayloads, appliedEntries)
+		task.spawn(listener, previewPayloads, appliedEntries, activeEmote)
 	end
 end
 
@@ -40,7 +41,8 @@ end
 
 function PreviewState.subscribe(callback: (
 	previewPayloads: { [ItemKey]: PreviewPayload },
-	appliedEntries: { [ItemKey]: DesiredOutfitEntry }
+	appliedEntries: { [ItemKey]: DesiredOutfitEntry },
+	activeEmote: PreviewPayload?
 ) -> ())
 	table.insert(listeners, callback)
 	return function()
@@ -60,7 +62,18 @@ end
 
 function PreviewState.hydrateAppliedEntries(entries: { DesiredOutfitEntry })
 	appliedEntries = {}
-	for _, entry in ipairs(entries) do
+	if type(entries) ~= "table" then
+		warn("[PreviewState] hydrateAppliedEntries called with non-table:", entries)
+		return
+	end
+	for i, entry in ipairs(entries) do
+		if type(entry) ~= "table" then
+			warn(`[PreviewState] hydrateAppliedEntries entry at index {i} is not a table:`, entry)
+			continue
+		end
+		if entry.key == nil then
+			warn(`[PreviewState] hydrateAppliedEntries entry has nil key! index {i}, entry:`, entry)
+		end
 		appliedEntries[entry.key] = entry
 	end
 	
@@ -72,13 +85,55 @@ function PreviewState.hasHydrated(): boolean
 	return hydrated
 end
 
-function PreviewState.addPreviewPayload(payload: PreviewPayload)
-	if not previewPayloads[payload.key] then
-		local newPayloads = table.clone(previewPayloads)
-		newPayloads[payload.key] = payload
-		previewPayloads = newPayloads
+function PreviewState.setActiveEmote(payload: PreviewPayload?)
+	if activeEmote ~= payload then
+		activeEmote = payload
 		notifyListeners()
 	end
+end
+
+function PreviewState.getActiveEmote(): PreviewPayload?
+	return activeEmote
+end
+
+function PreviewState.addPreviewPayload(payload: PreviewPayload)
+	local newPayloads = table.clone(previewPayloads)
+	
+	-- Remove active emote when equipping something else
+	if activeEmote then
+		activeEmote = nil
+	end
+
+	-- Replacement logic for accessories/clothing
+	if payload.propertyName then
+		for key, existing in pairs(newPayloads) do
+			if existing.propertyName == payload.propertyName then
+				newPayloads[key] = nil
+			end
+		end
+	end
+
+	-- Replacement logic for body parts (bundles)
+	if payload.bodyParts then
+		for key, existing in pairs(newPayloads) do
+			if existing.bodyParts then
+				local overlap = false
+				for partName in pairs(payload.bodyParts) do
+					if existing.bodyParts[partName] then
+						overlap = true
+						break
+					end
+				end
+				if overlap then
+					newPayloads[key] = nil
+				end
+			end
+		end
+	end
+
+	newPayloads[payload.key] = payload
+	previewPayloads = newPayloads
+	notifyListeners()
 end
 
 function PreviewState.removePreviewPayload(key: ItemKey)
@@ -92,11 +147,13 @@ end
 
 function PreviewState.clearPreview()
 	previewPayloads = {}
+	activeEmote = nil
 	notifyListeners()
 end
 
 function PreviewState.resetPreviewToOriginal()
 	previewPayloads = {}
+	activeEmote = nil
 	notifyListeners()
 end
 

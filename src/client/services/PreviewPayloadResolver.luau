@@ -17,22 +17,45 @@ function PreviewPayloadResolver.resolveBatch(items: { CatalogTypes.CatalogItem }
 		return payloads
 	end
 
-	local batchParams = {}
+	local assetIds = {}
+	local bundleIds = {}
+	
 	for _, item in ipairs(items) do
 		local id = tonumber(item.assetId or item.id)
 		if id then
-			table.insert(batchParams, {
-				Id = id,
-				ItemType = if item.itemType == "Bundle" then Enum.AvatarItemType.Bundle else Enum.AvatarItemType.Asset
-			})
+			if item.itemType == "Bundle" then
+				table.insert(bundleIds, id)
+			else
+				table.insert(assetIds, id)
+			end
 		end
 	end
 
-	local success, details = pcall(function()
-		return AvatarEditorService:GetBatchItemDetails(batchParams)
-	end)
+	local details = {}
+	
+	if #assetIds > 0 then
+		local success, result = pcall(function()
+			return AvatarEditorService:GetBatchItemDetails(assetIds, Enum.AvatarItemType.Asset)
+		end)
+		if success and type(result) == "table" then
+			for _, detail in ipairs(result) do
+				table.insert(details, detail)
+			end
+		end
+	end
+	
+	if #bundleIds > 0 then
+		local success, result = pcall(function()
+			return AvatarEditorService:GetBatchItemDetails(bundleIds, Enum.AvatarItemType.Bundle)
+		end)
+		if success and type(result) == "table" then
+			for _, detail in ipairs(result) do
+				table.insert(details, detail)
+			end
+		end
+	end
 
-	if not success or type(details) ~= "table" then
+	if #details == 0 then
 		for _, item in ipairs(items) do
 			payloads[item.key] = {
 				key = item.key,
