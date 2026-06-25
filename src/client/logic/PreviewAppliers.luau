@@ -149,11 +149,12 @@ function PreviewAppliers.applyAccessories(description: HumanoidDescription, prev
 			newIds = appliedBuckets[propertyName] or {}
 		end
 		
-		for _, assetId in ipairs(newIds) do
+		for order, assetId in ipairs(newIds) do
 			table.insert(accessories, {
 				AccessoryType = accType,
 				AssetId = assetId,
-				Order = 1,
+				IsLayered = true,
+				Order = order,
 			})
 		end
 	end

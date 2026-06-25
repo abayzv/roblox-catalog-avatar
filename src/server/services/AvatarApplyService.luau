@@ -27,6 +27,7 @@ local MAX_APPLY_ITEMS = 20
 local appliedStates: { [number]: EquippedState } = {}
 local originalStates: { [number]: EquippedState } = {}
 local resolvedAssetCache: { [number]: number } = {}
+
 local ACCESSORY_TYPE_TO_PROPERTY = {
 	[Enum.AccessoryType.Back] = "BackAccessory",
 	[Enum.AccessoryType.Face] = "FaceAccessory",
@@ -48,6 +49,53 @@ local ACCESSORY_TYPE_TO_PROPERTY = {
 	[Enum.AccessoryType.Eyebrow] = "EyebrowAccessory",
 	[Enum.AccessoryType.Eyelash] = "EyelashAccessory",
 }
+
+local LAYERED_ACCESSORY_PROPERTY_TO_TYPE = {
+	TShirtAccessory = Enum.AccessoryType.TShirt,
+	ShirtAccessory = Enum.AccessoryType.Shirt,
+	PantsAccessory = Enum.AccessoryType.Pants,
+	JacketAccessory = Enum.AccessoryType.Jacket,
+	SweaterAccessory = Enum.AccessoryType.Sweater,
+	ShortsAccessory = Enum.AccessoryType.Shorts,
+	LeftShoeAccessory = Enum.AccessoryType.LeftShoe,
+	RightShoeAccessory = Enum.AccessoryType.RightShoe,
+	DressSkirtAccessory = Enum.AccessoryType.DressSkirt,
+	EyebrowAccessory = Enum.AccessoryType.Eyebrow,
+	EyelashAccessory = Enum.AccessoryType.Eyelash,
+}
+
+local function setLayeredAccessoryProperty(
+	description: HumanoidDescription,
+	propertyName: string,
+	assetIds: { number }?
+): boolean
+	local accessoryType = LAYERED_ACCESSORY_PROPERTY_TO_TYPE[propertyName]
+	if not accessoryType then
+		return false
+	end
+
+	assetIds = assetIds or {}
+
+	local accessories = description:GetAccessories(true)
+
+	for i = #accessories, 1, -1 do
+		if accessories[i].AccessoryType == accessoryType then
+			table.remove(accessories, i)
+		end
+	end
+
+	for order, assetId in ipairs(assetIds) do
+		table.insert(accessories, {
+			AssetId = assetId,
+			AccessoryType = accessoryType,
+			IsLayered = true,
+			Order = order,
+		})
+	end
+
+	description:SetAccessories(accessories, true)
+	return true
+end
 
 local function describeItems(items: { EquippedItem }): string
 	local values = {}
@@ -186,6 +234,29 @@ local function appendCharacterAccessoryItems(
 	end
 end
 
+local function appendDescriptionAccessoryItems(
+	items: { EquippedItem },
+	seen: { [number]: boolean },
+	description: HumanoidDescription
+)
+	local success, accessories = pcall(function()
+		return description:GetAccessories(true)
+	end)
+
+	if not success or type(accessories) ~= "table" then
+		return
+	end
+
+	for _, accessoryInfo in ipairs(accessories) do
+		local propertyName = ACCESSORY_TYPE_TO_PROPERTY[accessoryInfo.AccessoryType]
+		local assetId = tonumber(accessoryInfo.AssetId)
+
+		if propertyName and assetId then
+			addSupportedItem(items, seen, assetId, propertyName)
+		end
+	end
+end
+
 local function extractSupportedItems(
 	description: HumanoidDescription,
 	character: Model?
@@ -225,6 +296,7 @@ local function extractSupportedItems(
 		end
 	end
 
+	appendDescriptionAccessoryItems(items, seen, description)
 	appendCharacterAccessoryItems(items, seen, character)
 
 	table.sort(items, function(left, right)
@@ -407,16 +479,18 @@ local function setDescriptionProperty(
 	assetIds: { number }?
 )
 	assetIds = assetIds or {}
-	
+
 	if propertyName == "EmoteAnimation" then
 		local emotes = {}
+
 		for slot, id in ipairs(assetIds) do
 			if slot <= 8 then
 				emotes["Emote" .. tostring(slot)] = { id }
 			end
 		end
+
 		description:SetEmotes(emotes)
-		-- Also set equipped emotes? Usually just Setting them is enough for preview.
+
 		local equippedEmotes = {}
 		for slot = 1, math.min(#assetIds, 8) do
 			table.insert(equippedEmotes, {
@@ -424,14 +498,23 @@ local function setDescriptionProperty(
 				Slot = slot,
 			})
 		end
+
 		description:SetEquippedEmotes(equippedEmotes)
 		return
 	end
 
+	-- IMPORTANT: 3D / layered clothing harus lewat AccessoryBlob
+	if setLayeredAccessoryProperty(description, propertyName, assetIds) then
+		return
+	end
+
+	-- Existing logic untuk classic clothing, body part, animation, rigid accessories
 	local success, currentValue = pcall(function()
 		return description[propertyName]
 	end)
+
 	if not success then
+		warn("[AvatarApplyService] Unsupported HumanoidDescription property:", propertyName)
 		return
 	end
 
