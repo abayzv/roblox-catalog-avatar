@@ -13,6 +13,7 @@ export type CatalogItem = {
 	image: string,
 
 	assetId: number?,
+	assetType: string?,
 	propertyName: string?,
 	category: string?,
 	subcategory: string?,

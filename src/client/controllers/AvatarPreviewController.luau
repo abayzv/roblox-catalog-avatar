@@ -36,14 +36,22 @@ function AvatarPreviewController.ToggleItemPreview(item)
 		print("[CatalogPreview] Payload found for:", key)
 		
 		if payload.emoteAnimationId then
+			local activeEmote = PreviewState.getActiveEmote()
 			local ViewportAnimationController = require(script.Parent.ViewportAnimationController)
-			ViewportAnimationController.playEmote(payload.emoteAnimationId)
+			if activeEmote and activeEmote.key == payload.key then
+				ViewportAnimationController.stopAll()
+				PreviewState.setActiveEmote(nil)
+			else
+				ViewportAnimationController.playEmote(payload.emoteAnimationId)
+				PreviewState.setActiveEmote(payload)
+			end
 			return
 		end
 		
-		-- Stop all animations before appearance mutations
+		-- Stop all animations and clear active emote before appearance mutations
 		local ViewportAnimationController = require(script.Parent.ViewportAnimationController)
 		ViewportAnimationController.stopAll()
+		PreviewState.setActiveEmote(nil)
 		
 		local equippedKeys = PreviewState.getEquippedKeys()
 		local isEquipped = equippedKeys[key] == true

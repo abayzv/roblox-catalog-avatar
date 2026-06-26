@@ -189,6 +189,7 @@ function CatalogService.fetchPage(params: FetchParams): FetchResult
 					then `rbxthumb://type=BundleThumbnail&id={rawItem.Id}&w=420&h=420` 
 					else `rbxthumb://type=Asset&id={rawItem.Id}&w=420&h=420`,
 				assetId = if itemType == "Asset" then rawItem.Id else nil,
+				assetType = if itemType == "Asset" and rawItem.AssetType then rawItem.AssetType.Name else nil,
 				category = params.category,
 				subcategory = params.subCategory,
 			}
