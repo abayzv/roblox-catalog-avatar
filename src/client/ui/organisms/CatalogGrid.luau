@@ -26,7 +26,8 @@ export type CatalogGridProps = {
 local function CatalogGrid(props: CatalogGridProps)
 	local contentSizeBinding, updateContentSize = React.useBinding(Vector2.new(0, 0))
 	local containerWidth, setContainerWidth = React.useState(804)
-	local previewPayloads, appliedEntries, activeEmote = usePreviewState()
+	local equippedKeys, activeEmote = usePreviewState()
+	local isHydrated = true
 	local lastScrollTime = React.useRef(0)
 
 	local children = {}
@@ -98,9 +99,7 @@ local function CatalogGrid(props: CatalogGridProps)
 				local isReady = props.readyKeys and item.key and props.readyKeys[item.key]
 				
 				if isReady then
-					local payload = previewPayloads[item.key]
-					local isPreviewing = (payload and payload.action ~= "remove")
-						or (appliedEntries[item.key] ~= nil and not payload)
+					local isPreviewing = (equippedKeys[item.key] == true)
 						or (activeEmote and activeEmote.key == item.key)
 					children["ItemWrapper_" .. item.id] = React.createElement("Frame", {
 						BackgroundTransparency = 1,

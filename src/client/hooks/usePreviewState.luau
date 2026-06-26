@@ -3,20 +3,18 @@ local React = require(ReplicatedStorage.Packages.React)
 local PreviewState = require(script.Parent.Parent.logic.PreviewState)
 
 local function usePreviewState()
-	local previewPayloads, setPreviewPayloads = React.useState(PreviewState.getPreviewPayloads())
-	local appliedEntries, setAppliedEntries = React.useState(PreviewState.getAppliedEntries())
+	local equippedKeys, setEquippedKeys = React.useState(PreviewState.getEquippedKeys())
 	local activeEmote, setActiveEmote = React.useState(PreviewState.getActiveEmote())
 
 	React.useEffect(function()
-		local unsubscribe = PreviewState.subscribe(function(newPreviewPayloads, newAppliedEntries, newActiveEmote)
-			setPreviewPayloads(newPreviewPayloads)
-			setAppliedEntries(newAppliedEntries)
+		local unsubscribe = PreviewState.subscribe(function(newEquippedKeys, newActiveEmote)
+			setEquippedKeys(newEquippedKeys)
 			setActiveEmote(newActiveEmote)
 		end)
 		return unsubscribe
 	end, {})
 
-	return previewPayloads, appliedEntries, activeEmote
+	return equippedKeys, activeEmote
 end
 
 return usePreviewState
