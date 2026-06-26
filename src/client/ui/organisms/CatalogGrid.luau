@@ -5,6 +5,7 @@ local ItemCard = require(script.Parent.Parent.molecules.ItemCard)
 local ItemCardSkeleton = require(script.Parent.Parent.molecules.ItemCardSkeleton)
 local usePreviewState = require(script.Parent.Parent.Parent.hooks.usePreviewState)
 local PreviewState = require(script.Parent.Parent.Parent.logic.PreviewState)
+local PreviewPayloadCache = require(script.Parent.Parent.Parent.services.PreviewPayloadCache)
 
 local CatalogTypes = require(ReplicatedStorage.Shared.types.CatalogTypes)
 export type CatalogItem = CatalogTypes.CatalogItem
@@ -100,7 +101,8 @@ local function CatalogGrid(props: CatalogGridProps)
 				local isReady = props.readyKeys and item.key and props.readyKeys[item.key]
 				
 				if isReady then
-					local isEmote = item.assetType == "EmoteAnimation"
+					local payload = PreviewPayloadCache.get(item.key)
+					local isEmote = payload and payload.emoteAnimationId ~= nil
 					local isPreviewing = false
 					if not isEmote then
 						isPreviewing = (equippedKeys[item.key] == true)
