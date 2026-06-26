@@ -9,6 +9,7 @@ local useCatalogState = require(script.Parent.Parent.hooks.useCatalogState)
 local useWornItems = require(script.Parent.Parent.Parent.hooks.useWornItems)
 local WornItemExtractor = require(ReplicatedStorage.Shared.avatar.WornItemExtractor)
 local MyAvatarCategoryConfig = require(ReplicatedStorage.Shared.avatar.MyAvatarCategoryConfig)
+local AvatarPreviewController = require(script.Parent.Parent.Parent.controllers.AvatarPreviewController)
 
 export type MyAvatarPanelProps = {
 	layoutOrder: number?,
@@ -42,6 +43,7 @@ local function MyAvatarPanel(props: MyAvatarPanelProps)
 				price = worn.price,
 				creator = worn.creator,
 				image = worn.image,
+				property = worn.property,
 			})
 		end
 		return items
@@ -148,6 +150,9 @@ local function MyAvatarPanel(props: MyAvatarPanelProps)
 						emptyText = if state.activeMainCategory == "all" and state.activeSubCategory == "all"
 							then "Belum ada item yang bisa ditampilkan."
 							else "Kamu belum memakai item di kategori ini.",
+						onTryOn = function(item)
+							AvatarPreviewController.RemoveWornItem(item)
+						end,
 					}),
 				}),
 			}),

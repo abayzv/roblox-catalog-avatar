@@ -75,4 +75,49 @@ function AvatarPreviewController.ResetPreview()
 	warn("Reset to original not yet implemented in Phase 7 UI")
 end
 
+function AvatarPreviewController.RemoveWornItem(item)
+	local state = AvatarAppearanceClient.getState()
+	if not state.liveSnapshot then
+		warn("[CatalogPreview] Cannot remove item: live snapshot is not loaded.")
+		return
+	end
+
+	print("[CatalogPreview] Removing worn item:", item.property, item.id)
+
+	-- We construct a custom payload to remove the item
+	-- We need to pass the assetIds as a table with the single ID so the draft logic can filter it out of CSV properties
+	local removePayload = {
+		action = "remove",
+		id = item.id,
+		itemType = "Asset",
+		propertyName = item.property,
+		assetIds = { item.id }
+	}
+	
+	-- We don't really need humanoidDescriptionProperties for simple removal if applyPayloadToSnapshot knows how to handle "remove" with just id.
+	-- Let's check how applyPayloadToSnapshot handles remove: it iterates over humanoidDescriptionProperties and removes the id.
+	
+	-- So we need to fetch the property.
+	-- Fortunately, applyPayloadToSnapshot removes `id` from any CSV property or clears the property if it matches exactly.
+	-- But to be safe, we give it the property hint.
+	
+	local nextSnapshot = AvatarDescriptionDraft.applyPayloadToSnapshot(state.liveSnapshot, removePayload)
+	
+	task.spawn(function()
+		local ok, result = pcall(function()
+			return TryOnDescriptionRemote:InvokeServer({
+				action = "TryOnDescription",
+				description = nextSnapshot,
+				revision = state.liveRevision
+			})
+		end)
+		
+		if ok and result and result.success then
+			AvatarAppearanceClient.updateState(result.liveSnapshot, result.liveRevision, result.source)
+		else
+			warn("[CatalogPreview] Remove failed:", result and result.message or "unknown error")
+		end
+	end)
+end
+
 return AvatarPreviewController

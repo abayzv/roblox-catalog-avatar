@@ -53,6 +53,16 @@ local function extractEquippedKeys(snapshot: AppearanceSnapshot)
 		pcall(function() addAsset(desc[prop]) end)
 	end
 	
+	-- Body Parts
+	for _, prop in ipairs({"Head", "Torso", "LeftArm", "RightArm", "LeftLeg", "RightLeg"}) do
+		pcall(function() addAsset(desc[prop]) end)
+	end
+
+	-- Animations
+	for _, prop in ipairs({"IdleAnimation", "WalkAnimation", "RunAnimation", "JumpAnimation", "FallAnimation", "ClimbAnimation", "SwimAnimation"}) do
+		pcall(function() addAsset(desc[prop]) end)
+	end
+	
 	-- Layered clothing
 	local accs = desc:GetAccessories(true)
 	for _, acc in ipairs(accs) do
