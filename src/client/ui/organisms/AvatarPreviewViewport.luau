@@ -56,7 +56,7 @@ local function playEmoteAnimation(model: Model, emoteId: number)
 	animation:Destroy()
 end
 
-local function playIdleAnimation(model: Model)
+local function playIdleAnimation(model: Model, desc: HumanoidDescription?)
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	if not humanoid then return end
 
@@ -74,8 +74,13 @@ local function playIdleAnimation(model: Model)
 
 	local animation = Instance.new("Animation")
 	animation.Name = "CatalogPreviewIdle"
-	animation.AnimationId = IDLE_ANIMATION_BY_RIG_TYPE[humanoid.RigType]
-		or IDLE_ANIMATION_BY_RIG_TYPE[Enum.HumanoidRigType.R15]
+	
+	if desc and desc.IdleAnimation and desc.IdleAnimation > 0 then
+		animation.AnimationId = "rbxassetid://" .. tostring(desc.IdleAnimation)
+	else
+		animation.AnimationId = IDLE_ANIMATION_BY_RIG_TYPE[humanoid.RigType]
+			or IDLE_ANIMATION_BY_RIG_TYPE[Enum.HumanoidRigType.R15]
+	end
 
 	local ok, trackOrError = pcall(function()
 		return animator:LoadAnimation(animation)
@@ -184,12 +189,12 @@ local function setupViewport(
 				if activeEmote and activeEmote.emoteAnimationId then
 					playEmoteAnimation(rig, activeEmote.emoteAnimationId)
 				else
-					playIdleAnimation(rig)
+					playIdleAnimation(rig, desc)
 				end
 			end
 		end)
 	else
-		playIdleAnimation(rig)
+		playIdleAnimation(rig, nil)
 	end
 
 	return rig
