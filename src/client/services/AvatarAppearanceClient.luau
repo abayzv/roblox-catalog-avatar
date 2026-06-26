@@ -3,6 +3,7 @@ local GetAppearanceStateRemote = require(ReplicatedStorage.Shared.remotes.GetApp
 local HumanoidDescriptionSerializer = require(ReplicatedStorage.Shared.avatar.HumanoidDescriptionSerializer)
 local CatalogTypes = require(ReplicatedStorage.Shared.types.CatalogTypes)
 local PreviewState = require(script.Parent.Parent.logic.PreviewState)
+local PreviewPayloadCache = require(script.Parent.Parent.services.PreviewPayloadCache)
 
 export type AppearanceSnapshot = {
 	[string]: any,
@@ -58,10 +59,62 @@ local function extractEquippedKeys(snapshot: AppearanceSnapshot)
 		addAsset(acc.AssetId)
 	end
 	
-	-- Bundles/Body parts usually aren't direct assetIds in description (they are bundle IDs, but description holds asset IDs for the parts).
-	-- For UI matching, if the UI matches by itemKey (which for bundles is Bundle:ID), it's hard to map from part AssetId -> Bundle ID locally.
-	-- We'll just leave them out for now or only match Assets. The plan says simple currently wearing is fine.
+	-- Bundles/Body parts second pass
+	-- Since HumanoidDescription only stores part AssetIDs (not Bundle IDs),
+	-- we must infer if a Bundle is equipped by checking if its parts are equipped.
+	for cachedKey, payload in pairs(PreviewPayloadCache.getAll()) do
+		if string.find(cachedKey, "^Bundle:") then
+			local isEquipped = true
+			local hasRequirements = false
+			
+			if payload.assetIds and #payload.assetIds > 0 then
+				hasRequirements = true
+				for _, assetId in ipairs(payload.assetIds) do
+					if not keys[CatalogTypes.makeItemKey("Asset", assetId)] then
+						isEquipped = false
+						break
+					end
+				end
+			end
+			
+			if payload.bodyParts then
+				hasRequirements = true
+				for partName, partAssetId in pairs(payload.bodyParts) do
+					if partAssetId > 0 then
+						local currentVal = nil
+						pcall(function() currentVal = desc[partName] end)
+						if currentVal ~= partAssetId then
+							isEquipped = false
+							break
+						end
+					end
+				end
+			end
+			
+			if payload.animations then
+				hasRequirements = true
+				for animName, animAssetId in pairs(payload.animations) do
+					if animAssetId > 0 then
+						local currentVal = nil
+						pcall(function() currentVal = desc[animName] end)
+						if currentVal ~= animAssetId then
+							isEquipped = false
+							break
+						end
+					end
+				end
+			end
+			
+			if hasRequirements and isEquipped then
+				keys[cachedKey] = true
+			end
+		end
+	end
 
+	local count = 0
+	for k in pairs(keys) do count += 1 end
+	print("[AvatarAppearanceClient] Extracted equipped keys count:", count)
+	
 	PreviewState.setEquippedKeys(keys)
 end
 

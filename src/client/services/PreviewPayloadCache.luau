@@ -29,6 +29,10 @@ function PreviewPayloadCache.has(key: CatalogTypes.ItemKey): boolean
 	return cache[key] ~= nil
 end
 
+function PreviewPayloadCache.getAll(): { [CatalogTypes.ItemKey]: PreviewTypes.PreviewPayload }
+	return cache
+end
+
 function PreviewPayloadCache.listen(key: CatalogTypes.ItemKey, callback: (payload: PreviewTypes.PreviewPayload) -> ()): () -> ()
 	if cache[key] then
 		-- Already cached, fire immediately
