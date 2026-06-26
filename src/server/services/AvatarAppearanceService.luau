@@ -139,6 +139,34 @@ function AvatarAppearanceService.resetToOriginal(player: Player): (boolean, stri
 	return AvatarAppearanceService.applyDescriptionSnapshot(player, state.originalSnapshot, "reset_original")
 end
 
+local function isMorphDetected(originalSnapshot: any, currentSnapshot: any): boolean
+	local KEYS = {
+		"Head", "Torso", "LeftArm", "RightArm", "LeftLeg", "RightLeg",
+		"Face", "Shirt", "Pants", "GraphicTShirt",
+		"HatAccessory", "HairAccessory", "FaceAccessory", "NeckAccessory", 
+		"ShouldersAccessory", "FrontAccessory", "BackAccessory", "WaistAccessory",
+		"TShirtAccessory", "ShirtAccessory", "PantsAccessory", "JacketAccessory", 
+		"SweaterAccessory", "ShortsAccessory", "DressSkirtAccessory", 
+		"LeftShoeAccessory", "RightShoeAccessory",
+		"IdleAnimation", "WalkAnimation", "RunAnimation", "JumpAnimation", 
+		"FallAnimation", "ClimbAnimation", "SwimAnimation", "MoodAnimation"
+	}
+	
+	for _, key in ipairs(KEYS) do
+		local origVal = tostring(originalSnapshot[key] or "0")
+		local currVal = tostring(currentSnapshot[key] or "0")
+		
+		if origVal == "" then origVal = "0" end
+		if currVal == "" then currVal = "0" end
+		
+		if origVal ~= currVal then
+			return true
+		end
+	end
+	
+	return false
+end
+
 function AvatarAppearanceService.reapplyLiveSnapshot(player: Player)
 	local state = getOrCreateState(player)
 	if not state.liveSnapshot then
@@ -155,6 +183,16 @@ function AvatarAppearanceService.reapplyLiveSnapshot(player: Player)
 	if state.isApplying then
 		warn("[AvatarAppearanceService] Skipping reapply for", player.Name, "- apply already in progress")
 		return
+	end
+	
+	-- Auto-detect morph
+	local currentDesc = humanoid:GetAppliedDescription()
+	if currentDesc and state.originalSnapshot then
+		local currentSnapshot = HumanoidDescriptionSerializer.serialize(currentDesc)
+		if isMorphDetected(state.originalSnapshot, currentSnapshot) then
+			print(`[AvatarAppearanceService] Morph or custom avatar detected on {player.Name}. Aborting catalog reapply.`)
+			return
+		end
 	end
 	
 	state.isApplying = true
