@@ -75,12 +75,23 @@ local function playIdleAnimation(model: Model, desc: HumanoidDescription?)
 	local animation = Instance.new("Animation")
 	animation.Name = "CatalogPreviewIdle"
 	
+	local animationId = IDLE_ANIMATION_BY_RIG_TYPE[humanoid.RigType]
+		or IDLE_ANIMATION_BY_RIG_TYPE[Enum.HumanoidRigType.R15]
+		
 	if desc and desc.IdleAnimation and desc.IdleAnimation > 0 then
-		animation.AnimationId = "rbxassetid://" .. tostring(desc.IdleAnimation)
-	else
-		animation.AnimationId = IDLE_ANIMATION_BY_RIG_TYPE[humanoid.RigType]
-			or IDLE_ANIMATION_BY_RIG_TYPE[Enum.HumanoidRigType.R15]
+		local animate = model:FindFirstChild("Animate")
+		if animate then
+			local idle = animate:FindFirstChild("idle")
+			if idle then
+				local anim1 = idle:FindFirstChild("Animation1") or idle:FindFirstChildWhichIsA("Animation")
+				if anim1 and anim1:IsA("Animation") and anim1.AnimationId ~= "" then
+					animationId = anim1.AnimationId
+				end
+			end
+		end
 	end
+	
+	animation.AnimationId = animationId
 
 	local ok, trackOrError = pcall(function()
 		return animator:LoadAnimation(animation)
@@ -102,7 +113,9 @@ local function prepareRig(model: Model)
 	for _, descendant in ipairs(model:GetDescendants()) do
 		if descendant:IsA("Script") or descendant:IsA("LocalScript") then
 			descendant.Enabled = false
-			descendant:Destroy()
+			if descendant.Name ~= "Animate" then
+				descendant:Destroy()
+			end
 		end
 	end
 
