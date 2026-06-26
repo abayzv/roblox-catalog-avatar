@@ -81,6 +81,6 @@ MyAvatarCategoryConfig.MainCategories = {
 			{ id = "back", label = "Back", properties = { "BackAccessory" } },
 			{ id = "waist", label = "Waist", properties = { "WaistAccessory" } },
 		},
+	},
 }
-
 return MyAvatarCategoryConfig
