@@ -63,7 +63,33 @@ function AvatarDescriptionDraft.applyPayload(payload: any)
 				(draftDescription :: any)[payload.propertyName] = payload.assetIds[#payload.assetIds] or 0
 			end
 		end)
-		if not ok then warn("Failed to set property", payload.propertyName, "err:", err) end
+		
+		if not ok then
+			-- It might be a layered clothing pseudo-property (like "JacketAccessory")
+			local accessoryName = payload.propertyName:gsub("Accessory", "")
+			if accessoryName == "Shoulders" then accessoryName = "Shoulder" end
+			local enumSuccess, enumItem = pcall(function() return Enum.AccessoryType[accessoryName] end)
+			
+			if enumSuccess and enumItem then
+				local accs = draftDescription:GetAccessories(true)
+				for i = #accs, 1, -1 do
+					if accs[i].AccessoryType == enumItem then
+						table.remove(accs, i)
+					end
+				end
+				for i, assetId in ipairs(payload.assetIds) do
+					table.insert(accs, {
+						AccessoryType = enumItem,
+						AssetId = assetId,
+						IsLayered = true,
+						Order = i
+					})
+				end
+				draftDescription:SetAccessories(accs, true)
+			else
+				warn("Failed to set property", payload.propertyName, "err:", err)
+			end
+		end
 	end
 	
 	if payload.bodyParts then

@@ -48,6 +48,8 @@ local CatalogConfig = {
 		[70] = "LeftShoeAccessory",
 		[71] = "RightShoeAccessory",
 		[72] = "DressSkirtAccessory",
+		[78] = "MoodAnimation",
+		[79] = "Head",
 	},
 
 	-- Toggle this to true if the game requires players to actually own the items to apply them to their live character

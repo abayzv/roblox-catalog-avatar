@@ -31,6 +31,7 @@ local NUMBER_PROPERTIES = {
 	"FallAnimation",
 	"ClimbAnimation",
 	"SwimAnimation",
+	"MoodAnimation",
 }
 
 local STRING_PROPERTIES = {
@@ -44,7 +45,9 @@ local STRING_PROPERTIES = {
 	"FrontAccessory",
 	"BackAccessory",
 	"WaistAccessory",
+}
 
+local LAYERED_CLOTHING_PROPERTIES = {
 	-- Layered clothing
 	"TShirtAccessory",
 	"ShirtAccessory",
@@ -95,6 +98,24 @@ function HumanoidDescriptionSerializer.serialize(description: HumanoidDescriptio
 		end
 	end
 
+	local accessories = description:GetAccessories(true)
+	for _, prop in ipairs(LAYERED_CLOTHING_PROPERTIES) do
+		local accessoryName = prop:gsub("Accessory", "")
+		if accessoryName == "Shoulders" then accessoryName = "Shoulder" end
+		local enumSuccess, enumItem = pcall(function() return Enum.AccessoryType[accessoryName] end)
+		if enumSuccess and enumItem then
+			local ids = {}
+			for _, acc in ipairs(accessories) do
+				if acc.AccessoryType == enumItem and acc.IsLayered then
+					table.insert(ids, acc.AssetId)
+				end
+			end
+			if #ids > 0 then
+				snapshot[prop] = table.concat(ids, ",")
+			end
+		end
+	end
+
 	for _, propertyName in ipairs(COLOR_PROPERTIES) do
 		local value = safeRead(description, propertyName)
 		if value ~= nil and typeof(value) == "Color3" then
@@ -127,6 +148,32 @@ function HumanoidDescriptionSerializer.deserialize(snapshot: table): HumanoidDes
 			end)
 		end
 	end
+
+	local accessories = description:GetAccessories(true)
+	for _, prop in ipairs(LAYERED_CLOTHING_PROPERTIES) do
+		local value = snapshot[prop]
+		if value and type(value) == "string" and value ~= "" then
+			local accessoryName = prop:gsub("Accessory", "")
+			if accessoryName == "Shoulders" then accessoryName = "Shoulder" end
+			local enumSuccess, enumItem = pcall(function() return Enum.AccessoryType[accessoryName] end)
+			if enumSuccess and enumItem then
+				for idStr in string.gmatch(value, "[^%,]+") do
+					local id = tonumber(idStr)
+					if id then
+						table.insert(accessories, {
+							AccessoryType = enumItem,
+							AssetId = id,
+							IsLayered = true,
+							Order = #accessories + 1
+						})
+					end
+				end
+			end
+		end
+	end
+	pcall(function()
+		description:SetAccessories(accessories, true)
+	end)
 
 	for _, propertyName in ipairs(COLOR_PROPERTIES) do
 		local value = snapshot[propertyName]
@@ -162,16 +209,27 @@ function HumanoidDescriptionSerializer.validateSnapshot(snapshot: table): (boole
 		local value = snapshot[propertyName]
 		if value ~= nil then
 			if type(value) ~= "string" then
-				return false, "Property " .. propertyName .. " must be a string"
+				return false, "Property " .. propertyName .. " must be a CSV string"
 			end
-			if string.len(value) > 300 then
-				return false, "Property " .. propertyName .. " exceeds max length"
+			local count = 0
+			for _ in string.gmatch(value, "[^%,]+") do
+				count += 1
 			end
-			
-			-- Count commas to ensure max 10 ids
-			local count = 1
-			for _ in string.gmatch(value, ",") do
-				count = count + 1
+			if count > 10 then
+				return false, "Property " .. propertyName .. " has too many asset IDs"
+			end
+		end
+	end
+
+	for _, propertyName in ipairs(LAYERED_CLOTHING_PROPERTIES) do
+		local value = snapshot[propertyName]
+		if value ~= nil then
+			if type(value) ~= "string" then
+				return false, "Property " .. propertyName .. " must be a CSV string"
+			end
+			local count = 0
+			for _ in string.gmatch(value, "[^%,]+") do
+				count += 1
 			end
 			if count > 10 then
 				return false, "Property " .. propertyName .. " has too many asset IDs"
