@@ -35,6 +35,22 @@ function AvatarApplyService.init()
 				liveRevision = AvatarAppearanceService.getLiveRevision(player),
 				source = "catalog_try_on",
 			}
+		elseif type(payload) == "table" and payload.action == "ResetToOriginal" then
+			local ok, err = AvatarAppearanceService.resetToOriginal(player)
+			if not ok then
+				return {
+					success = false,
+					code = err == "APPLY_IN_PROGRESS" and "APPLY_IN_PROGRESS" or "APPLY_ERROR",
+					message = err,
+				}
+			end
+			
+			return {
+				success = true,
+				liveSnapshot = AvatarAppearanceService.getLiveSnapshot(player),
+				liveRevision = AvatarAppearanceService.getLiveRevision(player),
+				source = "reset_original",
+			}
 		end
 
 		return { success = false, message = "Unknown action" }

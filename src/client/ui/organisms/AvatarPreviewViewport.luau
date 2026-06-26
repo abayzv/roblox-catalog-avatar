@@ -8,6 +8,8 @@ local GlassButton = require(script.Parent.Parent.atoms.GlassButton)
 local useAppearanceState = require(script.Parent.Parent.Parent.hooks.useAppearanceState)
 local usePreviewState = require(script.Parent.Parent.Parent.hooks.usePreviewState)
 local HumanoidDescriptionSerializer = require(ReplicatedStorage.Shared.avatar.HumanoidDescriptionSerializer)
+local ApplyAvatarRemote = require(ReplicatedStorage.Shared.remotes.ApplyAvatarRemote)
+local AvatarAppearanceClient = require(script.Parent.Parent.Parent.services.AvatarAppearanceClient)
 
 local LOCAL_PLAYER = Players.LocalPlayer
 local INITIAL_RIG_YAW = math.rad(180)
@@ -306,8 +308,33 @@ local function AvatarPreviewViewport()
 				[React.Event.InputEnded] = endDrag,
 			}),
 
-			ResetArea = false and React.createElement("Frame", {
-				-- Reset to original is not implemented yet in Phase 7 since we don't have OriginalSnapshot in client state.
+			ResetArea = React.createElement("Frame", {
+				AnchorPoint = Vector2.new(1, 0),
+				Position = UDim2.new(1, -Theme.Space.MD, 0, Theme.Space.MD),
+				Size = UDim2.fromOffset(48, 48),
+				BackgroundTransparency = 1,
+				ZIndex = 13,
+			}, {
+				ResetButton = React.createElement(GlassButton, {
+					icon = Icons.Reset,
+					color = Theme.Color.TextSecondary,
+					size = UDim2.fromScale(1, 1),
+					onActivated = function()
+						task.spawn(function()
+							local ok, response = pcall(function()
+								return ApplyAvatarRemote:InvokeServer({
+									action = "ResetToOriginal"
+								})
+							end)
+							
+							if ok and response and response.success then
+								AvatarAppearanceClient.updateState(response.liveSnapshot, response.liveRevision, response.source)
+							else
+								warn("[CatalogPreview] Failed to reset to original:", response and response.message or response)
+							end
+						end)
+					end,
+				}),
 			})
 		}),
 	})
