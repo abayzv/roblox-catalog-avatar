@@ -49,15 +49,6 @@ local PROPERTY_CLASSIFICATION = {
 	FrontAccessory = { mainCategory = "accessories", subCategory = "front", groupId = "accessories" },
 	BackAccessory = { mainCategory = "accessories", subCategory = "back", groupId = "accessories" },
 	WaistAccessory = { mainCategory = "accessories", subCategory = "waist", groupId = "accessories" },
-
-	-- Animation
-	IdleAnimation = { mainCategory = "animation", subCategory = "idle", groupId = "animation" },
-	WalkAnimation = { mainCategory = "animation", subCategory = "walk", groupId = "animation" },
-	RunAnimation = { mainCategory = "animation", subCategory = "run", groupId = "animation" },
-	JumpAnimation = { mainCategory = "animation", subCategory = "jump", groupId = "animation" },
-	FallAnimation = { mainCategory = "animation", subCategory = "fall", groupId = "animation" },
-	ClimbAnimation = { mainCategory = "animation", subCategory = "climb", groupId = "animation" },
-	SwimAnimation = { mainCategory = "animation", subCategory = "swim", groupId = "animation" },
 }
 
 local WornItemExtractor = {}

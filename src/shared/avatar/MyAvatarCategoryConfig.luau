@@ -23,7 +23,6 @@ MyAvatarCategoryConfig.MainCategories = {
 			{ id = "3d_clothing", label = "3D Clothing", groupId = "3d_clothing" },
 			{ id = "classic_clothing", label = "Classic Clothing", groupId = "classic_clothing" },
 			{ id = "accessories", label = "Accessories", groupId = "accessories" },
-			{ id = "animation", label = "Animation", groupId = "animation" },
 		},
 	},
 
@@ -82,22 +81,6 @@ MyAvatarCategoryConfig.MainCategories = {
 			{ id = "back", label = "Back", properties = { "BackAccessory" } },
 			{ id = "waist", label = "Waist", properties = { "WaistAccessory" } },
 		},
-	},
-
-	{
-		id = "animation",
-		label = "Animation",
-		subcategories = {
-			{ id = "all", label = "All", groupId = "animation" },
-			{ id = "idle", label = "Idle", properties = { "IdleAnimation" } },
-			{ id = "walk", label = "Walk", properties = { "WalkAnimation" } },
-			{ id = "run", label = "Run", properties = { "RunAnimation" } },
-			{ id = "jump", label = "Jump", properties = { "JumpAnimation" } },
-			{ id = "fall", label = "Fall", properties = { "FallAnimation" } },
-			{ id = "climb", label = "Climb", properties = { "ClimbAnimation" } },
-			{ id = "swim", label = "Swim", properties = { "SwimAnimation" } },
-		},
-	},
 }
 
 return MyAvatarCategoryConfig

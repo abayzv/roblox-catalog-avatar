@@ -7,6 +7,20 @@ local TryOnDescriptionRemote = require(ReplicatedStorage.Shared.remotes.ApplyAva
 
 local AvatarPreviewController = {}
 
+function AvatarPreviewController.getViewportHumanoid()
+	local localPlayer = game:GetService("Players").LocalPlayer
+	local playerGui = localPlayer:FindFirstChild("PlayerGui")
+	if not playerGui then return nil end
+	
+	local previewWorld = playerGui:FindFirstChild("PreviewWorld", true)
+	if not previewWorld then return nil end
+	
+	local rig = previewWorld:FindFirstChild("CatalogPreviewRig")
+	if not rig then return nil end
+	
+	return rig:FindFirstChildOfClass("Humanoid")
+end
+
 -- This function is called when UI clicks "Try On"
 function AvatarPreviewController.ToggleItemPreview(item)
 	local state = AvatarAppearanceClient.getState()
@@ -20,17 +34,16 @@ function AvatarPreviewController.ToggleItemPreview(item)
 	
 	if payload then
 		print("[CatalogPreview] Payload found for:", key)
-		local activeEmote = PreviewState.getActiveEmote()
-		if activeEmote and activeEmote.key == key then
-			print("[CatalogPreview] Toggling off emote")
-			PreviewState.setActiveEmote(nil)
-			return
-		end
-
+		
 		if payload.emoteAnimationId then
-			PreviewState.setActiveEmote(payload)
+			local ViewportAnimationController = require(script.Parent.ViewportAnimationController)
+			ViewportAnimationController.playEmote(payload.emoteAnimationId)
 			return
 		end
+		
+		-- Stop all animations before appearance mutations
+		local ViewportAnimationController = require(script.Parent.ViewportAnimationController)
+		ViewportAnimationController.stopAll()
 		
 		local equippedKeys = PreviewState.getEquippedKeys()
 		local isEquipped = equippedKeys[key] == true
@@ -84,24 +97,32 @@ function AvatarPreviewController.RemoveWornItem(item)
 
 	print("[CatalogPreview] Removing worn item:", item.property, item.id)
 
-	-- We construct a custom payload to remove the item
-	-- We need to pass the assetIds as a table with the single ID so the draft logic can filter it out of CSV properties
-	local removePayload = {
-		action = "remove",
-		id = item.id,
-		itemType = "Asset",
-		propertyName = item.property,
-		assetIds = { item.id }
+	local nextSnapshot = nil
+	local BODY_RESTORE_FIELDS = {
+		Head = true, Torso = true, LeftArm = true, RightArm = true, LeftLeg = true, RightLeg = true,
+		Face = true,
 	}
-	
-	-- We don't really need humanoidDescriptionProperties for simple removal if applyPayloadToSnapshot knows how to handle "remove" with just id.
-	-- Let's check how applyPayloadToSnapshot handles remove: it iterates over humanoidDescriptionProperties and removes the id.
-	
-	-- So we need to fetch the property.
-	-- Fortunately, applyPayloadToSnapshot removes `id` from any CSV property or clears the property if it matches exactly.
-	-- But to be safe, we give it the property hint.
-	
-	local nextSnapshot = AvatarDescriptionDraft.applyPayloadToSnapshot(state.liveSnapshot, removePayload)
+
+	if BODY_RESTORE_FIELDS[item.property] and state.originalSnapshot then
+		nextSnapshot = table.clone(state.liveSnapshot)
+		nextSnapshot[item.property] = state.originalSnapshot[item.property]
+		
+		local scales = { "BodyTypeScale", "DepthScale", "HeadScale", "HeightScale", "ProportionScale", "WidthScale" }
+		for _, scale in ipairs(scales) do
+			if state.originalSnapshot[scale] ~= nil then
+				nextSnapshot[scale] = state.originalSnapshot[scale]
+			end
+		end
+	else
+		local removePayload = {
+			action = "remove",
+			id = item.id,
+			itemType = "Asset",
+			propertyName = item.property,
+			assetIds = { item.id }
+		}
+		nextSnapshot = AvatarDescriptionDraft.applyPayloadToSnapshot(state.liveSnapshot, removePayload)
+	end
 	
 	task.spawn(function()
 		local ok, result = pcall(function()

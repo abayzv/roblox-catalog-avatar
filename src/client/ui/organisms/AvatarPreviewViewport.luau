@@ -20,41 +20,7 @@ local IDLE_ANIMATION_BY_RIG_TYPE = {
 	[Enum.HumanoidRigType.R15] = "rbxassetid://507766666",
 }
 
-local function playEmoteAnimation(model: Model, emoteId: number)
-	local humanoid = model:FindFirstChildOfClass("Humanoid")
-	if not humanoid then return end
 
-	local animator = humanoid:FindFirstChildOfClass("Animator")
-	if not animator then
-		animator = Instance.new("Animator")
-		animator.Parent = humanoid
-	end
-
-	for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-		if track.Name == "CatalogPreviewIdle" or track.Name == "CatalogPreviewEmote" then
-			track:Stop(0.1)
-		end
-	end
-
-	local animation = Instance.new("Animation")
-	animation.Name = "CatalogPreviewEmote"
-	animation.AnimationId = "rbxassetid://" .. tostring(emoteId)
-
-	local ok, trackOrError = pcall(function()
-		return animator:LoadAnimation(animation)
-	end)
-
-	if ok then
-		local track = trackOrError
-		track.Looped = true
-		track.Priority = Enum.AnimationPriority.Action
-		track:Play(0.1, 1, 1)
-	else
-		warn("[CatalogPreview] Failed to play emote animation:", trackOrError)
-	end
-
-	animation:Destroy()
-end
 
 local function playIdleAnimation(model: Model, desc: HumanoidDescription?)
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
@@ -147,22 +113,27 @@ end
 
 local function setupViewport(
 	viewport: ViewportFrame,
-	liveSnapshot: any,
-	activeEmote: any
+	liveSnapshot: any
 )
-	viewport:ClearAllChildren()
+	local token = (viewport:GetAttribute("PreviewToken") or 0) + 1
+	viewport:SetAttribute("PreviewToken", token)
 
-	local camera = Instance.new("Camera")
-	camera.Name = "PreviewCamera"
-	camera.FieldOfView = 31
-	camera.Parent = viewport
+	local camera = viewport:FindFirstChild("PreviewCamera")
+	if not camera then
+		camera = Instance.new("Camera")
+		camera.Name = "PreviewCamera"
+		camera.FieldOfView = 31
+		camera.Parent = viewport
+	end
 	viewport.CurrentCamera = camera
 
-	local worldModel = Instance.new("WorldModel")
-	worldModel.Name = "PreviewWorld"
-	worldModel.Parent = viewport
+	local worldModel = viewport:FindFirstChild("PreviewWorld")
+	if not worldModel then
+		worldModel = Instance.new("WorldModel")
+		worldModel.Name = "PreviewWorld"
+		worldModel.Parent = viewport
+	end
 	
-	-- Wait for live character to exist
 	local character = LOCAL_PLAYER.Character or LOCAL_PLAYER.CharacterAdded:Wait()
 	if not character:FindFirstChildOfClass("Humanoid") then
 		character:WaitForChild("Humanoid", 5)
@@ -176,17 +147,18 @@ local function setupViewport(
 	if not rig then return nil end
 
 	rig.Name = "CatalogPreviewRig"
-	rig.Parent = worldModel
 	prepareRig(rig)
-	pivotRig(rig)
-	frameCamera(camera, rig)
+	
+	local ViewportAnimationController = require(script.Parent.Parent.Parent.controllers.ViewportAnimationController)
 	
 	if liveSnapshot then
 		task.spawn(function()
 			local humanoid = rig:FindFirstChildOfClass("Humanoid")
 			if humanoid then
 				local desc = HumanoidDescriptionSerializer.deserialize(liveSnapshot)
-				local originalParent = rig.Parent
+				
+				ViewportAnimationController.stopViewportAnimation()
+				
 				rig.Parent = game.Workspace
 				rig:PivotTo(CFrame.new(0, -1000, 0))
 				
@@ -194,19 +166,25 @@ local function setupViewport(
 					humanoid:ApplyDescription(desc)
 				end)
 				
-				rig.Parent = originalParent
+				if viewport:GetAttribute("PreviewToken") ~= token then
+					rig:Destroy()
+					return
+				end
+				
+				worldModel:ClearAllChildren()
+				rig.Parent = worldModel
 				rig:PivotTo(CFrame.new())
 				pivotRig(rig)
 				frameCamera(camera, rig)
 				
-				if activeEmote and activeEmote.emoteAnimationId then
-					playEmoteAnimation(rig, activeEmote.emoteAnimationId)
-				else
-					playIdleAnimation(rig, desc)
-				end
+				playIdleAnimation(rig, desc)
 			end
 		end)
 	else
+		worldModel:ClearAllChildren()
+		rig.Parent = worldModel
+		pivotRig(rig)
+		frameCamera(camera, rig)
 		playIdleAnimation(rig, nil)
 	end
 
@@ -231,25 +209,27 @@ local function AvatarPreviewViewport()
 	local yawRef = React.useRef(INITIAL_RIG_YAW)
 	
 	local state = useAppearanceState()
-	local _, activeEmote = usePreviewState()
-	
 	local liveRevision = state.liveRevision
-	local activeEmoteKey = activeEmote and activeEmote.key or ""
+
+	local ViewportAnimationController = require(script.Parent.Parent.Parent.controllers.ViewportAnimationController)
+
+	React.useEffect(function()
+		return function()
+			ViewportAnimationController.stopAll()
+		end
+	end, {})
 
 	React.useEffect(function()
 		local viewport = viewportRef.current
 		if not viewport then return nil end
 
 		yawRef.current = INITIAL_RIG_YAW
-		rigRef.current = setupViewport(viewport, state.liveSnapshot, activeEmote)
+		rigRef.current = setupViewport(viewport, state.liveSnapshot)
 
 		return function()
 			rigRef.current = nil
-			if viewport then
-				viewport:ClearAllChildren()
-			end
 		end
-	end, { liveRevision, activeEmoteKey })
+	end, { liveRevision })
 
 	local beginDrag = React.useCallback(function(_, input)
 		if not isPrimaryDragInput(input) then return end

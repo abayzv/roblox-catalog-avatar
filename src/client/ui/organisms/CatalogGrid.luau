@@ -100,8 +100,12 @@ local function CatalogGrid(props: CatalogGridProps)
 				local isReady = props.readyKeys and item.key and props.readyKeys[item.key]
 				
 				if isReady then
-					local isPreviewing = (equippedKeys[item.key] == true)
-						or (activeEmote and activeEmote.key == item.key)
+					local isEmote = item.itemType == "EmoteAnimation" or item.itemType == "Emote"
+					local isPreviewing = false
+					if not isEmote then
+						isPreviewing = (equippedKeys[item.key] == true)
+					end
+
 					children["ItemWrapper_" .. item.id] = React.createElement("Frame", {
 						BackgroundTransparency = 1,
 						Size = UDim2.fromScale(1, 1),
@@ -117,6 +121,7 @@ local function CatalogGrid(props: CatalogGridProps)
 								price = item.price,
 								image = item.image,
 								isPreviewing = isPreviewing,
+								actionText = if isEmote then "Play" else nil,
 								onTryOn = if props.onTryOn
 									then function()
 										props.onTryOn(item)
