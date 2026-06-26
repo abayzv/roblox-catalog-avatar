@@ -4,13 +4,20 @@ local Theme = require(script.Parent.Parent.theme.Theme)
 local Icons = require(script.Parent.Parent.theme.Icons)
 local CategoryButton = require(script.Parent.Parent.molecules.CategoryButton)
 
+export type CategoryData = {
+	id: string,
+	label: string?,
+	icon: string?,
+}
+
 export type MainCategoryTabsProps = {
 	activeCategory: string?,
 	onCategorySelected: ((category: string) -> ())?,
 	layoutOrder: number?,
+	categories: { CategoryData }?,
 }
 
-local CATEGORIES = {
+local DEFAULT_CATEGORIES = {
 	{ id = "All", icon = Icons.Clothing }, -- Use a generic icon or something appropriate
 	{ id = "Body", icon = Icons.Body },
 	{ id = "Modern Clothing", icon = Icons.Clothing },
@@ -21,6 +28,7 @@ local CATEGORIES = {
 
 local function MainCategoryTabs(props: MainCategoryTabsProps)
 	local activeCategory = props.activeCategory or "Clothing"
+	local activeCategories = props.categories or DEFAULT_CATEGORIES
 
 	local children = {
 		Layout = React.createElement("UIListLayout", {
@@ -37,10 +45,10 @@ local function MainCategoryTabs(props: MainCategoryTabsProps)
 		}),
 	}
 
-	for i, cat in ipairs(CATEGORIES) do
+	for i, cat in ipairs(activeCategories) do
 		children[cat.id] = React.createElement(CategoryButton, {
-			text = cat.id,
-			icon = cat.icon or "rbxassetid://0",
+			text = cat.label or cat.id,
+			icon = cat.icon or Icons.Clothing,
 			active = activeCategory == cat.id,
 			layoutOrder = i,
 			onActivated = function()

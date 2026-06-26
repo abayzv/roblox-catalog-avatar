@@ -21,6 +21,7 @@ export type CatalogGridProps = {
 	onTryOn: ((item: CatalogItem) -> ())?,
 	layoutOrder: number?,
 	viewportScale: number?,
+	emptyText: string?,
 }
 
 local function CatalogGrid(props: CatalogGridProps)
@@ -164,7 +165,7 @@ local function CatalogGrid(props: CatalogGridProps)
 		children.EmptyState = React.createElement("TextLabel", {
 			Size = UDim2.fromScale(1, 1),
 			BackgroundTransparency = 1,
-			Text = "No items match your criteria.",
+			Text = props.emptyText or "No items match your criteria.",
 			TextColor3 = Theme.Color.TextMuted,
 			Font = Theme.Font.Regular,
 			TextSize = Theme.Text.Body,

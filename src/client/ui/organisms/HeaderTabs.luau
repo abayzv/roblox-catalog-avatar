@@ -63,6 +63,17 @@ local function HeaderTabs(props: HeaderTabsProps)
 							end
 						end,
 					}),
+					MyAvatar = React.createElement(HeaderTabButton, {
+						text = "My Avatar",
+						icon = Icons.Body or "rbxassetid://0",
+						active = activeTab == "My Avatar",
+						layoutOrder = 3,
+						onActivated = function()
+							if props.onTabSelected then
+								props.onTabSelected("My Avatar")
+							end
+						end,
+					}),
 				})
 			),
 			DividerContainer = React.createElement(

@@ -1,19 +1,16 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local Theme = require(script.Parent.Parent.theme.Theme)
-
 local HeaderTabs = require(script.Parent.HeaderTabs)
-local SearchToolbar = require(script.Parent.Parent.molecules.SearchToolbar)
 local MainCategoryTabs = require(script.Parent.MainCategoryTabs)
 local SubCategoryChips = require(script.Parent.SubCategoryChips)
 local CatalogGrid = require(script.Parent.CatalogGrid)
 local useCatalogState = require(script.Parent.Parent.hooks.useCatalogState)
-local useCatalogItems = require(script.Parent.Parent.Parent.hooks.useCatalogItems)
+local useWornItems = require(script.Parent.Parent.Parent.hooks.useWornItems)
+local WornItemExtractor = require(ReplicatedStorage.Shared.avatar.WornItemExtractor)
+local MyAvatarCategoryConfig = require(ReplicatedStorage.Shared.avatar.MyAvatarCategoryConfig)
 
-local AvatarPreviewController =
-	require(script.Parent.Parent.Parent.controllers.AvatarPreviewController)
-
-export type CatalogPanelProps = {
+export type MyAvatarPanelProps = {
 	layoutOrder: number?,
 	isMobile: boolean?,
 	isTablet: boolean?,
@@ -23,25 +20,41 @@ export type CatalogPanelProps = {
 	setActiveTab: (tab: string) -> (),
 }
 
-local HEADER_HEIGHT = 51
-local SEARCH_HEIGHT = 60
-local MAIN_CATEGORY_HEIGHT = 60
-local SUBCATEGORY_HEIGHT = 50
-local GRID_OFFSET = HEADER_HEIGHT
-	+ 16
-	+ SEARCH_HEIGHT
-	+ 18
-	+ MAIN_CATEGORY_HEIGHT
-	+ 16
-	+ SUBCATEGORY_HEIGHT
-	+ 16
-
-local function CatalogPanel(props: CatalogPanelProps)
-	local state, actions = useCatalogState()
+local function MyAvatarPanel(props: MyAvatarPanelProps)
+	local state, actions = useCatalogState("my_avatar")
+	local wornData = useWornItems()
+	
 	local contentScale = props.contentScale or 1
 	local contentSizeScale = if contentScale > 0 then 1 / contentScale else 1
 
-	local catalogData = useCatalogItems(state.activeMainCategory, state.activeSubCategory, state.searchQuery)
+	local filteredItems = React.useMemo(function()
+		return WornItemExtractor.filterItems(wornData.wornItems, state.activeMainCategory, state.activeSubCategory)
+	end, { wornData.wornItems, state.activeMainCategory, state.activeSubCategory })
+
+	-- Format worn items for CatalogGrid
+	local catalogItems = React.useMemo(function()
+		local items = {}
+		for _, worn in ipairs(filteredItems) do
+			table.insert(items, {
+				id = tostring(worn.id),
+				key = worn.key,
+				name = worn.name,
+				price = worn.price,
+				creator = worn.creator,
+				image = worn.image,
+			})
+		end
+		return items
+	end, { filteredItems })
+	
+	-- Everything is "ready" since it's just raw data right now
+	local readyKeys = React.useMemo(function()
+		local keys = {}
+		for _, item in ipairs(catalogItems) do
+			keys[item.key] = true
+		end
+		return keys
+	end, { catalogItems })
 
 	return React.createElement(
 		"Frame",
@@ -84,31 +97,31 @@ local function CatalogPanel(props: CatalogPanelProps)
 					onTabSelected = props.setActiveTab,
 					layoutOrder = 1,
 				}),
-
+				
 				Spacer1 = React.createElement("Frame", {
 					Size = UDim2.new(1, 0, 0, 16),
 					BackgroundTransparency = 1,
 					LayoutOrder = 2,
 				}),
 
-				SearchArea = React.createElement(SearchToolbar, {
-					searchText = state.searchQuery,
-					onSearchTextChanged = actions.setSearchQuery,
-					onFilterActivated = function()
-						print("Filter activated")
-					end,
+				MainCategoryArea = React.createElement(MainCategoryTabs, {
+					activeCategory = state.activeMainCategory,
+					onCategorySelected = actions.setActiveMainCategory,
+					categories = MyAvatarCategoryConfig.MainCategories,
 					layoutOrder = 3,
 				}),
 
 				Spacer2 = React.createElement("Frame", {
-					Size = UDim2.new(1, 0, 0, 18),
+					Size = UDim2.new(1, 0, 0, 16),
 					BackgroundTransparency = 1,
 					LayoutOrder = 4,
 				}),
 
-				MainCategoryArea = React.createElement(MainCategoryTabs, {
-					activeCategory = state.activeMainCategory,
-					onCategorySelected = actions.setActiveMainCategory,
+				SubCategoryArea = React.createElement(SubCategoryChips, {
+					activeMainCategory = state.activeMainCategory,
+					activeSubCategory = state.activeSubCategory,
+					onSubCategorySelected = actions.setActiveSubCategory,
+					categories = MyAvatarCategoryConfig.MainCategories,
 					layoutOrder = 5,
 				}),
 
@@ -118,38 +131,23 @@ local function CatalogPanel(props: CatalogPanelProps)
 					LayoutOrder = 6,
 				}),
 
-				SubCategoryArea = React.createElement(SubCategoryChips, {
-					activeMainCategory = state.activeMainCategory,
-					activeSubCategory = state.activeSubCategory,
-					onSubCategorySelected = actions.setActiveSubCategory,
-					layoutOrder = 7,
-				}),
-
-				Spacer4 = React.createElement("Frame", {
-					Size = UDim2.new(1, 0, 0, 16),
-					BackgroundTransparency = 1,
-					LayoutOrder = 8,
-				}),
-
 				GridArea = React.createElement("Frame", {
-					Size = UDim2.new(1, 0, 1, -GRID_OFFSET),
+					Size = UDim2.new(1, 0, 1, -193), -- 51 + 16 + 60 + 16 + 50 = 193
 					BackgroundTransparency = 1,
-					LayoutOrder = 9,
+					LayoutOrder = 7,
 				}, {
 					Grid = React.createElement(CatalogGrid, {
-						items = catalogData.items,
-						readyKeys = catalogData.readyKeys,
-						isLoading = catalogData.status == "Loading",
-						isFetchingNextPage = catalogData.status == "FetchingNextPage",
-						hasNextPage = catalogData.hasNextPage,
-						isLimitReached = catalogData.isLimitReached,
-						onLoadNextPage = catalogData.loadNextPage,
+						items = catalogItems,
+						readyKeys = readyKeys,
+						isLoading = wornData.isLoading,
+						isFetchingNextPage = false,
+						hasNextPage = false,
+						isLimitReached = true,
 						columns = 5,
 						viewportScale = contentScale,
-						onTryOn = function(item)
-							actions.setSelectedItemId(item.id)
-							AvatarPreviewController.ToggleItemPreview(item)
-						end,
+						emptyText = if state.activeMainCategory == "all" and state.activeSubCategory == "all"
+							then "Belum ada item yang bisa ditampilkan."
+							else "Kamu belum memakai item di kategori ini.",
 					}),
 				}),
 			}),
@@ -157,4 +155,4 @@ local function CatalogPanel(props: CatalogPanelProps)
 	)
 end
 
-return CatalogPanel
+return MyAvatarPanel
