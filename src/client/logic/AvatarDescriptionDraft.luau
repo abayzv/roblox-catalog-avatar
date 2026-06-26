@@ -54,13 +54,21 @@ function AvatarDescriptionDraft.applyPayload(payload: any)
 		local ok, err = pcall(function()
 			local currentValue = (draftDescription :: any)[payload.propertyName]
 			if type(currentValue) == "string" then
-				local values = {}
-				for _, id in ipairs(payload.assetIds) do
-					table.insert(values, tostring(id))
+				if payload.action == "remove" then
+					(draftDescription :: any)[payload.propertyName] = ""
+				else
+					local values = {}
+					for _, id in ipairs(payload.assetIds) do
+						table.insert(values, tostring(id))
+					end
+					(draftDescription :: any)[payload.propertyName] = table.concat(values, ",")
 				end
-				(draftDescription :: any)[payload.propertyName] = table.concat(values, ",")
 			else
-				(draftDescription :: any)[payload.propertyName] = payload.assetIds[#payload.assetIds] or 0
+				if payload.action == "remove" then
+					(draftDescription :: any)[payload.propertyName] = 0
+				else
+					(draftDescription :: any)[payload.propertyName] = payload.assetIds[#payload.assetIds] or 0
+				end
 			end
 		end)
 		
@@ -77,13 +85,15 @@ function AvatarDescriptionDraft.applyPayload(payload: any)
 						table.remove(accs, i)
 					end
 				end
-				for i, assetId in ipairs(payload.assetIds) do
-					table.insert(accs, {
-						AccessoryType = enumItem,
-						AssetId = assetId,
-						IsLayered = true,
-						Order = i
-					})
+				if payload.action ~= "remove" then
+					for i, assetId in ipairs(payload.assetIds) do
+						table.insert(accs, {
+							AccessoryType = enumItem,
+							AssetId = assetId,
+							IsLayered = true,
+							Order = i
+						})
+					end
 				end
 				draftDescription:SetAccessories(accs, true)
 			else
@@ -95,7 +105,7 @@ function AvatarDescriptionDraft.applyPayload(payload: any)
 	if payload.bodyParts then
 		for partName, assetId in pairs(payload.bodyParts) do
 			local ok, err = pcall(function()
-				(draftDescription :: any)[partName] = assetId
+				(draftDescription :: any)[partName] = if payload.action == "remove" then 0 else assetId
 			end)
 			if not ok then warn("Failed to set body part", partName, "err:", err) end
 		end
@@ -104,7 +114,7 @@ function AvatarDescriptionDraft.applyPayload(payload: any)
 	if payload.animations then
 		for animName, assetId in pairs(payload.animations) do
 			local ok, err = pcall(function()
-				(draftDescription :: any)[animName] = assetId
+				(draftDescription :: any)[animName] = if payload.action == "remove" then 0 else assetId
 			end)
 			if not ok then warn("Failed to set animation", animName, "err:", err) end
 		end

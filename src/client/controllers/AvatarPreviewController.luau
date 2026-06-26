@@ -27,11 +27,19 @@ function AvatarPreviewController.ToggleItemPreview(item)
 			print("[CatalogPreview] Removing payload")
 			PreviewState.removePreviewPayload(key)
 		else
-			print("[CatalogPreview] Adding payload")
-			if payload.emoteAnimationId then
-				PreviewState.setActiveEmote(payload)
+			local appliedEntries = PreviewState.getAppliedEntries()
+			if appliedEntries[key] ~= nil then
+				print("[CatalogPreview] Adding removal payload for applied item")
+				local removalPayload = table.clone(payload)
+				removalPayload.action = "remove"
+				PreviewState.addPreviewPayload(removalPayload)
 			else
-				PreviewState.addPreviewPayload(payload)
+				print("[CatalogPreview] Adding payload")
+				if payload.emoteAnimationId then
+					PreviewState.setActiveEmote(payload)
+				else
+					PreviewState.addPreviewPayload(payload)
+				end
 			end
 		end
 	else

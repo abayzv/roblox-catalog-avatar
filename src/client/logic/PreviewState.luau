@@ -188,14 +188,19 @@ function PreviewState.getDesiredEntries(): { DesiredOutfitEntry }
 	local seen = {}
 
 	for key, entry in pairs(appliedEntries) do
-		if not seen[key] then
-			seen[key] = true
-			table.insert(entries, entry)
+		local payload = previewPayloads[key]
+		if payload and payload.action == "remove" then
+			seen[key] = true -- Skip this item
+		else
+			if not seen[key] then
+				seen[key] = true
+				table.insert(entries, entry)
+			end
 		end
 	end
 
 	for key, payload in pairs(previewPayloads) do
-		if not seen[key] then
+		if not seen[key] and payload.action ~= "remove" then
 			seen[key] = true
 			table.insert(entries, {
 				key = payload.key,

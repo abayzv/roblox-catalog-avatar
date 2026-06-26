@@ -392,8 +392,7 @@ local function AvatarPreviewViewport()
 	local draggingRef = React.useRef(false)
 	local lastDragXRef = React.useRef(0)
 	local yawRef = React.useRef(INITIAL_RIG_YAW)
-	local previewPayloads, activeEmote = usePreviewState()
-	local appliedEntries = PreviewState.getAppliedEntries()
+	local previewPayloads, appliedEntries, activeEmote = usePreviewState()
 	local isHydrated = PreviewState.hasHydrated()
 	local isDirty = PreviewState.isDirty()
 	local previewKeyParts = {}
@@ -624,6 +623,7 @@ local function AvatarPreviewViewport()
 									if response.description then
 										local appliedDesc = HumanoidDescriptionSerializer.deserialize(response.description)
 										AvatarDescriptionDraft.markApplied(appliedDesc)
+										PreviewState.hydrateAppliedEntries(entries)
 										PreviewState.clearPreview() -- clear UI selection states after successful apply
 									end
 								else
