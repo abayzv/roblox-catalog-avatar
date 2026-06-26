@@ -8,6 +8,8 @@ local GlassButton = require(script.Parent.Parent.atoms.GlassButton)
 local usePreviewState = require(script.Parent.Parent.Parent.hooks.usePreviewState)
 local PreviewState = require(script.Parent.Parent.Parent.logic.PreviewState)
 local ApplyAvatarRemote = require(ReplicatedStorage.Shared.remotes.ApplyAvatarRemote)
+local AvatarDescriptionDraft = require(script.Parent.Parent.Parent.logic.AvatarDescriptionDraft)
+local HumanoidDescriptionSerializer = require(ReplicatedStorage.Shared.avatar.HumanoidDescriptionSerializer)
 
 local LOCAL_PLAYER = Players.LocalPlayer
 local INITIAL_RIG_YAW = math.rad(180)
@@ -225,6 +227,10 @@ local function cloneLocalCharacter(): Model?
 	character.Archivable = true
 	local clone = character:Clone()
 	character.Archivable = previousArchivable
+	
+	if AvatarDescriptionDraft.getDraftDescription() == nil then
+		AvatarDescriptionDraft.initializeFromCharacter(character)
+	end
 
 	if clone then
 		clone.Name = "CatalogPreviewRig"
@@ -243,35 +249,14 @@ local function applyPreviewDescription(rig: Model, previewPayloads, appliedEntri
 	local liveHumanoid = liveCharacter and liveCharacter:FindFirstChildOfClass("Humanoid")
 	if not liveHumanoid then return end
 
-	local description = liveHumanoid:GetAppliedDescription()
-	if not description then 
-		description = Instance.new("HumanoidDescription")
+	local draftDescription = AvatarDescriptionDraft.getDraftDescription()
+	if not draftDescription then
+		-- Fallback if not initialized yet
+		draftDescription = liveHumanoid:GetAppliedDescription() or Instance.new("HumanoidDescription")
 	end
-
-	print("[CatalogPreview] Applying preview payloads. Count:", select(2, next(previewPayloads)) ~= nil and "has items" or "EMPTY")
-	for key, payload in pairs(previewPayloads) do
-		print(`[CatalogPreview] Payload key={key} kind={payload.kind} prop={payload.propertyName} assetIds={payload.assetIds and table.concat(payload.assetIds, ",") or "nil"}`)
-		if payload.propertyName and payload.assetIds then
-			setDescriptionProperty(description, payload.propertyName, payload.assetIds)
-			print(`[CatalogPreview]   -> Processed {payload.propertyName}`)
-		end
-		
-		if payload.bodyParts then
-			for partName, assetId in pairs(payload.bodyParts) do
-				pcall(function()
-					description[partName] = assetId
-				end)
-			end
-		end
-
-		if payload.animations then
-			for animName, assetId in pairs(payload.animations) do
-				pcall(function()
-					description[animName] = assetId
-				end)
-			end
-		end
-	end
+	local description = draftDescription:Clone()
+	
+	print("[Preview] applying draft description:\n" .. HumanoidDescriptionSerializer.debugPrint(HumanoidDescriptionSerializer.serialize(description)))
 
 	task.spawn(function()
 		local originalParent = rig.Parent
@@ -309,9 +294,13 @@ local function applyPreviewDescription(rig: Model, previewPayloads, appliedEntri
 						break
 					end
 				end
-			elseif descendant:IsA("Shirt") or descendant:IsA("Pants") or descendant:IsA("ShirtGraphic") then
+			elseif descendant:IsA("Shirt") and previewedProperties["Shirt"] then
 				-- Destroying 2D clothing forces ApplyDescription to recreate them,
 				-- which is required for ViewportFrame to render texture updates.
+				descendant:Destroy()
+			elseif descendant:IsA("Pants") and previewedProperties["Pants"] then
+				descendant:Destroy()
+			elseif descendant:IsA("ShirtGraphic") and previewedProperties["GraphicTShirt"] then
 				descendant:Destroy()
 			end
 		end
@@ -616,42 +605,32 @@ local function AvatarPreviewViewport()
 						)
 
 						task.spawn(function()
+							local snapshot = AvatarDescriptionDraft.serializeDraft()
+							if not snapshot then return end
+							
+							print("[Apply:Client] snapshot:\n" .. HumanoidDescriptionSerializer.debugPrint(snapshot))
+
 							local callSuccess, response = pcall(function()
 								return ApplyAvatarRemote:InvokeServer({
-									entries = entries,
+									action = "ApplyDescription",
+									revision = 1,
+									description = snapshot,
 								})
 							end)
 
 							if callSuccess and type(response) == "table" then
 								if response.success then
-									if response.equippedItems then
-										local mappedEquipped = {}
-										for _, item in ipairs(response.equippedItems) do
-											table.insert(mappedEquipped, {
-												key = tostring(item.assetId),
-												id = item.assetId,
-												itemType = "Asset"
-											})
-										end
-										PreviewState.hydrateAppliedEntries(mappedEquipped)
-									else
-										PreviewState.hydrateAppliedEntries(entries)
+									print("[CatalogPreview] Server accepted apply:", response.message)
+									if response.description then
+										local appliedDesc = HumanoidDescriptionSerializer.deserialize(response.description)
+										AvatarDescriptionDraft.markApplied(appliedDesc)
+										PreviewState.clearPreview() -- clear UI selection states after successful apply
 									end
-									print(
-										"[CatalogPreview] Server accepted apply:",
-										response.message
-									)
 								else
-									warn(
-										"[CatalogPreview] Server rejected apply:",
-										response.message
-									)
+									warn("[CatalogPreview] Server rejected apply:", response.message)
 								end
 							else
-								warn(
-									"[CatalogPreview] Failed to communicate with server:",
-									response
-								)
+								warn("[CatalogPreview] Failed to communicate with server:", response)
 							end
 						end)
 					end,

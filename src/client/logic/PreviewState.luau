@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CatalogTypes = require(ReplicatedStorage.Shared.types.CatalogTypes)
 local AvatarApplyTypes = require(ReplicatedStorage.Shared.types.AvatarApplyTypes)
 local PreviewTypes = require(ReplicatedStorage.Shared.types.PreviewTypes)
+local AvatarDescriptionDraft = require(script.Parent.AvatarDescriptionDraft)
 
 export type ItemKey = CatalogTypes.ItemKey
 export type PreviewPayload = PreviewTypes.PreviewPayload
@@ -18,6 +19,12 @@ local hydrated = false
 local listeners = {}
 
 local function notifyListeners()
+	-- Sync draft description with current payloads
+	AvatarDescriptionDraft.resetDraftToApplied()
+	for _, payload in pairs(previewPayloads) do
+		AvatarDescriptionDraft.applyPayload(payload)
+	end
+
 	for _, listener in ipairs(listeners) do
 		task.spawn(listener, previewPayloads, appliedEntries, activeEmote)
 	end

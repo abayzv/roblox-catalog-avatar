@@ -4,6 +4,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 
 local ApplyAvatarRemote = require(ReplicatedStorage.Shared.remotes.ApplyAvatarRemote)
 local CatalogConfig = require(ReplicatedStorage.Shared.config.CatalogConfig)
+local HumanoidDescriptionSerializer = require(ReplicatedStorage.Shared.avatar.HumanoidDescriptionSerializer)
 
 local AvatarApplyService = {}
 
@@ -24,8 +25,8 @@ type EquippedState = {
 }
 
 local MAX_APPLY_ITEMS = 20
-local appliedStates: { [number]: EquippedState } = {}
-local originalStates: { [number]: EquippedState } = {}
+local applyingByUserId = {}
+local PlayerAppliedDescriptions = {}
 local ACCESSORY_TYPE_TO_PROPERTY = {
 	[Enum.AccessoryType.Back] = "BackAccessory",
 	[Enum.AccessoryType.Face] = "FaceAccessory",
@@ -457,82 +458,96 @@ local function handleGetEquipped(player: Player)
 	}
 end
 
-local function handleApply(player: Player, payload: any)
-	local desiredIds = getDesiredIdsFromPayload(payload)
-	if not desiredIds then
-		warn(`[AvatarApplyService] Invalid payload from {player.Name}`)
-		return { success = false, message = "Format payload tidak valid." }
+local function handleApplyDescription(player: Player, payload: any)
+	if applyingByUserId[player.UserId] then
+		return {
+			success = false,
+			code = "APPLY_IN_PROGRESS",
+			message = "Apply is already running",
+			revision = payload.revision,
+		}
 	end
 
-	if #desiredIds > MAX_APPLY_ITEMS then
-		return { success = false, message = "Terlalu banyak item yang dipilih sekaligus." }
-	end
+	applyingByUserId[player.UserId] = true
+	
+	print("[Apply:Server] received revision=" .. tostring(payload.revision))
 
-	local character, humanoid = getCharacterHumanoid(player)
-	if not character then
-		return { success = false, message = "Karakter tidak ditemukan. Tunggu hingga respawn." }
-	end
+	local ok, result = pcall(function()
+		local valid, reason = HumanoidDescriptionSerializer.validateSnapshot(payload.description)
+		if not valid then
+			return {
+				success = false,
+				code = "INVALID_DESCRIPTION",
+				message = reason,
+				revision = payload.revision,
+			}
+		end
+		
+		print("[Apply:Server] description snapshot summary:\n" .. HumanoidDescriptionSerializer.debugPrint(payload.description))
 
-	if not humanoid then
-		return { success = false, message = "Humanoid tidak ditemukan." }
-	end
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 
-	local baseDescription = getCurrentDescription(player, humanoid)
-	local liveItems = extractSupportedItems(baseDescription, character)
-	local currentItems = liveItems
-	print(
-		`[AvatarApplyService] Apply request from {player.Name}; current=[{describeItems(
-			currentItems
-		)}], live=[{describeItems(liveItems)}], desired=[{table.concat(desiredIds, ",")}]`
-	)
-	local buildSuccess, finalDescription, buildMessage =
-		buildDescriptionFromDesiredIds(player, baseDescription, currentItems, desiredIds)
-	if not buildSuccess or not finalDescription then
-		return { success = false, message = buildMessage or "Gagal membangun outfit final." }
-	end
+		if not humanoid then
+			return {
+				success = false,
+				code = "NO_HUMANOID",
+				message = "Character humanoid not found",
+				revision = payload.revision,
+			}
+		end
 
-	local applySuccess, applyError = pcall(function()
-		humanoid:ApplyDescription(finalDescription)
+		local description = HumanoidDescriptionSerializer.deserialize(payload.description)
+
+		humanoid:ApplyDescription(description)
+
+		-- Use the description we just successfully applied, 
+		-- because GetAppliedDescription() can be buggy with 2D clothing asset vs image IDs.
+		local appliedSnapshot = HumanoidDescriptionSerializer.serialize(description)
+
+		-- cache for respawn
+		PlayerAppliedDescriptions[player.UserId] = appliedSnapshot
+		
+		print("[Apply:Server] applied revision=" .. tostring(payload.revision))
+		print("[Apply:Server] applied snapshot summary:\n" .. HumanoidDescriptionSerializer.debugPrint(appliedSnapshot))
+
+		return {
+			success = true,
+			revision = payload.revision,
+			description = appliedSnapshot,
+			message = "Outfit applied successfully."
+		}
 	end)
 
-	if not applySuccess then
-		warn(`[AvatarApplyService] Failed to apply description for {player.Name}: {applyError}`)
-		return { success = false, message = "Gagal menerapkan item ke karakter." }
+	applyingByUserId[player.UserId] = nil
+
+	if not ok then
+		warn("[AvatarApplyService] ApplyDescription error:", result)
+		return {
+			success = false,
+			code = "APPLY_ERROR",
+			message = "Apply failed",
+			revision = payload.revision,
+		}
 	end
 
-	local state = cacheState(player, finalDescription, character)
-
-	print(
-		`[AvatarApplyService] Sukses menerapkan outfit final untuk {player.Name}; saved=[{describeItems(
-			state.items
-		)}]`
-	)
-	return {
-		success = true,
-		message = "Outfit berhasil diterapkan!",
-		equippedItems = state.items,
-		equippedItemIds = state.itemIds,
-	}
+	return result
 end
 
 function AvatarApplyService.init()
 	Players.PlayerAdded:Connect(function(player)
-		-- Cache the actual loaded character appearance before catalog preview opens.
-		task.spawn(function()
-			getOrCreateState(player)
-		end)
-
 		player.CharacterAdded:Connect(function(character)
 			local humanoid = character:WaitForChild("Humanoid", 5) :: Humanoid
 			if not humanoid then
 				return
 			end
 
-			local cachedState = appliedStates[player.UserId]
-			if cachedState then
+			local cachedSnapshot = PlayerAppliedDescriptions[player.UserId]
+			if cachedSnapshot then
 				task.delay(0.5, function()
 					if character.Parent then
-						humanoid:ApplyDescription(cachedState.description)
+						local description = HumanoidDescriptionSerializer.deserialize(cachedSnapshot)
+						humanoid:ApplyDescription(description)
 					end
 				end)
 			end
@@ -540,16 +555,20 @@ function AvatarApplyService.init()
 	end)
 
 	Players.PlayerRemoving:Connect(function(player)
-		appliedStates[player.UserId] = nil
-		originalStates[player.UserId] = nil
+		PlayerAppliedDescriptions[player.UserId] = nil
 	end)
 
 	ApplyAvatarRemote.OnServerInvoke = function(player: Player, payload: any)
+		if type(payload) == "table" and payload.action == "ApplyDescription" then
+			return handleApplyDescription(player, payload)
+		end
+		
+		-- Fallback to GetEquipped if needed, though mostly Phase 6 handles via drafts now
 		if type(payload) == "table" and payload.action == "GetEquipped" then
-			return handleGetEquipped(player)
+			return { success = true, equippedItems = {} } -- Stub for UI if it still requests
 		end
 
-		return handleApply(player, payload)
+		return { success = false, message = "Unknown action" }
 	end
 end
 
