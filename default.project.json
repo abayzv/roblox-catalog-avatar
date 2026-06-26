@@ -7,6 +7,9 @@
       "ApplyAvatarRemote": {
         "$className": "RemoteFunction"
       },
+      "GetAppearanceStateRemote": {
+        "$className": "RemoteFunction"
+      },
       "ResolveEmotesRemote": {
         "$className": "RemoteFunction"
       },

@@ -158,8 +158,30 @@ function AvatarAppearanceService.reapplyLiveSnapshot(player: Player)
 	end)
 end
 
+local GetAppearanceStateRemote = require(ReplicatedStorage.Shared.remotes.GetAppearanceStateRemote)
+
 Players.PlayerRemoving:Connect(function(player)
 	playerStates[player] = nil
 end)
+
+GetAppearanceStateRemote.OnServerInvoke = function(player: Player)
+	local state = playerStates[player]
+	if not state then
+		-- Initialize if they asked before it was ready
+		AvatarAppearanceService.initializePlayer(player)
+		state = playerStates[player]
+	end
+	
+	if not state then
+		return { success = false, message = "State unavailable" }
+	end
+	
+	return {
+		success = true,
+		liveSnapshot = state.liveSnapshot,
+		liveRevision = state.liveRevision,
+		lastApplySource = state.lastApplySource,
+	}
+end
 
 return AvatarAppearanceService
