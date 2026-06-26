@@ -102,7 +102,7 @@ local function CatalogGrid(props: CatalogGridProps)
 				
 				if isReady then
 					local payload = PreviewPayloadCache.get(item.key)
-					local isEmote = payload and payload.emoteAnimationId ~= nil
+					local isEmote = payload and payload.kind == "Emote"
 					local isPreviewing = false
 					if not isEmote then
 						isPreviewing = (equippedKeys[item.key] == true)

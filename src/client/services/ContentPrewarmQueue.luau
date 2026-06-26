@@ -113,6 +113,11 @@ function ContentPrewarmQueue.queueItems(payloads, limit)
 		end
 		
 		-- Only queue if it has assetIds or bodyParts or animations (not Failed)
+		if payload.kind == "Emote" or payload.kind == "AnimationBundle" then
+			-- Skip prewarm for emotes and animation bundles, they resolve lazily or parse directly
+			continue
+		end
+		
 		if payload.kind ~= "Failed" and not prewarmedSet[payload.key] and not processingSet[payload.key] then
 			processingSet[payload.key] = true
 			table.insert(queue, payload)

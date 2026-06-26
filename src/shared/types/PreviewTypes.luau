@@ -11,6 +11,9 @@ export type PreviewPayload = {
 	animations: { [string]: number }?,
 	bodyParts: { [string]: number }?,
 	emoteAnimationId: number?,
+	emoteAssetId: number?,
+	resolveState: string?,
+	resolveError: string?,
 }
 
 return {}

@@ -12,6 +12,10 @@ export type CatalogItem = {
 	price: number | string,
 	image: string,
 
+	emoteAssetId: number?,
+	emoteAnimationId: number?,
+	resolveState: string?, -- "pending" | "resolving" | "ready" | "failed"
+	resolveError: string?,
 	assetId: number?,
 	assetType: string?,
 	propertyName: string?,

@@ -35,8 +35,22 @@ local function processQueue()
 				if entry.token == entry.tokenRef.current then
 					local key = entry.item.key
 					if key and not PreviewPayloadCache.has(key) then
-						table.insert(batchEntries, entry)
-						table.insert(itemsToResolve, entry.item)
+						-- Handle emotes instantly
+						if entry.item.subcategory == "Emotes" or entry.item.assetType == "EmoteAnimation" then
+							local payload = {
+								key = key,
+								id = entry.item.id,
+								itemType = "Asset",
+								kind = "Emote",
+								emoteAssetId = tonumber(entry.item.assetId or entry.item.id),
+								emoteAnimationId = nil,
+								resolveState = "pending",
+							}
+							PreviewPayloadCache.set(key, payload)
+						else
+							table.insert(batchEntries, entry)
+							table.insert(itemsToResolve, entry.item)
+						end
 					end
 				end
 			end

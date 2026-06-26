@@ -11,6 +11,16 @@ function ResolveEmotesService.init()
 		if type(assetIds) ~= "table" then
 			return {}
 		end
+		
+		local MAX_EMOTES_PER_REQUEST = 3
+		if #assetIds > MAX_EMOTES_PER_REQUEST then
+			warn("[ResolveEmotesService] Truncating request to", MAX_EMOTES_PER_REQUEST, "emotes for player", player.UserId)
+			local truncated = {}
+			for i = 1, MAX_EMOTES_PER_REQUEST do
+				table.insert(truncated, assetIds[i])
+			end
+			assetIds = truncated
+		end
 
 		local results = {}
 		for _, assetId in ipairs(assetIds) do

@@ -35,15 +35,42 @@ function AvatarPreviewController.ToggleItemPreview(item)
 	if payload then
 		print("[CatalogPreview] Payload found for:", key)
 		
-		if payload.emoteAnimationId then
+		if payload.kind == "Emote" then
 			local activeEmote = PreviewState.getActiveEmote()
 			local ViewportAnimationController = require(script.Parent.ViewportAnimationController)
+			
 			if activeEmote and activeEmote.key == payload.key then
 				ViewportAnimationController.stopAll()
 				PreviewState.setActiveEmote(nil)
 			else
-				ViewportAnimationController.playEmote(payload.emoteAnimationId)
-				PreviewState.setActiveEmote(payload)
+				if payload.emoteAnimationId then
+					ViewportAnimationController.playEmote(payload.emoteAnimationId)
+					PreviewState.setActiveEmote(payload)
+				else
+					if payload.resolveState == "resolving" then
+						return
+					end
+					PreviewPayloadCache.patch(key, { resolveState = "resolving" })
+					
+					task.spawn(function()
+						local EmoteAnimationResolver = require(script.Parent.Parent.services.EmoteAnimationResolver)
+						local success, animationId, err = EmoteAnimationResolver.resolveOne(payload.emoteAssetId)
+						if success and animationId then
+							PreviewPayloadCache.patch(key, {
+								resolveState = "ready",
+								emoteAnimationId = animationId,
+							})
+							ViewportAnimationController.playEmote(animationId)
+							PreviewState.setActiveEmote(PreviewPayloadCache.get(key))
+						else
+							PreviewPayloadCache.patch(key, {
+								resolveState = "failed",
+								resolveError = err,
+							})
+							warn("[CatalogPreview] Failed to resolve emote animation:", err)
+						end
+					end)
+				end
 			end
 			return
 		end

@@ -25,6 +25,23 @@ function PreviewPayloadCache.set(key: CatalogTypes.ItemKey, payload: PreviewType
 	end
 end
 
+function PreviewPayloadCache.patch(key: CatalogTypes.ItemKey, partial: any)
+	local payload = cache[key]
+	if payload then
+		for k, v in pairs(partial) do
+			payload[k] = v
+		end
+		
+		-- Notify listeners even for patches, in case UI depends on state changes
+		local callbacks = listeners[key]
+		if callbacks then
+			for _, callback in ipairs(callbacks) do
+				task.spawn(callback, payload)
+			end
+		end
+	end
+end
+
 function PreviewPayloadCache.has(key: CatalogTypes.ItemKey): boolean
 	return cache[key] ~= nil
 end
