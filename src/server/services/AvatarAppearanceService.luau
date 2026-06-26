@@ -152,10 +152,17 @@ function AvatarAppearanceService.reapplyLiveSnapshot(player: Player)
 		return
 	end
 	
+	if state.isApplying then
+		warn("[AvatarAppearanceService] Skipping reapply for", player.Name, "- apply already in progress")
+		return
+	end
+	
+	state.isApplying = true
 	pcall(function()
 		local desc = HumanoidDescriptionSerializer.deserialize(state.liveSnapshot)
 		humanoid:ApplyDescriptionResetAsync(desc, Enum.AssetTypeVerification.Always)
 	end)
+	state.isApplying = false
 end
 
 local GetAppearanceStateRemote = require(ReplicatedStorage.Shared.remotes.GetAppearanceStateRemote)
