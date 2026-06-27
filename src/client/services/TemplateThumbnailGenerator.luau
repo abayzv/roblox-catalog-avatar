@@ -1,13 +1,9 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
 
 local HumanoidDescriptionSerializer = require(ReplicatedStorage.Shared.avatar.HumanoidDescriptionSerializer)
 
-local TEMPLATE_CARD_PAGE_SIZE = 10
 local THUMBNAIL_JOB_DELAY = 0.08
 local MAX_STATIC_THUMBNAIL_CACHE = 20
-local ENABLE_BREAK_JOINTS_FOR_STATIC_THUMBNAIL = false
 
 local TemplateThumbnailGenerator = {}
 
@@ -19,8 +15,6 @@ local cacheOrder = {}
 local activePageToken = nil
 local jobCounter = 0
 
--- Removed generatorWorldModel since we'll use Workspace directly
-
 local function getBaseRig()
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
 	if assets then
@@ -30,16 +24,7 @@ local function getBaseRig()
 		end
 	end
 	
-	-- Fallback if rig is missing (though user confirmed they have it)
-	warn("[TemplateThumbnailGenerator] BaseThumbnailRig not found in ReplicatedStorage.Assets! Using empty model fallback.")
-	local m = Instance.new("Model")
-	local h = Instance.new("Humanoid")
-	h.Parent = m
-	local hrp = Instance.new("Part")
-	hrp.Name = "HumanoidRootPart"
-	hrp.Parent = m
-	m.PrimaryPart = hrp
-	return m
+	return nil
 end
 
 local function sanitizeStaticAvatar(model: Model)
@@ -138,15 +123,30 @@ local function processJob(job)
 		return
 	end
 	
-	local generatorRig = getBaseRig():Clone()
+	local baseRig = getBaseRig()
+	if not baseRig then
+		warn("[TemplateThumbnailGenerator] Cannot generate thumbnail: BaseThumbnailRig missing.")
+		return
+	end
+	
+	local generatorRig = baseRig:Clone()
 	
 	local hrp = generatorRig:FindFirstChild("HumanoidRootPart")
 	if hrp and not generatorRig.PrimaryPart then
 		generatorRig.PrimaryPart = hrp
 	end
 	
-	-- Must be in Workspace for ApplyDescription to properly build skinning and attachments
-	-- Place it high in the sky to avoid FallenPartsDestroyHeight (which destroys parts at -500)
+	-- [Real Flow - Mode A: StaticLightweight]
+	-- 1. Generate rig and place in temporary Workspace (fallback/workaround to ensure ApplyDescription loads assets)
+	-- 2. Call ApplyDescriptionResetAsync
+	-- 3. Clone generated result
+	-- 4. Destroy generator rig
+	-- 5. Sanitize clone (remove Humanoid/Animator ONLY, keep all joints)
+	-- 6. Render static clone to ViewportFrame
+	
+	-- Note: Placing in Workspace is a temporary workaround because ApplyDescription 
+	-- sometimes fails to fetch and build Layered Clothing meshes in ReplicatedStorage.
+	-- We place it high in the sky to avoid FallenPartsDestroyHeight.
 	generatorRig:PivotTo(CFrame.new(0, 100000, 0))
 	generatorRig.Parent = game.Workspace
 
