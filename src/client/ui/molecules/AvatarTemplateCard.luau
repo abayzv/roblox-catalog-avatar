@@ -77,22 +77,17 @@ local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 				}
 			),
 
-			-- 2. Title Area
-			TitleRow = React.createElement("Frame", {
-				Size = UDim2.new(1, 0, 0, 24),
+			-- 2. Item Name
+			ItemName = React.createElement("TextLabel", {
+				Size = UDim2.new(1, 0, 0, 22),
 				BackgroundTransparency = 1,
+				Text = data.name,
+				TextColor3 = Theme.Color.TextPrimary,
+				Font = Theme.Font.Bold,
+				TextSize = Theme.Text.CardTitle,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextTruncate = Enum.TextTruncate.AtEnd,
 				LayoutOrder = 2,
-			}, {
-				NameLabel = React.createElement("TextLabel", {
-					Size = UDim2.fromScale(1, 1),
-					BackgroundTransparency = 1,
-					Text = data.name,
-					TextColor3 = Theme.Color.TextPrimary,
-					Font = Theme.Font.SemiBold,
-					TextSize = Theme.Text.Body,
-					TextXAlignment = Enum.TextXAlignment.Left,
-					TextTruncate = Enum.TextTruncate.AtEnd,
-				}),
 			}),
 
 			-- 3. Code & Creator Area
