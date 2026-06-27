@@ -18,7 +18,7 @@ local ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 local function generateUniqueCode(): string
 	local maxAttempts = 5
 	for attempt = 1, maxAttempts do
-		local code = "AVT-"
+		local code = ""
 		for i = 1, 5 do
 			local index = math.random(1, #ALPHABET)
 			code ..= string.sub(ALPHABET, index, index)
@@ -28,7 +28,7 @@ local function generateUniqueCode(): string
 			return code
 		end
 	end
-	return "AVT-ERROR" -- Fallback if collision persists
+	return "ERROR" -- Fallback if collision persists
 end
 
 function AvatarTemplateService.getTemplate(templateId: string): AvatarTemplateTypes.AvatarTemplateRecord?
