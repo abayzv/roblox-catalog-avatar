@@ -136,11 +136,25 @@ function AvatarTemplateService.saveCurrentAvatarAsTemplate(player: Player): Avat
 	}
 end
 
+local loadCooldowns = {} :: { [number]: number }
+local saveCooldowns = {} :: { [number]: number }
+
+local LOAD_COOLDOWN = 1 -- 1 second between loads
+local SAVE_COOLDOWN = 3 -- 3 seconds between saves
+
 function AvatarTemplateService.saveTemplate(player: Player): any
+	local now = os.time()
+	local lastSave = saveCooldowns[player.UserId] or 0
+	if now - lastSave < SAVE_COOLDOWN then
+		return { success = false, error = "Please wait before saving another template." }
+	end
+	
 	local appearanceState = AvatarAppearanceService.getState(player)
 	if not appearanceState or not appearanceState.liveSnapshot then
 		return { success = false, error = "No live snapshot available" }
 	end
+
+	saveCooldowns[player.UserId] = now
 
 	local code = generateUniqueCode()
 	
@@ -171,6 +185,12 @@ function AvatarTemplateService.saveTemplate(player: Player): any
 end
 
 function AvatarTemplateService.loadTemplate(player: Player, templateId: string): AvatarTemplateTypes.LoadTemplateResponse
+	local now = os.time()
+	local lastLoad = loadCooldowns[player.UserId] or 0
+	if now - lastLoad < LOAD_COOLDOWN then
+		return { success = false, error = "Please wait before loading another template." }
+	end
+	
 	local template = mockStore.templatesById[templateId]
 	if not template then
 		return {
@@ -178,6 +198,8 @@ function AvatarTemplateService.loadTemplate(player: Player, templateId: string):
 			error = "Template not found",
 		}
 	end
+	
+	loadCooldowns[player.UserId] = now
 	
 	local success, err = AvatarAppearanceService.applyDescriptionSnapshot(player, template.snapshot, "avatar_loader")
 	if not success then

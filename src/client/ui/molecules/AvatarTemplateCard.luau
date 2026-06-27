@@ -16,6 +16,7 @@ export type AvatarTemplateCardProps = {
 local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 	local isHovered, setIsHovered = React.useState(false)
 	local data = props.templateData
+	local isApplying, setIsApplying = React.useState(false)
 	
 	-- In MVP we use a placeholder icon for thumbnail
 	local thumbImage = Icons.Avatar or "rbxassetid://0"
@@ -59,43 +60,44 @@ local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 			ImageContainer = React.createElement(
 				"Frame",
 				{
-					Size = UDim2.new(1, 0, 0, 124),
-					BackgroundTransparency = 1,
+					Size = UDim2.new(1, 0, 0, 128),
+					BackgroundColor3 = Theme.Color.PanelHover,
 					LayoutOrder = 1,
 				},
-				React.createElement(React.Fragment, nil, {
-					UIPadding = React.createElement("UIPadding", {
-						PaddingTop = UDim.new(0, 4),
-						PaddingBottom = UDim.new(0, 4),
-						PaddingLeft = UDim.new(0, 4),
-						PaddingRight = UDim.new(0, 4),
+				{
+					UICorner = React.createElement("UICorner", {
+						CornerRadius = UDim.new(0, Theme.Radius.MD),
 					}),
-					ItemImage = React.createElement(Icon, {
-						image = thumbImage,
-						size = 80,
-						color = Theme.Color.TextMuted,
-						anchorPoint = Vector2.new(0.5, 0.5),
-						position = UDim2.fromScale(0.5, 0.5),
+					Thumbnail = React.createElement("ImageLabel", {
+						Size = UDim2.fromScale(1, 1),
+						BackgroundTransparency = 1,
+						Image = data.thumbnailUrl or thumbImage,
+						ScaleType = Enum.ScaleType.Fit,
 					}),
-				})
+				}
 			),
 
-			-- 2. Template Name
-			TemplateName = React.createElement("TextLabel", {
-				Size = UDim2.new(1, 0, 0, 22),
+			-- 2. Title Area
+			TitleRow = React.createElement("Frame", {
+				Size = UDim2.new(1, 0, 0, 24),
 				BackgroundTransparency = 1,
-				Text = data.name,
-				TextColor3 = Theme.Color.TextPrimary,
-				Font = Theme.Font.Bold,
-				TextSize = Theme.Text.CardTitle,
-				TextXAlignment = Enum.TextXAlignment.Left,
-				TextTruncate = Enum.TextTruncate.AtEnd,
 				LayoutOrder = 2,
+			}, {
+				NameLabel = React.createElement("TextLabel", {
+					Size = UDim2.fromScale(1, 1),
+					BackgroundTransparency = 1,
+					Text = data.name,
+					TextColor3 = Theme.Color.TextPrimary,
+					Font = Theme.Font.SemiBold,
+					TextSize = Theme.Text.Body,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					TextTruncate = Enum.TextTruncate.AtEnd,
+				}),
 			}),
 
-			-- 3. Code & Creator Row
-			CodeRow = React.createElement("Frame", {
-				Size = UDim2.new(1, 0, 0, 22),
+			-- 3. Code & Creator Area
+			MetaRow = React.createElement("Frame", {
+				Size = UDim2.new(1, 0, 0, 16),
 				BackgroundTransparency = 1,
 				LayoutOrder = 3,
 			}, {
@@ -103,10 +105,9 @@ local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 					FillDirection = Enum.FillDirection.Horizontal,
 					SortOrder = Enum.SortOrder.LayoutOrder,
 					Padding = UDim.new(0, 8),
-					VerticalAlignment = Enum.VerticalAlignment.Center,
 				}),
 				CodeTag = React.createElement("TextLabel", {
-					Size = UDim2.new(0, 0, 1, 0),
+					Size = UDim2.new(0, 40, 1, 0),
 					AutomaticSize = Enum.AutomaticSize.X,
 					BackgroundTransparency = 1,
 					Text = data.code,
@@ -136,12 +137,19 @@ local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 				LayoutOrder = 4,
 			}, {
 				LoadButton = React.createElement(GradientButton, {
-					text = if props.isLoading then "Loading..." else "Load",
+					text = if isApplying then "Applying..." elseif props.isLoading then "Loading..." else "Load",
 					size = UDim2.fromScale(1, 1),
-					disabled = props.isLoading,
+					disabled = props.isLoading or isApplying,
 					onActivated = function()
-						if not props.isLoading then
+						if not props.isLoading and not isApplying then
+							setIsApplying(true)
 							props.onLoad(data.templateId)
+							
+							-- In MVP, reset state after a short delay since onLoad doesn't return a Promise 
+							-- (It uses task.spawn internally in the parent, but we can just delay reset)
+							task.delay(1, function()
+								setIsApplying(false)
+							end)
 						end
 					end,
 				}),
