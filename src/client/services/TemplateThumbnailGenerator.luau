@@ -19,11 +19,7 @@ local cacheOrder = {}
 local activePageToken = nil
 local jobCounter = 0
 
-local generatorWorldModel = Instance.new("WorldModel")
-generatorWorldModel.Name = "ThumbnailGeneratorContainer"
-if not RunService:IsServer() then
-	pcall(function() generatorWorldModel.Parent = ReplicatedStorage end)
-end
+-- Removed generatorWorldModel since we'll use Workspace directly
 
 local function getBaseRig()
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
@@ -48,15 +44,7 @@ end
 
 local function sanitizeStaticAvatar(model: Model)
 	for _, inst in ipairs(model:GetDescendants()) do
-		if inst:IsA("Humanoid") then
-			inst:Destroy()
-		elseif inst:IsA("Animator") then
-			inst:Destroy()
-		elseif inst:IsA("AnimationController") then
-			inst:Destroy()
-		elseif inst:IsA("Animation") then
-			inst:Destroy()
-		elseif inst:IsA("Script") or inst:IsA("LocalScript") then
+		if inst:IsA("Script") or inst:IsA("LocalScript") then
 			inst:Destroy()
 		elseif inst:IsA("BasePart") then
 			inst.Anchored = true
@@ -149,7 +137,10 @@ local function processJob(job)
 	end
 	
 	local generatorRig = getBaseRig():Clone()
-	generatorRig.Parent = generatorWorldModel
+	
+	-- Must be in Workspace for ApplyDescription to properly build skinning and attachments
+	generatorRig.Parent = game.Workspace
+	generatorRig:PivotTo(CFrame.new(0, -1000, 0))
 
 	local humanoid = generatorRig:FindFirstChildOfClass("Humanoid")
 	if not humanoid then
@@ -161,10 +152,7 @@ local function processJob(job)
 	local description = HumanoidDescriptionSerializer.deserialize(job.descriptionSnapshot)
 
 	local ok, err = pcall(function()
-		humanoid:ApplyDescriptionResetAsync(
-			description,
-			Enum.AssetTypeVerification.Default
-		)
+		humanoid:ApplyDescription(description)
 	end)
 
 	if not ok then
