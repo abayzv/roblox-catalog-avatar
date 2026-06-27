@@ -119,9 +119,8 @@ function HumanoidDescriptionSerializer.serialize(description: HumanoidDescriptio
 	for _, propertyName in ipairs(COLOR_PROPERTIES) do
 		local value = safeRead(description, propertyName)
 		if value ~= nil and typeof(value) == "Color3" then
-			-- Serialize Color3 as a hex string or just pass it since Remotes support Color3
-			-- For safety and predictability, let's keep it as Color3 for Remote transmission
-			snapshot[propertyName] = value
+			-- Serialize Color3 as a hex string for DataStore support
+			snapshot[propertyName] = value:ToHex()
 		end
 	end
 
@@ -177,10 +176,17 @@ function HumanoidDescriptionSerializer.deserialize(snapshot: table): HumanoidDes
 
 	for _, propertyName in ipairs(COLOR_PROPERTIES) do
 		local value = snapshot[propertyName]
-		if value ~= nil and typeof(value) == "Color3" then
-			pcall(function()
-				(description :: any)[propertyName] = value
-			end)
+		if value ~= nil then
+			-- Backwards compatibility: might be Color3 object (from old mock state) or hex string (from DataStore)
+			if typeof(value) == "Color3" then
+				pcall(function()
+					(description :: any)[propertyName] = value
+				end)
+			elseif type(value) == "string" then
+				pcall(function()
+					(description :: any)[propertyName] = Color3.fromHex(value)
+				end)
+			end
 		end
 	end
 
@@ -240,8 +246,8 @@ function HumanoidDescriptionSerializer.validateSnapshot(snapshot: table): (boole
 	for _, propertyName in ipairs(COLOR_PROPERTIES) do
 		local value = snapshot[propertyName]
 		if value ~= nil then
-			if typeof(value) ~= "Color3" then
-				return false, "Property " .. propertyName .. " must be a Color3"
+			if typeof(value) ~= "Color3" and type(value) ~= "string" then
+				return false, "Property " .. propertyName .. " must be a Color3 or Hex String"
 			end
 		end
 	end
