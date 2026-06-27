@@ -6,18 +6,38 @@ local Icon = require(script.Parent.Parent.atoms.Icon)
 local GradientButton = require(script.Parent.Parent.atoms.GradientButton)
 local AvatarTemplateTypes = require(ReplicatedStorage.Shared.types.AvatarTemplateTypes)
 
+local TemplateThumbnailGenerator = require(script.Parent.Parent.Parent.services.TemplateThumbnailGenerator)
+
 export type AvatarTemplateCardProps = {
 	templateData: AvatarTemplateTypes.AvatarTemplateCardData,
 	isLoading: boolean?,
 	onLoad: (templateId: string) -> (),
 	layoutOrder: number?,
+	pageToken: string?,
 }
 
 local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 	local isHovered, setIsHovered = React.useState(false)
 	local data = props.templateData
 	local isApplying, setIsApplying = React.useState(false)
+	local viewportRef = React.useRef(nil)
 	
+	React.useEffect(function()
+		local active = true
+		if viewportRef.current and data.descriptionSnapshot then
+			TemplateThumbnailGenerator.renderTemplateCard(
+				data.templateId or data.userOutfitId or tostring(data.name),
+				data.descriptionSnapshot,
+				viewportRef.current,
+				{ pageToken = props.pageToken }
+			)
+		end
+		
+		return function()
+			active = false
+		end
+	end, {data.templateId, data.userOutfitId, data.descriptionSnapshot, props.pageToken})
+
 	-- In MVP we use a placeholder icon for thumbnail
 	local thumbImage = Icons.Avatar or "rbxassetid://0"
 
@@ -68,12 +88,22 @@ local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 					UICorner = React.createElement("UICorner", {
 						CornerRadius = UDim.new(0, Theme.Radius.MD),
 					}),
-					Thumbnail = React.createElement("ImageLabel", {
+					ThumbnailPlaceholder = React.createElement("ImageLabel", {
 						Size = UDim2.fromScale(1, 1),
 						BackgroundTransparency = 1,
-						Image = data.thumbnailUrl or thumbImage,
+						Image = thumbImage,
 						ScaleType = Enum.ScaleType.Fit,
+						ZIndex = 1,
 					}),
+					Viewport = React.createElement("ViewportFrame", {
+						Size = UDim2.fromScale(1, 1),
+						BackgroundTransparency = 1,
+						ZIndex = 2,
+						LightColor = Color3.fromRGB(255, 255, 255),
+						Ambient = Color3.fromRGB(200, 200, 200),
+						LightDirection = Vector3.new(-1, -1, -1),
+						ref = viewportRef,
+					})
 				}
 			),
 

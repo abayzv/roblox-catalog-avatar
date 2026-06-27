@@ -8,7 +8,7 @@ local AvatarTemplateCard = require(script.Parent.Parent.molecules.AvatarTemplate
 local Text = require(script.Parent.Parent.atoms.Text)
 local AvatarTemplateTypes = require(ReplicatedStorage.Shared.types.AvatarTemplateTypes)
 local AvatarAppearanceClient = require(script.Parent.Parent.Parent.services.AvatarAppearanceClient)
-
+local TemplateThumbnailGenerator = require(script.Parent.Parent.Parent.services.TemplateThumbnailGenerator)
 local ListAvatarTemplatesRemote = require(ReplicatedStorage.Shared.remotes.ListAvatarTemplatesRemote)
 local LoadAvatarTemplateRemote = require(ReplicatedStorage.Shared.remotes.LoadAvatarTemplateRemote)
 local SearchAvatarLoaderRemote = require(ReplicatedStorage.Shared.remotes.SearchAvatarLoaderRemote)
@@ -34,6 +34,15 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 	local templates, setTemplates = React.useState({})
 	local isLoading, setIsLoading = React.useState(true)
 	local searchState, setSearchState = React.useState("idle")
+	local currentPage, setCurrentPage = React.useState(1)
+	
+	local pageToken = "avatar_loader_page_" .. tostring(currentPage)
+	
+	React.useEffect(function()
+		return function()
+			TemplateThumbnailGenerator.cancelPage(pageToken)
+		end
+	end, {pageToken})
 	
 	React.useEffect(function()
 		local active = true
@@ -144,6 +153,7 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 					searchText = searchInput,
 					onSearchInputChanged = setSearchInput,
 					onSearchSubmitted = function(query)
+						setCurrentPage(1)
 						setSearchQuery(query)
 					end,
 					layoutOrder = 3,
@@ -244,8 +254,15 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 						
 						Cards = React.createElement(React.Fragment, nil, 
 							(function()
+								local itemsPerPage = 10
+								local startIndex = (currentPage - 1) * itemsPerPage + 1
+								local endIndex = math.min(startIndex + itemsPerPage - 1, #templates)
+								
 								local cards = {}
-								for i, template in ipairs(templates) do
+								for i = startIndex, endIndex do
+									local template = templates[i]
+									if not template then continue end
+									
 									local key = template.templateId or template.userOutfitId or tostring(i)
 									cards["Card_" .. tostring(key)] = React.createElement("Frame", {
 										BackgroundTransparency = 1,
@@ -260,6 +277,7 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 											Card = React.createElement(AvatarTemplateCard, {
 												templateData = template,
 												isLoading = isLoading,
+												pageToken = pageToken,
 												onLoad = function(id)
 													task.spawn(function()
 														if template.sourceType == "roblox_outfit" then
@@ -291,7 +309,71 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 							end)()
 						)
 					})
-				end)()
+				end)(),
+				
+				PaginationArea = (function()
+					local itemsPerPage = 10
+					local totalPages = math.max(math.ceil(#templates / itemsPerPage), 1)
+					if totalPages <= 1 then
+						return nil
+					end
+					
+					return React.createElement("Frame", {
+						Size = UDim2.new(1, 0, 0, 40),
+						BackgroundTransparency = 1,
+						LayoutOrder = 8,
+					}, {
+						Layout = React.createElement("UIListLayout", {
+							FillDirection = Enum.FillDirection.Horizontal,
+							SortOrder = Enum.SortOrder.LayoutOrder,
+							HorizontalAlignment = Enum.HorizontalAlignment.Center,
+							VerticalAlignment = Enum.VerticalAlignment.Center,
+							Padding = UDim.new(0, 16),
+						}),
+						PrevButton = React.createElement("TextButton", {
+							Size = UDim2.fromOffset(100, 32),
+							BackgroundColor3 = Theme.Color.PanelHover,
+							Text = "Previous",
+							TextColor3 = Theme.Color.TextPrimary,
+							Font = Theme.Font.SemiBold,
+							TextSize = 14,
+							LayoutOrder = 1,
+							Visible = currentPage > 1,
+							[React.Event.Activated] = function()
+								if currentPage > 1 then
+									setCurrentPage(currentPage - 1)
+								end
+							end,
+						}, {
+							UICorner = React.createElement("UICorner", { CornerRadius = UDim.new(0, 8) })
+						}),
+						PageText = React.createElement(Text, {
+							text = "Page " .. tostring(currentPage) .. " of " .. tostring(totalPages),
+							font = Theme.Font.Regular,
+							textSize = 14,
+							color = Theme.Color.TextSecondary,
+							size = UDim2.fromOffset(100, 32),
+							layoutOrder = 2,
+						}),
+						NextButton = React.createElement("TextButton", {
+							Size = UDim2.fromOffset(100, 32),
+							BackgroundColor3 = Theme.Color.PanelHover,
+							Text = "Next",
+							TextColor3 = Theme.Color.TextPrimary,
+							Font = Theme.Font.SemiBold,
+							TextSize = 14,
+							LayoutOrder = 3,
+							Visible = currentPage < totalPages,
+							[React.Event.Activated] = function()
+								if currentPage < totalPages then
+									setCurrentPage(currentPage + 1)
+								end
+							end,
+						}, {
+							UICorner = React.createElement("UICorner", { CornerRadius = UDim.new(0, 8) })
+						})
+					})
+				end)(),
 			}),
 		})
 	)
