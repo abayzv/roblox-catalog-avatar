@@ -4,7 +4,6 @@ local React = require(ReplicatedStorage.Packages.React)
 
 local Theme = require(script.Parent.Parent.theme.Theme)
 local Icons = require(script.Parent.Parent.theme.Icons)
-local InitialRobloxCharacter = require(script.Parent.Parent.Parent.services.InitialRobloxCharacter)
 local AvatarAppearanceClient = require(script.Parent.Parent.Parent.services.AvatarAppearanceClient)
 local AvatarTemplateCache = require(script.Parent.Parent.Parent.services.AvatarTemplateCache)
 local ViewportStageManager = require(script.Parent.Parent.Parent.services.ViewportStageManager)
