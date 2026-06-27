@@ -73,6 +73,9 @@ local function sanitizeStaticAvatar(model: Model)
 end
 
 local function positionCamera(camera: Camera, staticModel: Model)
+	-- Rotate model to face camera and place it at origin
+	staticModel:PivotTo(CFrame.Angles(0, math.rad(180), 0))
+
 	local boundingCFrame, boundingSize = staticModel:GetBoundingBox()
 	local center = boundingCFrame.Position
 	local height = math.max(boundingSize.Y, 5)
@@ -83,9 +86,6 @@ local function positionCamera(camera: Camera, staticModel: Model)
 
 	camera.FieldOfView = 31
 	camera.CFrame = CFrame.new(cameraPosition, target)
-	
-	-- Rotate model to face camera
-	staticModel:PivotTo(CFrame.Angles(0, math.rad(180), 0))
 end
 
 function TemplateThumbnailGenerator.clearViewport(viewportFrame: ViewportFrame)
