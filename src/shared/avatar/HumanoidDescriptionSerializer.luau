@@ -99,6 +99,19 @@ function HumanoidDescriptionSerializer.serialize(description: HumanoidDescriptio
 	end
 
 	local accessories = description:GetAccessories(true)
+	local serializedAccessories = {}
+	for _, acc in ipairs(accessories) do
+		table.insert(serializedAccessories, {
+			AssetId = acc.AssetId,
+			AccessoryType = acc.AccessoryType.Name,
+			IsLayered = acc.IsLayered,
+			Order = acc.Order,
+			Puffiness = acc.Puffiness,
+		})
+	end
+	snapshot.SerializedAccessories = serializedAccessories
+	
+	-- Legacy layered clothing serialization for backward compatibility if ever needed
 	for _, prop in ipairs(LAYERED_CLOTHING_PROPERTIES) do
 		local accessoryName = prop:gsub("Accessory", "")
 		if accessoryName == "Shoulders" then accessoryName = "Shoulder" end
@@ -149,27 +162,45 @@ function HumanoidDescriptionSerializer.deserialize(snapshot: table): HumanoidDes
 	end
 
 	local accessories = description:GetAccessories(true)
-	for _, prop in ipairs(LAYERED_CLOTHING_PROPERTIES) do
-		local value = snapshot[prop]
-		if value and type(value) == "string" and value ~= "" then
-			local accessoryName = prop:gsub("Accessory", "")
-			if accessoryName == "Shoulders" then accessoryName = "Shoulder" end
-			local enumSuccess, enumItem = pcall(function() return Enum.AccessoryType[accessoryName] end)
+	
+	if snapshot.SerializedAccessories then
+		for _, acc in ipairs(snapshot.SerializedAccessories) do
+			local enumSuccess, enumItem = pcall(function() return Enum.AccessoryType[acc.AccessoryType] end)
 			if enumSuccess and enumItem then
-				for idStr in string.gmatch(value, "[^%,]+") do
-					local id = tonumber(idStr)
-					if id then
-						table.insert(accessories, {
-							AccessoryType = enumItem,
-							AssetId = id,
-							IsLayered = true,
-							Order = #accessories + 1
-						})
+				table.insert(accessories, {
+					AccessoryType = enumItem,
+					AssetId = acc.AssetId,
+					IsLayered = acc.IsLayered,
+					Order = acc.Order,
+					Puffiness = acc.Puffiness,
+				})
+			end
+		end
+	else
+		-- Legacy fallback for layered clothing
+		for _, prop in ipairs(LAYERED_CLOTHING_PROPERTIES) do
+			local value = snapshot[prop]
+			if value and type(value) == "string" and value ~= "" then
+				local accessoryName = prop:gsub("Accessory", "")
+				if accessoryName == "Shoulders" then accessoryName = "Shoulder" end
+				local enumSuccess, enumItem = pcall(function() return Enum.AccessoryType[accessoryName] end)
+				if enumSuccess and enumItem then
+					for idStr in string.gmatch(value, "[^%,]+") do
+						local id = tonumber(idStr)
+						if id then
+							table.insert(accessories, {
+								AccessoryType = enumItem,
+								AssetId = id,
+								IsLayered = true,
+								Order = #accessories + 1
+							})
+						end
 					end
 				end
 			end
 		end
 	end
+	
 	pcall(function()
 		description:SetAccessories(accessories, true)
 	end)
