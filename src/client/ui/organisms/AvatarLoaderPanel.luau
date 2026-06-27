@@ -191,7 +191,8 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 							(function()
 								local cards = {}
 								for i, template in ipairs(templates) do
-									cards["Card_" .. template.templateId] = React.createElement("Frame", {
+									local key = template.templateId or template.userOutfitId or tostring(i)
+									cards["Card_" .. tostring(key)] = React.createElement("Frame", {
 										BackgroundTransparency = 1,
 										Size = UDim2.fromScale(1, 1),
 										LayoutOrder = i,
