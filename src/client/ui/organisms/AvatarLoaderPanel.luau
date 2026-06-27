@@ -107,10 +107,6 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 						if response.resultType == "template_results" and response.templates then
 							setTemplates(response.templates)
 							setSearchState("results")
-						elseif response.resultType == "loaded_template_code" or response.resultType == "loaded_username_avatar" then
-							AvatarAppearanceClient.updateState(response.liveSnapshot, response.liveRevision, "avatar_loader_direct")
-							setTemplates({})
-							setSearchState("success_direct")
 						elseif response.resultType == "empty" then
 							setTemplates({})
 							setSearchState("empty")
@@ -236,9 +232,7 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 					
 					if #templates == 0 then
 						local emptyText = "Template atau username tidak ditemukan."
-						if searchState == "success_direct" then
-							emptyText = "Berhasil memuat avatar!"
-						elseif searchState == "error" then
+						if searchState == "error" then
 							emptyText = "Gagal memuat pencarian."
 						end
 						
@@ -343,6 +337,8 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 																	AvatarAppearanceClient.updateState(res.liveSnapshot, res.liveRevision, "avatar_loader")
 																end
 															end
+														elseif template.sourceType == "username" then
+															print("[AvatarLoader] Username Template Data:", template)
 														else
 															if LoadAvatarTemplateRemote then
 																local res = LoadAvatarTemplateRemote:InvokeServer(id)

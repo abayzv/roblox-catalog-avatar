@@ -336,31 +336,30 @@ function AvatarTemplateService.searchAvatarLoader(player: Player, query: string?
 		return { success = true, resultType = "empty", message = "Please enter a code or username." }
 	end
 
-	-- 1. Try code lookup (direct load)
+	-- 1. Try code lookup
 	local code = normalizeCode(q)
 	if code then
-		local template = getTemplateByCodeFromDataStore(code)
-		if template then
-			local loadResult = AvatarTemplateService.loadTemplate(player, template.templateId)
-			if loadResult.success then
-				return {
-					success = true,
-					resultType = "loaded_template_code",
-					liveSnapshot = loadResult.liveSnapshot,
-					liveRevision = loadResult.liveRevision,
-					code = template.code,
-				}
-			else
-				return {
-					success = false,
-					resultType = "error",
-					message = "Failed to load template code: " .. tostring(loadResult.error),
-				}
-			end
+		local record = getTemplateByCodeFromDataStore(code)
+		if record then
+			local card: AvatarTemplateTypes.AvatarTemplateCardData = {
+				templateId = record.templateId,
+				code = record.code,
+				name = record.name,
+				creatorUsername = record.creatorUsername,
+				thumbnailUrl = record.thumbnail.imageUrl,
+				thumbnailState = record.thumbnail.state,
+				loadCount = record.loadCount,
+				descriptionSnapshot = record.descriptionSnapshot,
+			}
+			return {
+				success = true,
+				resultType = "template_results",
+				templates = {card},
+			}
 		end
 	end
 	
-	-- 2. Try Roblox user lookup (direct load)
+	-- 2. Try Roblox user lookup
 	local targetUserId = tonumber(q)
 	local targetUsername = q
 	if not targetUserId then
@@ -387,23 +386,24 @@ function AvatarTemplateService.searchAvatarLoader(player: Player, query: string?
 			local snapshot = HumanoidDescriptionSerializer.serialize(description)
 			description:Destroy()
 			
-			local applySuccess, err = AvatarAppearanceService.applyDescriptionSnapshot(player, snapshot, "avatar_loader_username")
-			if applySuccess then
-				return {
-					success = true,
-					resultType = "loaded_username_avatar",
-					liveSnapshot = AvatarAppearanceService.getLiveSnapshot(player),
-					liveRevision = AvatarAppearanceService.getLiveRevision(player),
-					resolvedUserId = targetUserId,
-					resolvedUsername = targetUsername,
-				}
-			else
-				return {
-					success = false,
-					resultType = "error",
-					message = "Failed to apply user avatar: " .. tostring(err),
-				}
-			end
+			local card: AvatarTemplateTypes.AvatarTemplateCardData = {
+				templateId = "username_" .. tostring(targetUserId),
+				code = "USER",
+				name = targetUsername .. "'s Avatar",
+				creatorUsername = targetUsername,
+				thumbnailUrl = nil,
+				thumbnailState = "Placeholder",
+				loadCount = 0,
+				descriptionSnapshot = snapshot,
+				sourceType = "username",
+				userOutfitId = targetUserId,
+			}
+			
+			return {
+				success = true,
+				resultType = "template_results",
+				templates = {card},
+			}
 		end
 	end
 	
