@@ -209,6 +209,9 @@ local function AvatarPreviewViewport()
 	local lastDragXRef = React.useRef(0)
 	local yawRef = React.useRef(INITIAL_RIG_YAW)
 	
+	local isSaving, setIsSaving = React.useState(false)
+	local saveSuccessText, setSaveSuccessText = React.useState(nil :: string?)
+
 	local state = useAppearanceState()
 	local liveRevision = state.liveRevision
 
@@ -351,21 +354,32 @@ local function AvatarPreviewViewport()
 				}),
 
 				SaveTemplateButton = React.createElement(GlassButton, {
-					text = "Save Template",
-					icon = Icons.Save,
-					color = Theme.Color.TextPrimary,
+					text = if isSaving then "Saving..." else (saveSuccessText or "Save Template"),
+					icon = if saveSuccessText then Icons.Apply else Icons.Save,
+					color = if saveSuccessText then Theme.Color.Success else Theme.Color.TextPrimary,
 					size = UDim2.fromScale(1, 1),
 					onActivated = function()
+						if isSaving or saveSuccessText then return end
+						
+						setIsSaving(true)
 						task.spawn(function()
 							if SaveAvatarTemplateRemote then
 								local res = SaveAvatarTemplateRemote:InvokeServer()
 								if res.success then
-									print("Template saved!", res.template)
-									-- Fire a bindable event or something? For now MVP is just console print + refresh panel later
+									setSaveSuccessText("Saved!")
+									-- Reset success text after 2 seconds
+									task.delay(2, function()
+										setSaveSuccessText(nil)
+									end)
 								else
 									warn("Failed to save template:", res.error)
+									setSaveSuccessText("Failed")
+									task.delay(2, function()
+										setSaveSuccessText(nil)
+									end)
 								end
 							end
+							setIsSaving(false)
 						end)
 					end,
 				}),
