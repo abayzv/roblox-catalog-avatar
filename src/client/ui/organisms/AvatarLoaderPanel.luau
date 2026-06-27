@@ -209,7 +209,7 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 						})
 					end
 
-					local columns = 3
+					local columns = 5
 					local scrollBarThickness = 6
 					local sidePadding = 16
 					-- Approximate container width based on standard design
