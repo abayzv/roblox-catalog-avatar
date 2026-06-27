@@ -145,6 +145,7 @@ function AvatarTemplateService.listTemplates(player: Player, params: any): Avata
 				thumbnailUrl = record.thumbnail.imageUrl,
 				thumbnailState = record.thumbnail.state,
 				loadCount = record.loadCount,
+				descriptionSnapshot = record.descriptionSnapshot,
 			}
 			table.insert(cards, card)
 			count += 1
@@ -209,6 +210,7 @@ function AvatarTemplateService.saveCurrentAvatarAsTemplate(player: Player): Avat
 		thumbnailUrl = newRecord.thumbnail.imageUrl,
 		thumbnailState = newRecord.thumbnail.state,
 		loadCount = newRecord.loadCount,
+		descriptionSnapshot = newRecord.descriptionSnapshot,
 	}
 	
 	return {
@@ -411,6 +413,7 @@ function AvatarTemplateService.searchAvatarLoader(player: Player, query: string?
 				thumbnailUrl = record.thumbnail.imageUrl,
 				thumbnailState = record.thumbnail.state,
 				loadCount = record.loadCount,
+				descriptionSnapshot = record.descriptionSnapshot,
 			}
 			table.insert(cards, card)
 		end

@@ -91,7 +91,7 @@ local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 					ThumbnailPlaceholder = React.createElement("ImageLabel", {
 						Size = UDim2.fromScale(1, 1),
 						BackgroundTransparency = 1,
-						Image = thumbImage,
+						Image = data.thumbnailUrl or thumbImage,
 						ScaleType = Enum.ScaleType.Fit,
 						ZIndex = 1,
 					}),

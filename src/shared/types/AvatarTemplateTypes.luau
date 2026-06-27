@@ -33,6 +33,7 @@ export type AvatarTemplateCardData = {
 	thumbnailState: string,
 
 	loadCount: number?,
+	descriptionSnapshot: { [string]: any }?,
 }
 
 export type ListTemplatesResponse = {
