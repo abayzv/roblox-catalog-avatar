@@ -307,46 +307,17 @@ local function AvatarPreviewViewport()
 				[React.Event.InputEnded] = endDrag,
 			}),
 
-			TopRightActions = React.createElement("Frame", {
+			ResetArea = React.createElement("Frame", {
 				AnchorPoint = Vector2.new(1, 0),
 				Position = UDim2.new(1, -Theme.Space.MD, 0, Theme.Space.MD),
-				Size = UDim2.fromOffset(200, 48), -- Wide enough to hold both
+				Size = UDim2.fromOffset(48, 48),
 				BackgroundTransparency = 1,
 				ZIndex = 13,
 			}, {
-				Layout = React.createElement("UIListLayout", {
-					FillDirection = Enum.FillDirection.Horizontal,
-					SortOrder = Enum.SortOrder.LayoutOrder,
-					HorizontalAlignment = Enum.HorizontalAlignment.Right,
-					VerticalAlignment = Enum.VerticalAlignment.Center,
-					Padding = UDim.new(0, Theme.Space.MD),
-				}),
-				
-				SaveTemplateButton = React.createElement(GlassButton, {
-					icon = Icons.Save,
-					color = Theme.Color.TextSecondary,
-					size = UDim2.fromOffset(48, 48),
-					layoutOrder = 1,
-					onActivated = function()
-						task.spawn(function()
-							if SaveAvatarTemplateRemote then
-								local res = SaveAvatarTemplateRemote:InvokeServer()
-								if res.success then
-									print("Template saved!", res.template)
-									-- Fire a bindable event or something? For now MVP is just console print + refresh panel later
-								else
-									warn("Failed to save template:", res.error)
-								end
-							end
-						end)
-					end,
-				}),
-
 				ResetButton = React.createElement(GlassButton, {
 					icon = Icons.Reset,
 					color = Theme.Color.TextSecondary,
-					size = UDim2.fromOffset(48, 48),
-					layoutOrder = 2,
+					size = UDim2.fromScale(1, 1),
 					onActivated = function()
 						task.spawn(function()
 							local ok, response = pcall(function()
@@ -363,7 +334,42 @@ local function AvatarPreviewViewport()
 						end)
 					end,
 				}),
-			})
+			}),
+
+			ActionArea = React.createElement("Frame", {
+				AnchorPoint = Vector2.new(0.5, 1),
+				Position = UDim2.new(0.5, 0, 1, -Theme.Space.XL),
+				BackgroundTransparency = 1,
+				Size = UDim2.new(1, -(Theme.Space.XL * 2), 0, 48),
+				ZIndex = 13,
+			}, {
+				Layout = React.createElement("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					HorizontalAlignment = Enum.HorizontalAlignment.Center,
+					VerticalAlignment = Enum.VerticalAlignment.Center,
+					Padding = UDim.new(0, Theme.Space.MD),
+				}),
+
+				SaveTemplateButton = React.createElement(GlassButton, {
+					text = "Save Template",
+					icon = Icons.Save,
+					color = Theme.Color.TextPrimary,
+					size = UDim2.fromScale(1, 1),
+					onActivated = function()
+						task.spawn(function()
+							if SaveAvatarTemplateRemote then
+								local res = SaveAvatarTemplateRemote:InvokeServer()
+								if res.success then
+									print("Template saved!", res.template)
+									-- Fire a bindable event or something? For now MVP is just console print + refresh panel later
+								else
+									warn("Failed to save template:", res.error)
+								end
+							end
+						end)
+					end,
+				}),
+			}),
 		}),
 	})
 end
