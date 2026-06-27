@@ -6,7 +6,12 @@ local AvatarAppearanceService = require(script.Parent.AvatarAppearanceService)
 
 local AvatarTemplateService = {}
 
--- TODO: replace with persistent store (DataStore/database wrapper)
+local DataStoreService = game:GetService("DataStoreService")
+
+local AvatarTemplateById = DataStoreService:GetDataStore("AvatarTemplateById_v1")
+local CodeToTemplateId = DataStoreService:GetDataStore("CodeToTemplateId_v1")
+local RecentAvatarTemplateIndex = DataStoreService:GetOrderedDataStore("RecentAvatarTemplateIndex_v1")
+
 local mockStore = {
 	templatesById = {} :: { [string]: AvatarTemplateTypes.AvatarTemplateRecord },
 	templateIndex = {} :: { string }, -- List of templateIds
