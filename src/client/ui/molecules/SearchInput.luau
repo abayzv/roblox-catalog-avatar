@@ -8,6 +8,7 @@ export type SearchInputProps = {
 	placeholder: string?,
 	text: string?,
 	onTextChanged: ((text: string) -> ())?,
+	onSubmit: ((text: string) -> ())?,
 	layoutOrder: number?,
 }
 
@@ -67,8 +68,11 @@ local function SearchInput(props: SearchInputProps)
 				[React.Event.Focused] = function()
 					setIsFocused(true)
 				end,
-				[React.Event.FocusLost] = function()
+				[React.Event.FocusLost] = function(rbx, enterPressed)
 					setIsFocused(false)
+					if enterPressed and props.onSubmit then
+						props.onSubmit(rbx.Text)
+					end
 				end,
 			}),
 		})

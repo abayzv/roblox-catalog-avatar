@@ -14,6 +14,8 @@ export type UseCatalogItemsResult = {
 	isLimitReached: boolean,
 }
 
+local SearchCache = {}
+
 local function useCatalogItems(category: string, subCategory: string, searchQuery: string): UseCatalogItemsResult
 	local items, setItems = React.useState({})
 	local readyKeys, setReadyKeys = React.useState({})
@@ -25,8 +27,11 @@ local function useCatalogItems(category: string, subCategory: string, searchQuer
 	local activeRequestToken = React.useRef(0)
 	local pageCount = React.useRef(0)
 
-	-- Function to handle fetching
 	local fetchItems = React.useCallback(function(isNextPage: boolean)
+		local isSearchMode = searchQuery ~= ""
+		local MAX_PAGES = if isSearchMode then 2 else 3
+		local cacheKey = `{category}_{subCategory}_{searchQuery}`
+		
 		if not isNextPage then
 			setStatus("Loading")
 			setItems({})
@@ -45,7 +50,7 @@ local function useCatalogItems(category: string, subCategory: string, searchQuer
 				return
 			end
 			-- Check hard limit
-			if pageCount.current >= 3 or #items >= 90 then
+			if pageCount.current >= MAX_PAGES or #items >= 90 then
 				setHasNextPage(false)
 				setIsLimitReached(true)
 				return
@@ -57,6 +62,21 @@ local function useCatalogItems(category: string, subCategory: string, searchQuer
 		local currentToken = activeRequestToken.current
 
 		task.spawn(function()
+			-- Check cache only for initial page
+			if not isNextPage then
+				if SearchCache[cacheKey] then
+					if activeRequestToken.current ~= currentToken then return end
+					local cachedData = SearchCache[cacheKey]
+					setItems(cachedData.items)
+					pageCount.current = 1
+					setHasNextPage(cachedData.nextCursor ~= nil and pageCount.current < MAX_PAGES)
+					setIsLimitReached(pageCount.current >= MAX_PAGES)
+					setStatus("Idle")
+					CatalogWarmupQueue.warmup(cachedData.items, currentToken, activeRequestToken)
+					return
+				end
+			end
+
 			-- Artificial delay for pagination so it doesn't spam instantly
 			if isNextPage then
 				task.wait(0.4)
@@ -86,12 +106,21 @@ local function useCatalogItems(category: string, subCategory: string, searchQuer
 				for _, item in ipairs(result.items) do
 					table.insert(newItems, item)
 				end
+				
+				-- Save to cache if it's the first page
+				if not isNextPage then
+					SearchCache[cacheKey] = {
+						items = newItems,
+						nextCursor = result.nextCursor,
+					}
+				end
+				
 				return newItems
 			end)
 			
 			pageCount.current += 1
 			
-			local reachedLimit = pageCount.current >= 3 or (isNextPage and (#items + #result.items) >= 90)
+			local reachedLimit = pageCount.current >= MAX_PAGES or (isNextPage and (#items + #result.items) >= 90)
 			setHasNextPage(result.nextCursor ~= nil and not reachedLimit)
 			setIsLimitReached(reachedLimit)
 			setStatus("Idle")

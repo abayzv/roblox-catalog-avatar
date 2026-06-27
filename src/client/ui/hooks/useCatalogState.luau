@@ -4,6 +4,7 @@ local React = require(ReplicatedStorage.Packages.React)
 export type CatalogState = {
 	activeMainCategory: string,
 	activeSubCategory: string,
+	searchInput: string,
 	searchQuery: string,
 	selectedItemId: string?,
 }
@@ -11,6 +12,7 @@ export type CatalogState = {
 export type CatalogStateActions = {
 	setActiveMainCategory: (category: string) -> (),
 	setActiveSubCategory: (subcat: string) -> (),
+	setSearchInput: (input: string) -> (),
 	setSearchQuery: (query: string) -> (),
 	setSelectedItemId: (id: string?) -> (),
 }
@@ -41,11 +43,17 @@ local MyAvatarCategoryConfig = require(ReplicatedStorage.Shared.avatar.MyAvatarC
 local function useCatalogState(configType: string?)
 	local activeMainCategory, setActiveMainCategoryInternal = React.useState(if configType == "my_avatar" then "all" else "All")
 	local activeSubCategory, setActiveSubCategory = React.useState(if configType == "my_avatar" then "all" else "Featured")
+	local searchInput, setSearchInput = React.useState("")
 	local searchQuery, setSearchQuery = React.useState("")
 	local selectedItemId, setSelectedItemId = React.useState(nil :: string?)
 
 	local function setActiveMainCategory(category: string)
 		setActiveMainCategoryInternal(category)
+		
+		-- Clear search when switching main category
+		setSearchInput("")
+		setSearchQuery("")
+		
 		if configType == "my_avatar" then
 			local defaultSub = "all"
 			for _, mainCat in ipairs(MyAvatarCategoryConfig.MainCategories) do
@@ -58,9 +66,11 @@ local function useCatalogState(configType: string?)
 			end
 			setActiveSubCategory(defaultSub)
 		else
-			local defaultSub = MAIN_TO_SUB[category]
-			if defaultSub and defaultSub[1] then
-				setActiveSubCategory(defaultSub[1])
+			local subcategories = MAIN_TO_SUB[category]
+			if subcategories and #subcategories > 0 then
+				setActiveSubCategory(subcategories[1])
+			else
+				setActiveSubCategory("")
 			end
 		end
 	end
@@ -68,6 +78,7 @@ local function useCatalogState(configType: string?)
 	local state: CatalogState = {
 		activeMainCategory = activeMainCategory,
 		activeSubCategory = activeSubCategory,
+		searchInput = searchInput,
 		searchQuery = searchQuery,
 		selectedItemId = selectedItemId,
 	}
@@ -75,6 +86,7 @@ local function useCatalogState(configType: string?)
 	local actions: CatalogStateActions = {
 		setActiveMainCategory = setActiveMainCategory,
 		setActiveSubCategory = setActiveSubCategory,
+		setSearchInput = setSearchInput,
 		setSearchQuery = setSearchQuery,
 		setSelectedItemId = setSelectedItemId,
 	}

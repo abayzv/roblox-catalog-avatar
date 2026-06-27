@@ -7,8 +7,8 @@ local SearchInput = require(script.Parent.SearchInput)
 
 export type SearchToolbarProps = {
 	searchText: string?,
-	onSearchTextChanged: ((text: string) -> ())?,
-	onFilterActivated: (() -> ())?,
+	onSearchInputChanged: ((text: string) -> ())?,
+	onSearchSubmitted: ((text: string) -> ())?,
 	layoutOrder: number?,
 }
 
@@ -41,13 +41,18 @@ local function SearchToolbar(props: SearchToolbarProps)
 				React.createElement(React.Fragment, nil, {
 					Input = React.createElement(SearchInput, {
 						text = props.searchText,
-						onTextChanged = props.onSearchTextChanged,
+						onTextChanged = props.onSearchInputChanged,
+						onSubmit = props.onSearchSubmitted,
 					}),
 				})
 			),
-			FilterBtn = React.createElement(IconButton, {
-				icon = Icons.Filter or "rbxassetid://0",
-				onActivated = props.onFilterActivated,
+			SearchBtn = React.createElement(IconButton, {
+				icon = Icons.Search or "rbxassetid://0",
+				onActivated = function()
+					if props.onSearchSubmitted and props.searchText then
+						props.onSearchSubmitted(props.searchText)
+					end
+				end,
 				layoutOrder = 2,
 			}),
 		})

@@ -43,6 +43,30 @@ local function CatalogPanel(props: CatalogPanelProps)
 
 	local catalogData = useCatalogItems(state.activeMainCategory, state.activeSubCategory, state.searchQuery)
 
+	local lastSearchSubmitAt = React.useRef(0)
+	
+	local submitSearch = React.useCallback(function(query: string)
+		local now = os.clock()
+		-- Debounce for 0.7 seconds
+		if now - lastSearchSubmitAt.current < 0.7 then
+			return
+		end
+		lastSearchSubmitAt.current = now
+		
+		-- Normalize query
+		query = tostring(query or "")
+		query = string.gsub(query, "^%s+", "")
+		query = string.gsub(query, "%s+$", "")
+		query = string.gsub(query, "%s+", " ")
+		
+		if query ~= "" and #query < 2 then
+			warn("[Search] Query minimal 2 karakter")
+			return
+		end
+		
+		actions.setSearchQuery(query)
+	end, {actions.setSearchQuery})
+
 	return React.createElement(
 		"Frame",
 		{
@@ -92,11 +116,9 @@ local function CatalogPanel(props: CatalogPanelProps)
 				}),
 
 				SearchArea = React.createElement(SearchToolbar, {
-					searchText = state.searchQuery,
-					onSearchTextChanged = actions.setSearchQuery,
-					onFilterActivated = function()
-						print("Filter activated")
-					end,
+					searchText = state.searchInput,
+					onSearchInputChanged = actions.setSearchInput,
+					onSearchSubmitted = submitSearch,
 					layoutOrder = 3,
 				}),
 
