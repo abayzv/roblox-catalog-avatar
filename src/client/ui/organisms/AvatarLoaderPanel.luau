@@ -3,6 +3,7 @@ local React = require(ReplicatedStorage.Packages.React)
 local Theme = require(script.Parent.Parent.theme.Theme)
 
 local HeaderTabs = require(script.Parent.HeaderTabs)
+local SearchToolbar = require(script.Parent.Parent.molecules.SearchToolbar)
 local AvatarTemplateCard = require(script.Parent.Parent.molecules.AvatarTemplateCard)
 local AvatarTemplateTypes = require(ReplicatedStorage.Shared.types.AvatarTemplateTypes)
 
@@ -20,8 +21,12 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 	local contentScale = props.contentScale or 1
 	local contentSizeScale = if contentScale > 0 then 1 / contentScale else 1
 	
+	local searchInput, setSearchInput = React.useState("")
+	local searchQuery, setSearchQuery = React.useState("")
+	
 	local HEADER_HEIGHT = 51
-	local LIST_OFFSET = HEADER_HEIGHT + 16 + 24
+	local SEARCH_HEIGHT = 60
+	local LIST_OFFSET = HEADER_HEIGHT + 16 + SEARCH_HEIGHT + 18 + 24 + 16
 	
 	-- Dummy data for UI building (Sub-Phase 12.4)
 	local dummyTemplates: {AvatarTemplateTypes.AvatarTemplateCardData} = {
@@ -99,6 +104,21 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 					LayoutOrder = 2,
 				}),
 				
+				SearchArea = React.createElement(SearchToolbar, {
+					searchText = searchInput,
+					onSearchInputChanged = setSearchInput,
+					onSearchSubmitted = function(query)
+						setSearchQuery(query)
+					end,
+					layoutOrder = 3,
+				}),
+				
+				Spacer2 = React.createElement("Frame", {
+					Size = UDim2.new(1, 0, 0, 18),
+					BackgroundTransparency = 1,
+					LayoutOrder = 4,
+				}),
+
 				TitleArea = React.createElement("TextLabel", {
 					Size = UDim2.new(1, 0, 0, 24),
 					BackgroundTransparency = 1,
@@ -107,13 +127,13 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 					Font = Theme.Font.Bold,
 					TextSize = Theme.Text.H3,
 					TextXAlignment = Enum.TextXAlignment.Left,
-					LayoutOrder = 3,
+					LayoutOrder = 5,
 				}),
 				
-				Spacer2 = React.createElement("Frame", {
+				Spacer3 = React.createElement("Frame", {
 					Size = UDim2.new(1, 0, 0, 16),
 					BackgroundTransparency = 1,
-					LayoutOrder = 4,
+					LayoutOrder = 6,
 				}),
 
 				GridArea = (function()
@@ -143,7 +163,7 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 						ScrollBarThickness = scrollBarThickness,
 						ScrollBarImageColor3 = Theme.Color.Border,
 						CanvasSize = UDim2.new(0, 0, 0, estimatedContentHeight),
-						LayoutOrder = 5,
+						LayoutOrder = 7,
 					}, {
 						Layout = React.createElement("UIGridLayout", {
 							CellSize = UDim2.fromOffset(math.floor(targetCellWidth), targetCellHeight),
