@@ -319,8 +319,13 @@ local function normalizeCode(query: string): string?
 end
 
 function AvatarTemplateService.searchAvatarLoader(player: Player, query: string): AvatarTemplateTypes.SearchAvatarLoaderResponse
+	local q = string.gsub(query, "^%s*(.-)%s*$", "%1")
+	if q == "" then
+		return { success = true, resultType = "empty", message = "Please enter a code or username." }
+	end
+
 	-- 1. Try code lookup
-	local code = normalizeCode(query)
+	local code = normalizeCode(q)
 	if code then
 		local template = getTemplateByCodeFromDataStore(code)
 		if template then
@@ -341,12 +346,68 @@ function AvatarTemplateService.searchAvatarLoader(player: Player, query: string)
 		end
 	end
 	
-	-- 2. If code not found, next sub-phase will handle Roblox username fallback.
-	-- For now, return empty.
+	-- 2. Try Roblox user lookup
+	local targetUserId = tonumber(q)
+	if not targetUserId then
+		local success, userId = pcall(function()
+			local Players = game:GetService("Players")
+			return Players:GetUserIdFromNameAsync(q)
+		end)
+		if success and userId then
+			targetUserId = userId
+		end
+	end
+	
+	if targetUserId then
+		local RobloxAvatarApiClient = require(script.Parent.RobloxAvatarApiClient)
+		local userOutfits = RobloxAvatarApiClient.getUserOutfits(targetUserId)
+		
+		if userOutfits then
+			local outfitIds = {}
+			for _, outfit in ipairs(userOutfits) do
+				table.insert(outfitIds, outfit.id)
+			end
+			
+			local thumbnails = RobloxAvatarApiClient.getOutfitThumbnails(outfitIds)
+			
+			local ownerName = q
+			pcall(function()
+				ownerName = game:GetService("Players"):GetNameFromUserIdAsync(targetUserId)
+			end)
+			
+			local outfitCards = {}
+			for _, outfit in ipairs(userOutfits) do
+				local thumb = thumbnails[outfit.id]
+				local card: AvatarTemplateTypes.RobloxOutfitCardData = {
+					sourceType = "roblox_outfit",
+					userOutfitId = outfit.id,
+					name = outfit.name,
+					ownerUserId = targetUserId,
+					ownerUsername = ownerName,
+					thumbnailUrl = thumb and thumb.imageUrl or nil,
+					thumbnailState = thumb and thumb.state or "Pending",
+					canLoad = outfit.isEditable,
+				}
+				table.insert(outfitCards, card)
+			end
+			
+			return {
+				success = true,
+				resultType = "roblox_outfits",
+				owner = {
+					userId = targetUserId,
+					username = ownerName,
+				},
+				outfits = outfitCards,
+			}
+		end
+	end
+	
+	-- 3. Nothing found
 	return {
 		success = true,
 		resultType = "empty",
-		message = "Template not found.",
+		message = "No template or user found for '" .. q .. "'.",
 	}
 end
 
