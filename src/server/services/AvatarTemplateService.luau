@@ -136,6 +136,40 @@ function AvatarTemplateService.saveCurrentAvatarAsTemplate(player: Player): Avat
 	}
 end
 
+function AvatarTemplateService.saveTemplate(player: Player): any
+	local appearanceState = AvatarAppearanceService.getAppearanceState(player)
+	if not appearanceState or not appearanceState.liveSnapshot then
+		return { success = false, error = "No live snapshot available" }
+	end
+
+	local code = generateUniqueCode()
+	
+	local record: AvatarTemplateTypes.AvatarTemplateRecord = {
+		templateId = "Tpl_" .. tostring(os.time()) .. "_" .. tostring(math.random(1000, 9999)),
+		code = code,
+		name = player.Name .. "'s Avatar",
+		creatorId = player.UserId,
+		creatorUsername = player.Name,
+		createdTime = os.time(),
+		thumbnail = {
+			imageUrl = nil,
+			state = "Placeholder",
+		},
+		snapshot = appearanceState.liveSnapshot,
+		isPublic = true,
+		loadCount = 0,
+	}
+	
+	mockStore.templatesById[record.templateId] = record
+	mockStore.codeToTemplateId[code] = record.templateId
+	table.insert(mockStore.templateIndex, 1, record.templateId) -- insert at beginning
+	
+	return {
+		success = true,
+		template = record,
+	}
+end
+
 function AvatarTemplateService.loadTemplate(player: Player, templateId: string): AvatarTemplateTypes.LoadTemplateResponse
 	local template = mockStore.templatesById[templateId]
 	if not template then
@@ -176,6 +210,11 @@ end
 local LoadAvatarTemplateRemote = require(ReplicatedStorage.Shared.remotes.LoadAvatarTemplateRemote)
 LoadAvatarTemplateRemote.OnServerInvoke = function(player: Player, templateId: string)
 	return AvatarTemplateService.loadTemplate(player, templateId)
+end
+
+local SaveAvatarTemplateRemote = require(ReplicatedStorage.Shared.remotes.SaveAvatarTemplateRemote)
+SaveAvatarTemplateRemote.OnServerInvoke = function(player: Player)
+	return AvatarTemplateService.saveTemplate(player)
 end
 
 return AvatarTemplateService

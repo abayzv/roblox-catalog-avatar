@@ -4,23 +4,29 @@
     "$className": "DataModel",
     "ReplicatedStorage": {
       "$className": "ReplicatedStorage",
-      "ApplyAvatarRemote": {
-        "$className": "RemoteFunction"
-      },
-      "GetAppearanceStateRemote": {
-        "$className": "RemoteFunction"
-      },
-      "ResolveEmotesRemote": {
-        "$className": "RemoteFunction"
-      },
-      "ListAvatarTemplatesRemote": {
-        "$className": "RemoteFunction"
-      },
-      "SaveAvatarTemplateRemote": {
-        "$className": "RemoteFunction"
-      },
-      "LoadAvatarTemplateRemote": {
-        "$className": "RemoteFunction"
+      "Remotes": {
+        "$className": "Folder",
+        "ApplyAvatarRemote": {
+          "$className": "RemoteFunction"
+        },
+        "SearchCatalogRemote": {
+          "$className": "RemoteFunction"
+        },
+        "GetCatalogItemRemote": {
+          "$className": "RemoteFunction"
+        },
+        "GetAvatarAppearanceRemote": {
+          "$className": "RemoteFunction"
+        },
+        "ListAvatarTemplatesRemote": {
+          "$className": "RemoteFunction"
+        },
+        "LoadAvatarTemplateRemote": {
+          "$className": "RemoteFunction"
+        },
+        "SaveAvatarTemplateRemote": {
+          "$className": "RemoteFunction"
+        }
       },
       "Packages": {
         "$path": "Packages"
