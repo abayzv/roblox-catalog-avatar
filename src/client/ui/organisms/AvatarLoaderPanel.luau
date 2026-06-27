@@ -110,13 +110,8 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 						elseif response.resultType == "loaded_template_code" or response.resultType == "loaded_username_avatar" then
 							AvatarAppearanceClient.updateState(response.liveSnapshot, response.liveRevision, "avatar_loader_direct")
 							print("[AvatarLoader] Berhasil memuat avatar via code/username")
-							local cached = AvatarTemplateCache.get(templateCategory)
-							if cached then
-								setTemplates(cached)
-							else
-								setTemplates({})
-							end
-							setSearchState("idle")
+							setSearchInput("")
+							setSearchQuery("")
 						elseif response.resultType == "empty" then
 							setTemplates({})
 							setSearchState("empty")
@@ -207,7 +202,13 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 				
 				CategoryArea = React.createElement(MainCategoryTabs, {
 					activeCategory = templateCategory,
-					onCategorySelected = props.setTemplateCategory,
+					onCategorySelected = function(category)
+						if searchQuery ~= "" or searchInput ~= "" then
+							setSearchInput("")
+							setSearchQuery("")
+						end
+						props.setTemplateCategory(category)
+					end,
 					layoutOrder = 5,
 					categories = {
 						{ id = "all", label = "All Template", icon = Icons.Catalog },
