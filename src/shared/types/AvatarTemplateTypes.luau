@@ -50,10 +50,36 @@ export type SaveTemplateResponse = {
 
 export type LoadTemplateResponse = {
 	success: boolean,
-	liveSnapshot: { [string]: any }?,
+	liveSnapshot: any?,
 	liveRevision: number?,
 	templateId: string?,
 	error: string?,
+}
+
+export type RobloxOutfitCardData = {
+	sourceType: "roblox_outfit",
+	userOutfitId: number,
+	name: string,
+
+	ownerUserId: number,
+	ownerUsername: string?,
+
+	thumbnailUrl: string?,
+	thumbnailState: string,
+
+	canLoad: boolean,
+}
+
+export type SearchAvatarLoaderResponse = {
+	success: boolean,
+	resultType: "template" | "roblox_outfits" | "empty" | "error",
+	template: AvatarTemplateCardData?,
+	owner: {
+		userId: number,
+		username: string,
+	}?,
+	outfits: { RobloxOutfitCardData }?,
+	message: string?,
 }
 
 return {}

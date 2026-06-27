@@ -309,6 +309,47 @@ function AvatarTemplateService.loadTemplate(player: Player, templateId: string):
 	}
 end
 
+local function normalizeCode(query: string): string?
+	local q = string.upper(query)
+	q = string.gsub(q, "%s+", "")
+	if string.match(q, "^[A-Z2-9]+$") and #q == 5 then
+		return q
+	end
+	return nil
+end
+
+function AvatarTemplateService.searchAvatarLoader(player: Player, query: string): AvatarTemplateTypes.SearchAvatarLoaderResponse
+	-- 1. Try code lookup
+	local code = normalizeCode(query)
+	if code then
+		local template = getTemplateByCodeFromDataStore(code)
+		if template then
+			local card: AvatarTemplateTypes.AvatarTemplateCardData = {
+				templateId = template.templateId,
+				code = template.code,
+				name = template.name,
+				creatorUsername = template.creatorUsername,
+				thumbnailUrl = template.thumbnail.imageUrl,
+				thumbnailState = template.thumbnail.state,
+				loadCount = template.loadCount,
+			}
+			return {
+				success = true,
+				resultType = "template",
+				template = card,
+			}
+		end
+	end
+	
+	-- 2. If code not found, next sub-phase will handle Roblox username fallback.
+	-- For now, return empty.
+	return {
+		success = true,
+		resultType = "empty",
+		message = "Template not found.",
+	}
+end
+
 function AvatarTemplateService.init()
 	local ListAvatarTemplatesRemote = require(ReplicatedStorage.Shared.remotes.ListAvatarTemplatesRemote)
 	ListAvatarTemplatesRemote.OnServerInvoke = function(player: Player, params: any)
@@ -323,6 +364,11 @@ function AvatarTemplateService.init()
 	local SaveAvatarTemplateRemote = require(ReplicatedStorage.Shared.remotes.SaveAvatarTemplateRemote)
 	SaveAvatarTemplateRemote.OnServerInvoke = function(player: Player)
 		return AvatarTemplateService.saveTemplate(player)
+	end
+	
+	local SearchAvatarLoaderRemote = require(ReplicatedStorage.Shared.remotes.SearchAvatarLoaderRemote)
+	SearchAvatarLoaderRemote.OnServerInvoke = function(player: Player, query: string)
+		return AvatarTemplateService.searchAvatarLoader(player, query)
 	end
 end
 
