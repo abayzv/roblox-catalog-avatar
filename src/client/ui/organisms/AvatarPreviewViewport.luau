@@ -202,7 +202,12 @@ local function isDragMoveInput(input: InputObject): boolean
 		or input.UserInputType == Enum.UserInputType.Touch
 end
 
-local function AvatarPreviewViewport()
+export type AvatarPreviewViewportProps = {
+	showSaveTemplate: boolean?,
+	onTemplateSaved: (() -> ())?,
+}
+
+local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 	local viewportRef = React.useRef(nil)
 	local rigRef = React.useRef(nil)
 	local draggingRef = React.useRef(false)
@@ -353,7 +358,7 @@ local function AvatarPreviewViewport()
 					Padding = UDim.new(0, Theme.Space.MD),
 				}),
 
-				SaveTemplateButton = React.createElement(GlassButton, {
+				SaveTemplateButton = props.showSaveTemplate and React.createElement(GlassButton, {
 					text = if isSaving then "Saving..." else (saveSuccessText or "Save Template"),
 					icon = if saveSuccessText then Icons.Apply else Icons.Save,
 					color = if saveSuccessText then Theme.Color.Success else Theme.Color.TextPrimary,
@@ -367,6 +372,9 @@ local function AvatarPreviewViewport()
 								local res = SaveAvatarTemplateRemote:InvokeServer()
 								if res.success then
 									setSaveSuccessText("Saved!")
+									if props.onTemplateSaved then
+										props.onTemplateSaved()
+									end
 									-- Reset success text after 2 seconds
 									task.delay(2, function()
 										setSaveSuccessText(nil)

@@ -11,6 +11,7 @@ local DataStoreService = game:GetService("DataStoreService")
 local AvatarTemplateById = DataStoreService:GetDataStore("AvatarTemplateById_v1")
 local CodeToTemplateId = DataStoreService:GetDataStore("CodeToTemplateId_v1")
 local RecentAvatarTemplateIndex = DataStoreService:GetOrderedDataStore("RecentAvatarTemplateIndex_v1")
+local UserAvatarTemplateIndex = DataStoreService:GetOrderedDataStore("UserAvatarTemplateIndex_v1")
 
 local ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
@@ -49,6 +50,10 @@ local function saveTemplateToDataStore(record: AvatarTemplateTypes.AvatarTemplat
 		
 		-- Write to recent ordered index
 		RecentAvatarTemplateIndex:SetAsync(record.templateId, record.createdAt)
+		
+		-- Write to user's ordered index
+		local UserIndex = DataStoreService:GetOrderedDataStore("UserAvatarTemplateIndex_v1", tostring(record.creatorUserId))
+		UserIndex:SetAsync(record.templateId, record.createdAt)
 	end)
 	
 	if not success then
@@ -83,13 +88,17 @@ local function getTemplateByCodeFromDataStore(code: string): AvatarTemplateTypes
 	return nil
 end
 
-local function listRecentTemplatesFromDataStore(limit: number)
+local function listTemplatesFromDataStore(limit: number, mode: string?, userId: number?)
 	local success, pages = pcall(function()
-		return RecentAvatarTemplateIndex:GetSortedAsync(false, limit)
+		local indexToUse = RecentAvatarTemplateIndex
+		if mode == "mine" and userId then
+			indexToUse = DataStoreService:GetOrderedDataStore("UserAvatarTemplateIndex_v1", tostring(userId))
+		end
+		return indexToUse:GetSortedAsync(false, limit)
 	end)
 	
 	if not success or not pages then
-		warn("[AvatarTemplateService] Failed to fetch recent template index:", pages)
+		warn("[AvatarTemplateService] Failed to fetch template index:", pages)
 		return {}
 	end
 	
@@ -120,9 +129,10 @@ end
 function AvatarTemplateService.listTemplates(player: Player, params: any): AvatarTemplateTypes.ListTemplatesResponse
 	local limit = params and params.limit or 30
 	local query = params and params.query
+	local mode = params and params.mode or "all"
 	if query then query = string.lower(query) end
 	
-	local recentRecords = listRecentTemplatesFromDataStore(limit)
+	local recentRecords = listTemplatesFromDataStore(limit, mode, player.UserId)
 	local cards = {}
 	local count = 0
 	

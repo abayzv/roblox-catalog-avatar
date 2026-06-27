@@ -24,6 +24,8 @@ local function CatalogScreen()
 	local catalogBoundsSize, setCatalogBoundsSize = React.useState(Vector2.new(0, 0))
 	local catalogContentScale = getCatalogContentScale(catalogBoundsSize)
 	local activeTab, setActiveTab = React.useState("Item Catalog")
+	local templateCategory, setTemplateCategory = React.useState("all")
+	local templateListRefreshCount, setTemplateListRefreshCount = React.useState(0)
 
 	return React.createElement("Frame", {
 		Name = "CatalogScreen",
@@ -74,6 +76,9 @@ local function CatalogScreen()
 						contentScale = catalogContentScale,
 						activeTab = activeTab,
 						setActiveTab = setActiveTab,
+						templateCategory = templateCategory,
+						setTemplateCategory = setTemplateCategory,
+						refreshTrigger = templateListRefreshCount,
 					})
 				else
 					React.createElement(CatalogPanel, {
@@ -98,7 +103,12 @@ local function CatalogScreen()
 				PaddingRight = UDim.new(0, 0),
 			}),
 
-			Preview = React.createElement(AvatarPreviewViewport),
+			Preview = React.createElement(AvatarPreviewViewport, {
+				showSaveTemplate = activeTab == "Avatar Loader" and templateCategory == "mine",
+				onTemplateSaved = function()
+					setTemplateListRefreshCount(templateListRefreshCount + 1)
+				end,
+			}),
 		}),
 	})
 end

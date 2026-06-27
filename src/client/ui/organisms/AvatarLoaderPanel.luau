@@ -3,9 +3,11 @@ local React = require(ReplicatedStorage.Packages.React)
 local Theme = require(script.Parent.Parent.theme.Theme)
 
 local HeaderTabs = require(script.Parent.HeaderTabs)
+local MainCategoryTabs = require(script.Parent.MainCategoryTabs)
 local SearchToolbar = require(script.Parent.Parent.molecules.SearchToolbar)
 local AvatarTemplateCard = require(script.Parent.Parent.molecules.AvatarTemplateCard)
 local Text = require(script.Parent.Parent.atoms.Text)
+local Icons = require(script.Parent.Parent.theme.Icons)
 local AvatarTemplateTypes = require(ReplicatedStorage.Shared.types.AvatarTemplateTypes)
 local AvatarAppearanceClient = require(script.Parent.Parent.Parent.services.AvatarAppearanceClient)
 local TemplateThumbnailGenerator = require(script.Parent.Parent.Parent.services.TemplateThumbnailGenerator)
@@ -22,6 +24,9 @@ export type AvatarLoaderPanelProps = {
 	contentScale: number?,
 	activeTab: string,
 	setActiveTab: (tab: string) -> (),
+	templateCategory: string?,
+	setTemplateCategory: ((category: string) -> ())?,
+	refreshTrigger: number?,
 }
 
 local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
@@ -45,6 +50,8 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 		end
 	end, {pageToken})
 	
+	local templateCategory = props.templateCategory or "all"
+	
 	React.useEffect(function()
 		local active = true
 		setIsLoading(true)
@@ -54,6 +61,7 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 			if searchQuery == "" then
 				local response = ListAvatarTemplatesRemote:InvokeServer({
 					limit = 30,
+					mode = templateCategory,
 				})
 				
 				if active then
@@ -96,7 +104,7 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 		return function()
 			active = false
 		end
-	end, {searchQuery})
+	end, {searchQuery, templateCategory, props.refreshTrigger})
 	
 	local HEADER_HEIGHT = 51
 	local SEARCH_HEIGHT = 60
@@ -164,6 +172,22 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 					Size = UDim2.new(1, 0, 0, 18),
 					BackgroundTransparency = 1,
 					LayoutOrder = 4,
+				}),
+				
+				CategoryArea = React.createElement(MainCategoryTabs, {
+					activeCategory = templateCategory,
+					onCategorySelected = props.setTemplateCategory,
+					layoutOrder = 5,
+					categories = {
+						{ id = "all", label = "All Template", icon = Icons.Catalog },
+						{ id = "mine", label = "My Template", icon = Icons.Avatar },
+					},
+				}),
+				
+				Spacer3 = React.createElement("Frame", {
+					Size = UDim2.new(1, 0, 0, 16),
+					BackgroundTransparency = 1,
+					LayoutOrder = 6,
 				}),
 				
 				GridArea = (function()

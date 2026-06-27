@@ -149,28 +149,41 @@ local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 				}),
 			}),
 
-			-- 4. Load Button
+			-- 4. Action Buttons
 			ActionRow = React.createElement("Frame", {
 				Size = UDim2.new(1, 0, 0, 36),
 				BackgroundTransparency = 1,
 				LayoutOrder = 4,
 			}, {
+				Layout = React.createElement("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					SortOrder = Enum.SortOrder.LayoutOrder,
+					Padding = UDim.new(0, 8),
+				}),
 				LoadButton = React.createElement(GradientButton, {
 					text = if isApplying then "Applying..." elseif props.isLoading then "Loading..." else "Load",
-					size = UDim2.fromScale(1, 1),
+					size = UDim2.new(0.5, -4, 1, 0),
 					disabled = props.isLoading or isApplying,
+					layoutOrder = 1,
 					onActivated = function()
 						if not props.isLoading and not isApplying then
 							setIsApplying(true)
 							local id = if data.sourceType == "roblox_outfit" then data.userOutfitId else data.templateId
 							props.onLoad(id)
 							
-							-- In MVP, reset state after a short delay since onLoad doesn't return a Promise 
-							-- (It uses task.spawn internally in the parent, but we can just delay reset)
 							task.delay(1, function()
 								setIsApplying(false)
 							end)
 						end
+					end,
+				}),
+				ShareButton = React.createElement(GradientButton, {
+					text = "Share",
+					size = UDim2.new(0.5, -4, 1, 0),
+					disabled = false,
+					layoutOrder = 2,
+					onActivated = function()
+						print("[AvatarLoader] Share Template Code:", data.code)
 					end,
 				}),
 			}),
