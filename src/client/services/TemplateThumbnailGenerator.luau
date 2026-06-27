@@ -20,13 +20,9 @@ local activePageToken = nil
 local jobCounter = 0
 
 local generatorWorldModel = Instance.new("WorldModel")
-local hiddenGui = Instance.new("ScreenGui")
-hiddenGui.Name = "ThumbnailGeneratorContainer"
-hiddenGui.Enabled = false
-hiddenGui.ResetOnSpawn = false
-generatorWorldModel.Parent = hiddenGui
+generatorWorldModel.Name = "ThumbnailGeneratorContainer"
 if not RunService:IsServer() then
-	pcall(function() hiddenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui") end)
+	pcall(function() generatorWorldModel.Parent = ReplicatedStorage end)
 end
 
 local function getBaseRig()
@@ -77,15 +73,19 @@ local function sanitizeStaticAvatar(model: Model)
 end
 
 local function positionCamera(camera: Camera, staticModel: Model)
-	local cf, size = staticModel:GetBoundingBox()
-	local center = cf.Position
+	local boundingCFrame, boundingSize = staticModel:GetBoundingBox()
+	local center = boundingCFrame.Position
+	local height = math.max(boundingSize.Y, 5)
+	local width = math.max(boundingSize.X, boundingSize.Z, 3)
+	local distance = math.max(height * 2.65, width * 3.1, 13)
+	local target = center + Vector3.new(0, height * 0.04, 0)
+	local cameraPosition = target + Vector3.new(0, height * 0.04, distance)
 
-	local distance = math.max(size.X, size.Y, size.Z) * 1.5
-
-	camera.CFrame = CFrame.new(
-		center + Vector3.new(0, size.Y * 0.15, distance),
-		center + Vector3.new(0, size.Y * 0.05, 0)
-	)
+	camera.FieldOfView = 31
+	camera.CFrame = CFrame.new(cameraPosition, target)
+	
+	-- Rotate model to face camera a bit
+	staticModel:PivotTo(CFrame.Angles(0, math.rad(15), 0))
 end
 
 function TemplateThumbnailGenerator.clearViewport(viewportFrame: ViewportFrame)
