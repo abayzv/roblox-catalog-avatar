@@ -361,9 +361,9 @@ function AvatarTemplateService.searchAvatarLoader(player: Player, query: string?
 	if targetUserId then
 		print("[AvatarTemplateService] Resolved query '" .. q .. "' to UserId:", targetUserId)
 		local RobloxAvatarApiClient = require(script.Parent.RobloxAvatarApiClient)
-		local userOutfits = RobloxAvatarApiClient.getUserOutfits(targetUserId)
+		local userOutfits, apiErr = RobloxAvatarApiClient.getUserOutfits(targetUserId)
 		
-		print("[AvatarTemplateService] userOutfits result:", userOutfits)
+		print("[AvatarTemplateService] userOutfits result:", userOutfits, "err:", apiErr)
 		
 		if userOutfits then
 			local outfitIds = {}
@@ -406,6 +406,13 @@ function AvatarTemplateService.searchAvatarLoader(player: Player, query: string?
 			}
 		else
 			print("[AvatarTemplateService] userOutfits was nil (API failed or returned nothing)")
+			if apiErr and string.find(tostring(apiErr), "429") then
+				return {
+					success = true,
+					resultType = "empty",
+					message = "Roblox API is busy (Too Many Requests). Please wait a moment and try again.",
+				}
+			end
 		end
 	else
 		print("[AvatarTemplateService] Could not resolve '" .. q .. "' to a valid UserId.")

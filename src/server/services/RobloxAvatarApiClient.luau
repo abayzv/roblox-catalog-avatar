@@ -4,7 +4,15 @@ local RobloxAvatarApiClient = {}
 
 local AVATAR_API_BASE = "https://avatar.roproxy.com/v1"
 
+local cache = {}
+local CACHE_DURATION = 60
+
 function RobloxAvatarApiClient.getUserOutfits(userId: number)
+	local now = os.time()
+	if cache[userId] and now - cache[userId].timestamp < CACHE_DURATION then
+		return cache[userId].data, nil
+	end
+
 	local url = AVATAR_API_BASE .. "/users/" .. tostring(userId) .. "/outfits?page=1&itemsPerPage=25"
 	print("[RobloxAvatarApiClient] Fetching outfits from:", url)
 	local success, response = pcall(function()
@@ -13,7 +21,7 @@ function RobloxAvatarApiClient.getUserOutfits(userId: number)
 	
 	if not success then
 		warn("[RobloxAvatarApiClient] Failed to fetch outfits for user", userId, response)
-		return nil
+		return nil, tostring(response)
 	end
 	
 	local decodeSuccess, data = pcall(function()
@@ -31,6 +39,12 @@ function RobloxAvatarApiClient.getUserOutfits(userId: number)
 	end
 	
 	print("[RobloxAvatarApiClient] Successfully decoded outfits. Count:", #data.data)
+	
+	cache[userId] = {
+		timestamp = now,
+		data = data.data,
+	}
+	
 	return data.data
 end
 
