@@ -236,7 +236,7 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 						CanvasSize = UDim2.new(0, 0, 0, estimatedContentHeight),
 						LayoutOrder = 7,
 						[React.Change.AbsoluteSize] = function(rbx)
-							local nextWidth = rbx.AbsoluteSize.X
+							local nextWidth = rbx.AbsoluteSize.X / contentScale
 							if nextWidth > 0 and nextWidth ~= containerWidth then
 								setContainerWidth(nextWidth)
 							end
