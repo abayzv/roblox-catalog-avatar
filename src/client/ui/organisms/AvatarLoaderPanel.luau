@@ -24,37 +24,42 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 	local searchInput, setSearchInput = React.useState("")
 	local searchQuery, setSearchQuery = React.useState("")
 	
+	local templates, setTemplates = React.useState({})
+	local isLoading, setIsLoading = React.useState(true)
+	
+	React.useEffect(function()
+		local active = true
+		setIsLoading(true)
+		
+		task.spawn(function()
+			local ListAvatarTemplatesRemote = ReplicatedStorage.Shared.remotes:FindFirstChild("ListAvatarTemplatesRemote")
+			if not ListAvatarTemplatesRemote then
+				warn("ListAvatarTemplatesRemote not found")
+				if active then setIsLoading(false) end
+				return
+			end
+			
+			local response = ListAvatarTemplatesRemote:InvokeServer({
+				limit = 30,
+				query = searchQuery,
+			})
+			
+			if active then
+				setIsLoading(false)
+				if response and response.success and response.templates then
+					setTemplates(response.templates)
+				end
+			end
+		end)
+		
+		return function()
+			active = false
+		end
+	end, {searchQuery})
+	
 	local HEADER_HEIGHT = 51
 	local SEARCH_HEIGHT = 60
 	local LIST_OFFSET = HEADER_HEIGHT + 16 + SEARCH_HEIGHT + 18 + 24 + 16
-	
-	-- Dummy data for UI building (Sub-Phase 12.4)
-	local dummyTemplates: {AvatarTemplateTypes.AvatarTemplateCardData} = {
-		{
-			templateId = "dummy-1",
-			code = "5X3P2",
-			name = "Template 1",
-			creatorUsername = "Abay",
-			thumbnailUrl = nil,
-			thumbnailState = "Placeholder",
-		},
-		{
-			templateId = "dummy-2",
-			code = "829KQ",
-			name = "Template 2",
-			creatorUsername = "Roblox",
-			thumbnailUrl = nil,
-			thumbnailState = "Placeholder",
-		},
-		{
-			templateId = "dummy-3",
-			code = "ZZZ11",
-			name = "Template 3",
-			creatorUsername = "Builderman",
-			thumbnailUrl = nil,
-			thumbnailState = "Placeholder",
-		}
-	}
 
 	return React.createElement(
 		"Frame",
@@ -118,24 +123,7 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 					BackgroundTransparency = 1,
 					LayoutOrder = 4,
 				}),
-
-				TitleArea = React.createElement("TextLabel", {
-					Size = UDim2.new(1, 0, 0, 24),
-					BackgroundTransparency = 1,
-					Text = "Generated Templates",
-					TextColor3 = Theme.Color.TextPrimary,
-					Font = Theme.Font.Bold,
-					TextSize = Theme.Text.H3,
-					TextXAlignment = Enum.TextXAlignment.Left,
-					LayoutOrder = 5,
-				}),
 				
-				Spacer3 = React.createElement("Frame", {
-					Size = UDim2.new(1, 0, 0, 16),
-					BackgroundTransparency = 1,
-					LayoutOrder = 6,
-				}),
-
 				GridArea = (function()
 					local columns = 3
 					local scrollBarThickness = 6
@@ -151,7 +139,7 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 					local targetCellWidth = math.max((usableWidth - (gapX * (columns - 1))) / columns, 1)
 					local scale = targetCellWidth / originalWidth
 					local targetCellHeight = math.floor(originalHeight * scale)
-					local itemCount = #dummyTemplates
+					local itemCount = #templates
 					local rowCount = math.max(math.ceil(itemCount / columns), 1)
 					
 					local estimatedContentHeight = 12 + (rowCount * targetCellHeight) + (math.max(rowCount - 1, 0) * gapY) + 96
@@ -183,7 +171,7 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 						Cards = React.createElement(React.Fragment, nil, 
 							(function()
 								local cards = {}
-								for i, template in ipairs(dummyTemplates) do
+								for i, template in ipairs(templates) do
 									cards["Card_" .. template.templateId] = React.createElement("Frame", {
 										BackgroundTransparency = 1,
 										Size = UDim2.fromScale(1, 1),
@@ -196,6 +184,7 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 											UIScale = React.createElement("UIScale", { Scale = scale }),
 											Card = React.createElement(AvatarTemplateCard, {
 												templateData = template,
+												isLoading = isLoading,
 												onLoad = function(id)
 													print("Load template:", id)
 												end,

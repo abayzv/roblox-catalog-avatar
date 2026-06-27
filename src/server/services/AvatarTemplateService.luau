@@ -37,24 +37,43 @@ end
 
 function AvatarTemplateService.listTemplates(player: Player, params: any): AvatarTemplateTypes.ListTemplatesResponse
 	local limit = params and params.limit or 30
+	local query = params and params.query
+	if query then query = string.lower(query) end
+	
 	local cards = {}
+	local count = 0
 	
 	-- For MVP, just return recent from index (last added first)
-	for i = #mockStore.templateIndex, math.max(1, #mockStore.templateIndex - limit + 1), -1 do
+	for i = #mockStore.templateIndex, 1, -1 do
 		local templateId = mockStore.templateIndex[i]
 		local record = mockStore.templatesById[templateId]
 		
 		if record then
-			local card: AvatarTemplateTypes.AvatarTemplateCardData = {
-				templateId = record.templateId,
-				code = record.code,
-				name = record.name,
-				creatorUsername = record.creatorUsername,
-				thumbnailUrl = record.thumbnail.imageUrl,
-				thumbnailState = record.thumbnail.state,
-				loadCount = record.loadCount,
-			}
-			table.insert(cards, card)
+			local matches = true
+			if query and query ~= "" then
+				local codeMatch = string.find(string.lower(record.code), query, 1, true)
+				local nameMatch = string.find(string.lower(record.name), query, 1, true)
+				if not codeMatch and not nameMatch then
+					matches = false
+				end
+			end
+			
+			if matches then
+				local card: AvatarTemplateTypes.AvatarTemplateCardData = {
+					templateId = record.templateId,
+					code = record.code,
+					name = record.name,
+					creatorUsername = record.creatorUsername,
+					thumbnailUrl = record.thumbnail.imageUrl,
+					thumbnailState = record.thumbnail.state,
+					loadCount = record.loadCount,
+				}
+				table.insert(cards, card)
+				count += 1
+				if count >= limit then
+					break
+				end
+			end
 		end
 	end
 	
