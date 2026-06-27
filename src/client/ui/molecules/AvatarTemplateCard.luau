@@ -3,7 +3,7 @@ local React = require(ReplicatedStorage.Packages.React)
 local Theme = require(script.Parent.Parent.theme.Theme)
 local Icons = require(script.Parent.Parent.theme.Icons)
 local Icon = require(script.Parent.Parent.atoms.Icon)
-local Button = require(script.Parent.Parent.atoms.Button)
+local GradientButton = require(script.Parent.Parent.atoms.GradientButton)
 local AvatarTemplateTypes = require(ReplicatedStorage.Shared.types.AvatarTemplateTypes)
 
 export type AvatarTemplateCardProps = {
@@ -117,9 +117,10 @@ local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 				VerticalAlignment = Enum.VerticalAlignment.Center,
 				HorizontalAlignment = Enum.HorizontalAlignment.Right,
 			}),
-			LoadButton = React.createElement(Button, {
+			LoadButton = React.createElement(GradientButton, {
 				text = if props.isLoading then "Loading..." else "Load",
-				variant = "primary",
+				size = UDim2.new(1, 0, 0, 36),
+				disabled = props.isLoading,
 				onActivated = function()
 					if not props.isLoading then
 						props.onLoad(data.templateId)
