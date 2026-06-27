@@ -24,6 +24,7 @@ local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 	
 	React.useEffect(function()
 		local active = true
+		print("[AvatarTemplateCard] useEffect fired for", data.name, "snapshot:", data.descriptionSnapshot ~= nil, "viewportRef:", viewportRef.current ~= nil)
 		if viewportRef.current and data.descriptionSnapshot then
 			TemplateThumbnailGenerator.renderTemplateCard(
 				data.templateId or data.userOutfitId or tostring(data.name),
@@ -87,13 +88,6 @@ local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 				{
 					UICorner = React.createElement("UICorner", {
 						CornerRadius = UDim.new(0, Theme.Radius.MD),
-					}),
-					ThumbnailPlaceholder = React.createElement("ImageLabel", {
-						Size = UDim2.fromScale(1, 1),
-						BackgroundTransparency = 1,
-						Image = data.thumbnailUrl or thumbImage,
-						ScaleType = Enum.ScaleType.Fit,
-						ZIndex = 1,
 					}),
 					Viewport = React.createElement("ViewportFrame", {
 						Size = UDim2.fromScale(1, 1),
