@@ -106,22 +106,22 @@ local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 					SortOrder = Enum.SortOrder.LayoutOrder,
 					Padding = UDim.new(0, 8),
 				}),
-				CodeTag = React.createElement("TextLabel", {
-					Size = UDim2.new(0, 40, 1, 0),
+				CodeLabel = React.createElement("TextLabel", {
 					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.fromScale(0, 1),
 					BackgroundTransparency = 1,
-					Text = data.code,
-					TextColor3 = Theme.Color.Purple,
+					Text = data.code or (data.sourceType == "roblox_outfit" and "OUTFIT") or "",
+					TextColor3 = Theme.Color.Primary,
 					Font = Theme.Font.Bold,
 					TextSize = Theme.Text.Caption,
 					TextXAlignment = Enum.TextXAlignment.Left,
 					LayoutOrder = 1,
 				}),
-				CreatorTag = React.createElement("TextLabel", {
-					Size = UDim2.new(1, -50, 1, 0),
+				CreatorLabel = React.createElement("TextLabel", {
+					Size = UDim2.new(1, -40, 1, 0),
 					BackgroundTransparency = 1,
-					Text = "by @" .. data.creatorUsername,
-					TextColor3 = Theme.Color.TextMuted,
+					Text = "by " .. (data.creatorUsername or data.ownerUsername or "Unknown"),
+					TextColor3 = Theme.Color.TextSecondary,
 					Font = Theme.Font.Regular,
 					TextSize = Theme.Text.Caption,
 					TextXAlignment = Enum.TextXAlignment.Left,
@@ -143,7 +143,8 @@ local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 					onActivated = function()
 						if not props.isLoading and not isApplying then
 							setIsApplying(true)
-							props.onLoad(data.templateId)
+							local id = if data.sourceType == "roblox_outfit" then data.userOutfitId else data.templateId
+							props.onLoad(id)
 							
 							-- In MVP, reset state after a short delay since onLoad doesn't return a Promise 
 							-- (It uses task.spawn internally in the parent, but we can just delay reset)

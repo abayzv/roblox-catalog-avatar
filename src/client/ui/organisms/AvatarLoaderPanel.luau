@@ -10,6 +10,8 @@ local AvatarAppearanceClient = require(script.Parent.Parent.Parent.services.Avat
 
 local ListAvatarTemplatesRemote = require(ReplicatedStorage.Shared.remotes.ListAvatarTemplatesRemote)
 local LoadAvatarTemplateRemote = require(ReplicatedStorage.Shared.remotes.LoadAvatarTemplateRemote)
+local SearchAvatarLoaderRemote = require(ReplicatedStorage.Shared.remotes.SearchAvatarLoaderRemote)
+local LoadRobloxOutfitRemote = require(ReplicatedStorage.Shared.remotes.LoadRobloxOutfitRemote)
 
 export type AvatarLoaderPanelProps = {
 	layoutOrder: number?,
@@ -36,21 +38,33 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 		setIsLoading(true)
 		
 		task.spawn(function()
-			if not ListAvatarTemplatesRemote then
-				warn("ListAvatarTemplatesRemote not found")
-				if active then setIsLoading(false) end
-				return
-			end
-			
-			local response = ListAvatarTemplatesRemote:InvokeServer({
-				limit = 30,
-				query = searchQuery,
-			})
-			
-			if active then
-				setIsLoading(false)
-				if response and response.success and response.templates then
-					setTemplates(response.templates)
+			if searchQuery == "" then
+				local response = ListAvatarTemplatesRemote:InvokeServer({
+					limit = 30,
+				})
+				
+				if active then
+					setIsLoading(false)
+					if response and response.success and response.templates then
+						setTemplates(response.templates)
+					end
+				end
+			else
+				local response = SearchAvatarLoaderRemote:InvokeServer(searchQuery)
+				
+				if active then
+					setIsLoading(false)
+					if response and response.success then
+						if response.resultType == "template" and response.template then
+							setTemplates({response.template})
+						elseif response.resultType == "roblox_outfits" and response.outfits then
+							setTemplates(response.outfits)
+						else
+							setTemplates({})
+						end
+					else
+						setTemplates({})
+					end
 				end
 			end
 		end)
@@ -190,12 +204,23 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 												isLoading = isLoading,
 												onLoad = function(id)
 													task.spawn(function()
-														if LoadAvatarTemplateRemote then
-															local res = LoadAvatarTemplateRemote:InvokeServer(id)
-															if not res.success then
-																warn("Failed to load template:", res.error)
-															else
-																AvatarAppearanceClient.updateState(res.liveSnapshot, res.liveRevision, "avatar_loader")
+														if template.sourceType == "roblox_outfit" then
+															if LoadRobloxOutfitRemote then
+																local res = LoadRobloxOutfitRemote:InvokeServer(id)
+																if not res.success then
+																	warn("Failed to load outfit:", res.error)
+																else
+																	AvatarAppearanceClient.updateState(res.liveSnapshot, res.liveRevision, "avatar_loader")
+																end
+															end
+														else
+															if LoadAvatarTemplateRemote then
+																local res = LoadAvatarTemplateRemote:InvokeServer(id)
+																if not res.success then
+																	warn("Failed to load template:", res.error)
+																else
+																	AvatarAppearanceClient.updateState(res.liveSnapshot, res.liveRevision, "avatar_loader")
+																end
 															end
 														end
 													end)
