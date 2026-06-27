@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local CatalogPanel = require(script.Parent.Parent.organisms.CatalogPanel)
 local MyAvatarPanel = require(script.Parent.Parent.organisms.MyAvatarPanel)
+local AvatarLoaderPanel = require(script.Parent.Parent.organisms.AvatarLoaderPanel)
 local AvatarPreviewViewport = require(script.Parent.Parent.organisms.AvatarPreviewViewport)
 
 local CATALOG_WIDTH_SCALE = 0.68
@@ -62,6 +63,13 @@ local function CatalogScreen()
 			}, {
 				Panel = if activeTab == "My Avatar" then
 					React.createElement(MyAvatarPanel, {
+						viewportSize = catalogBoundsSize,
+						contentScale = catalogContentScale,
+						activeTab = activeTab,
+						setActiveTab = setActiveTab,
+					})
+				elseif activeTab == "Avatar Loader" then
+					React.createElement(AvatarLoaderPanel, {
 						viewportSize = catalogBoundsSize,
 						contentScale = catalogContentScale,
 						activeTab = activeTab,
