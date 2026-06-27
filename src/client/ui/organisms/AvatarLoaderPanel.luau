@@ -50,7 +50,9 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 					end
 				end
 			else
+				print("[AvatarLoaderPanel] Invoking SearchAvatarLoaderRemote with query:", searchQuery)
 				local response = SearchAvatarLoaderRemote:InvokeServer(searchQuery)
+				print("[AvatarLoaderPanel] Search response:", response)
 				
 				if active then
 					setIsLoading(false)

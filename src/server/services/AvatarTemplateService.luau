@@ -318,8 +318,8 @@ local function normalizeCode(query: string): string?
 	return nil
 end
 
-function AvatarTemplateService.searchAvatarLoader(player: Player, query: string): AvatarTemplateTypes.SearchAvatarLoaderResponse
-	local q = string.gsub(query, "^%s*(.-)%s*$", "%1")
+function AvatarTemplateService.searchAvatarLoader(player: Player, query: string?): AvatarTemplateTypes.SearchAvatarLoaderResponse
+	local q = if query then string.gsub(query, "^%s*(.-)%s*$", "%1") else ""
 	if q == "" then
 		return { success = true, resultType = "empty", message = "Please enter a code or username." }
 	end
