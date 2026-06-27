@@ -2,7 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local Theme = require(script.Parent.Parent.theme.Theme)
 
-local HeaderTabs = require(script.Parent.Parent.molecules.HeaderTabs)
+local HeaderTabs = require(script.Parent.HeaderTabs)
 local SearchToolbar = require(script.Parent.Parent.molecules.SearchToolbar)
 local AvatarTemplateCard = require(script.Parent.Parent.molecules.AvatarTemplateCard)
 local Text = require(script.Parent.Parent.atoms.Text)
