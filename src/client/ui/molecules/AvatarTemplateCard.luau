@@ -45,7 +45,7 @@ local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 	return React.createElement(
 		"Frame",
 		{
-			Size = UDim2.fromOffset(248, 252), -- Exactly matches guideline
+			Size = UDim2.fromOffset(248, 342), -- Taller for portrait thumbnail
 			BackgroundColor3 = Theme.Color.Panel,
 			LayoutOrder = props.layoutOrder,
 			Active = true,
@@ -81,8 +81,8 @@ local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 			ImageContainer = React.createElement(
 				"Frame",
 				{
-					Size = UDim2.new(1, 0, 0, 128),
-					BackgroundColor3 = Theme.Color.PanelHover,
+					Size = UDim2.new(1, 0, 0, 218), -- Portrait height (218 + 8 + 22 + 8 + 14 + 8 + 40 + 24 = 342)
+					BackgroundTransparency = 1, -- No background as requested
 					LayoutOrder = 1,
 				},
 				{

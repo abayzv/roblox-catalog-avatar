@@ -218,7 +218,7 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 					local gapX = 18
 					local gapY = 14
 					local originalWidth = 248
-					local originalHeight = 252
+					local originalHeight = 342
 					
 					local targetCellWidth = math.max((usableWidth - (gapX * (columns - 1))) / columns, 1)
 					local scale = targetCellWidth / originalWidth
