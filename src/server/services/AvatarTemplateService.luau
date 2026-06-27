@@ -12,12 +12,6 @@ local AvatarTemplateById = DataStoreService:GetDataStore("AvatarTemplateById_v1"
 local CodeToTemplateId = DataStoreService:GetDataStore("CodeToTemplateId_v1")
 local RecentAvatarTemplateIndex = DataStoreService:GetOrderedDataStore("RecentAvatarTemplateIndex_v1")
 
-local mockStore = {
-	templatesById = {} :: { [string]: AvatarTemplateTypes.AvatarTemplateRecord },
-	templateIndex = {} :: { string }, -- List of templateIds
-	codeToTemplateId = {} :: { [string]: string },
-}
-
 local ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
 local function generateUniqueCode(): string
@@ -120,7 +114,7 @@ local function listRecentTemplatesFromDataStore(limit: number)
 end
 
 function AvatarTemplateService.getTemplate(templateId: string): AvatarTemplateTypes.AvatarTemplateRecord?
-	return mockStore.templatesById[templateId]
+	return getTemplateFromDataStore(templateId)
 end
 
 function AvatarTemplateService.listTemplates(player: Player, params: any): AvatarTemplateTypes.ListTemplatesResponse
@@ -128,39 +122,34 @@ function AvatarTemplateService.listTemplates(player: Player, params: any): Avata
 	local query = params and params.query
 	if query then query = string.lower(query) end
 	
+	local recentRecords = listRecentTemplatesFromDataStore(limit)
 	local cards = {}
 	local count = 0
 	
-	-- For MVP, just return recent from index (last added first)
-	for i = #mockStore.templateIndex, 1, -1 do
-		local templateId = mockStore.templateIndex[i]
-		local record = mockStore.templatesById[templateId]
-		
-		if record then
-			local matches = true
-			if query and query ~= "" then
-				local codeMatch = string.find(string.lower(record.code), query, 1, true)
-				local nameMatch = string.find(string.lower(record.name), query, 1, true)
-				if not codeMatch and not nameMatch then
-					matches = false
-				end
+	for _, record in ipairs(recentRecords) do
+		local matches = true
+		if query and query ~= "" then
+			local codeMatch = string.find(string.lower(record.code), query, 1, true)
+			local nameMatch = string.find(string.lower(record.name), query, 1, true)
+			if not codeMatch and not nameMatch then
+				matches = false
 			end
-			
-			if matches then
-				local card: AvatarTemplateTypes.AvatarTemplateCardData = {
-					templateId = record.templateId,
-					code = record.code,
-					name = record.name,
-					creatorUsername = record.creatorUsername,
-					thumbnailUrl = record.thumbnail.imageUrl,
-					thumbnailState = record.thumbnail.state,
-					loadCount = record.loadCount,
-				}
-				table.insert(cards, card)
-				count += 1
-				if count >= limit then
-					break
-				end
+		end
+		
+		if matches then
+			local card: AvatarTemplateTypes.AvatarTemplateCardData = {
+				templateId = record.templateId,
+				code = record.code,
+				name = record.name,
+				creatorUsername = record.creatorUsername,
+				thumbnailUrl = record.thumbnail.imageUrl,
+				thumbnailState = record.thumbnail.state,
+				loadCount = record.loadCount,
+			}
+			table.insert(cards, card)
+			count += 1
+			if count >= limit then
+				break
 			end
 		end
 	end
@@ -184,12 +173,12 @@ function AvatarTemplateService.saveCurrentAvatarAsTemplate(player: Player): Avat
 	
 	local templateId = HttpService:GenerateGUID(false)
 	local code = generateUniqueCode()
-	local globalCount = #mockStore.templateIndex
+	local globalCount = 0 -- In DataStore MVP we won't show global count easily, use random for dummy name
 	
 	local newRecord: AvatarTemplateTypes.AvatarTemplateRecord = {
 		templateId = templateId,
 		code = code,
-		name = `Template {globalCount + 1}`,
+		name = `Template {math.random(1000, 9999)}`,
 		creatorUserId = player.UserId,
 		creatorUsername = player.Name,
 		creatorDisplayName = player.DisplayName,
@@ -204,9 +193,13 @@ function AvatarTemplateService.saveCurrentAvatarAsTemplate(player: Player): Avat
 		version = 1,
 	}
 	
-	mockStore.templatesById[templateId] = newRecord
-	table.insert(mockStore.templateIndex, templateId)
-	mockStore.codeToTemplateId[code] = templateId
+	local success = saveTemplateToDataStore(newRecord)
+	if not success then
+		return {
+			success = false,
+			error = "Failed to save template to database."
+		}
+	end
 	
 	local card: AvatarTemplateTypes.AvatarTemplateCardData = {
 		templateId = newRecord.templateId,
@@ -271,11 +264,6 @@ function AvatarTemplateService.saveTemplate(player: Player): any
 		}
 	end
 	
-	-- Keep mockStore updated for now so listTemplates doesn't break until we refactor it
-	mockStore.templatesById[record.templateId] = record
-	mockStore.codeToTemplateId[code] = record.templateId
-	table.insert(mockStore.templateIndex, 1, record.templateId)
-	
 	return {
 		success = true,
 		template = record,
@@ -289,7 +277,7 @@ function AvatarTemplateService.loadTemplate(player: Player, templateId: string):
 		return { success = false, error = "Please wait before loading another template." }
 	end
 	
-	local template = mockStore.templatesById[templateId]
+	local template = getTemplateFromDataStore(templateId)
 	if not template then
 		return {
 			success = false,
