@@ -6,7 +6,7 @@ local HeaderTabs = require(script.Parent.HeaderTabs)
 local SearchToolbar = require(script.Parent.Parent.molecules.SearchToolbar)
 local AvatarTemplateCard = require(script.Parent.Parent.molecules.AvatarTemplateCard)
 local AvatarTemplateTypes = require(ReplicatedStorage.Shared.types.AvatarTemplateTypes)
-local AvatarPreviewController = require(script.Parent.Parent.Parent.controllers.AvatarPreviewController)
+local AvatarAppearanceClient = require(script.Parent.Parent.Parent.services.AvatarAppearanceClient)
 
 local ListAvatarTemplatesRemote = require(ReplicatedStorage.Shared.remotes.ListAvatarTemplatesRemote)
 local LoadAvatarTemplateRemote = require(ReplicatedStorage.Shared.remotes.LoadAvatarTemplateRemote)
@@ -195,8 +195,7 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 															if not res.success then
 																warn("Failed to load template:", res.error)
 															else
-																-- Reset preview so viewport reflects the new character
-																AvatarPreviewController.resetPreview()
+																AvatarAppearanceClient.updateState(res.liveSnapshot, res.liveRevision, "avatar_loader")
 															end
 														end
 													end)
