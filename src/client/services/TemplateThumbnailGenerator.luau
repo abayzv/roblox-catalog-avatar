@@ -138,9 +138,15 @@ local function processJob(job)
 	
 	local generatorRig = getBaseRig():Clone()
 	
+	local hrp = generatorRig:FindFirstChild("HumanoidRootPart")
+	if hrp and not generatorRig.PrimaryPart then
+		generatorRig.PrimaryPart = hrp
+	end
+	
 	-- Must be in Workspace for ApplyDescription to properly build skinning and attachments
+	-- Place it high in the sky to avoid FallenPartsDestroyHeight (which destroys parts at -500)
+	generatorRig:PivotTo(CFrame.new(0, 100000, 0))
 	generatorRig.Parent = game.Workspace
-	generatorRig:PivotTo(CFrame.new(0, -1000, 0))
 
 	local humanoid = generatorRig:FindFirstChildOfClass("Humanoid")
 	if not humanoid then
