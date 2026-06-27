@@ -161,10 +161,6 @@ local function processJob(job)
 		return
 	end
 
-	print("\n[TemplateThumbnailGenerator] Snapshot data for", job.templateId)
-	print(HumanoidDescriptionSerializer.debugPrint(job.descriptionSnapshot))
-	print("--------------------------------------------------\n")
-
 	local description = HumanoidDescriptionSerializer.deserialize(job.descriptionSnapshot)
 
 	local ok, err = pcall(function()
@@ -176,12 +172,6 @@ local function processJob(job)
 		warn("[TemplateThumbnailGenerator] Failed to apply description:", err)
 		return
 	end
-	
-	local appliedDesc = humanoid:GetAppliedDescription()
-	local appliedSnapshot = HumanoidDescriptionSerializer.serialize(appliedDesc)
-	print("\n[TemplateThumbnailGenerator] APPLIED Snapshot data for", job.templateId)
-	print(HumanoidDescriptionSerializer.debugPrint(appliedSnapshot))
-	print("--------------------------------------------------\n")
 	
 	-- Make sure we are still on the same page after the async call!
 	if job.pageToken ~= activePageToken then
