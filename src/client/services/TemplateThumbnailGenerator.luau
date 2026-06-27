@@ -30,7 +30,11 @@ end
 local function sanitizeStaticAvatar(model: Model)
 	for _, inst in ipairs(model:GetDescendants()) do
 		if inst:IsA("Humanoid") then
-			inst:Destroy()
+			-- Mode B: StaticWithHumanoidFallback
+			-- Keeping Humanoid because removing it breaks 2D clothing composites and dynamic head textures
+			inst.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+			inst.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+			inst.EvaluateStateMachine = false
 		elseif inst:IsA("Animator") then
 			inst:Destroy()
 		elseif inst:IsA("Script") or inst:IsA("LocalScript") then
@@ -136,12 +140,12 @@ local function processJob(job)
 		generatorRig.PrimaryPart = hrp
 	end
 	
-	-- [Real Flow - Mode A: StaticLightweight]
+	-- [Real Flow - Mode B: StaticWithHumanoidFallback]
 	-- 1. Generate rig and place in temporary Workspace (fallback/workaround to ensure ApplyDescription loads assets)
 	-- 2. Call ApplyDescriptionResetAsync
 	-- 3. Clone generated result
 	-- 4. Destroy generator rig
-	-- 5. Sanitize clone (remove Humanoid/Animator ONLY, keep all joints)
+	-- 5. Sanitize clone (keep Humanoid to prevent 2D clothing composite destruction, remove Animator, keep all joints)
 	-- 6. Render static clone to ViewportFrame
 	
 	-- Note: Placing in Workspace is a temporary workaround because ApplyDescription 
