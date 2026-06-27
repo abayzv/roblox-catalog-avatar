@@ -6,6 +6,7 @@ local HeaderTabs = require(script.Parent.HeaderTabs)
 local SearchToolbar = require(script.Parent.Parent.molecules.SearchToolbar)
 local AvatarTemplateCard = require(script.Parent.Parent.molecules.AvatarTemplateCard)
 local AvatarTemplateTypes = require(ReplicatedStorage.Shared.types.AvatarTemplateTypes)
+local AvatarPreviewController = require(script.Parent.Parent.Parent.controllers.AvatarPreviewController)
 
 export type AvatarLoaderPanelProps = {
 	layoutOrder: number?,
@@ -186,7 +187,18 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 												templateData = template,
 												isLoading = isLoading,
 												onLoad = function(id)
-													print("Load template:", id)
+													task.spawn(function()
+														local LoadAvatarTemplateRemote = ReplicatedStorage.Shared.remotes:FindFirstChild("LoadAvatarTemplateRemote")
+														if LoadAvatarTemplateRemote then
+															local res = LoadAvatarTemplateRemote:InvokeServer(id)
+															if not res.success then
+																warn("Failed to load template:", res.error)
+															else
+																-- Reset preview so viewport reflects the new character
+																AvatarPreviewController.resetPreview()
+															end
+														end
+													end)
 												end,
 											}),
 										}),
