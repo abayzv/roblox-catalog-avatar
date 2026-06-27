@@ -29,11 +29,89 @@ local function generateUniqueCode(): string
 			code ..= string.sub(ALPHABET, index, index)
 		end
 		
+		-- Wait until we hook up to DataStore, but for now we still check mockStore
 		if not mockStore.codeToTemplateId[code] then
 			return code
 		end
 	end
 	return "ERROR" -- Fallback if collision persists
+end
+
+local function saveTemplateToDataStore(record: AvatarTemplateTypes.AvatarTemplateRecord): boolean
+	local success, err = pcall(function()
+		-- Write to main store
+		AvatarTemplateById:SetAsync("template:" .. record.templateId, record)
+		
+		-- Write code mapping
+		CodeToTemplateId:SetAsync("code:" .. record.code, {
+			templateId = record.templateId,
+			createdAt = record.createdAt,
+		})
+		
+		-- Write to recent ordered index
+		RecentAvatarTemplateIndex:SetAsync(record.templateId, record.createdAt)
+	end)
+	
+	if not success then
+		warn("[AvatarTemplateService] Failed to save template to DataStore:", err)
+		return false
+	end
+	
+	return true
+end
+
+local function getTemplateFromDataStore(templateId: string): AvatarTemplateTypes.AvatarTemplateRecord?
+	local success, result = pcall(function()
+		return AvatarTemplateById:GetAsync("template:" .. templateId)
+	end)
+	
+	if success and result then
+		return result
+	end
+	
+	return nil
+end
+
+local function getTemplateByCodeFromDataStore(code: string): AvatarTemplateTypes.AvatarTemplateRecord?
+	local success, result = pcall(function()
+		return CodeToTemplateId:GetAsync("code:" .. code)
+	end)
+	
+	if success and result and result.templateId then
+		return getTemplateFromDataStore(result.templateId)
+	end
+	
+	return nil
+end
+
+local function listRecentTemplatesFromDataStore(limit: number)
+	local success, pages = pcall(function()
+		return RecentAvatarTemplateIndex:GetSortedAsync(false, limit)
+	end)
+	
+	if not success or not pages then
+		warn("[AvatarTemplateService] Failed to fetch recent template index:", pages)
+		return {}
+	end
+	
+	local successPage, currentPage = pcall(function()
+		return pages:GetCurrentPage()
+	end)
+	
+	if not successPage or not currentPage then
+		return {}
+	end
+	
+	local results = {}
+	for _, item in ipairs(currentPage) do
+		local templateId = item.key
+		local record = getTemplateFromDataStore(templateId)
+		if record then
+			table.insert(results, record)
+		end
+	end
+	
+	return results
 end
 
 function AvatarTemplateService.getTemplate(templateId: string): AvatarTemplateTypes.AvatarTemplateRecord?
