@@ -13,6 +13,15 @@
       "ResolveEmotesRemote": {
         "$className": "RemoteFunction"
       },
+      "ListAvatarTemplatesRemote": {
+        "$className": "RemoteFunction"
+      },
+      "SaveAvatarTemplateRemote": {
+        "$className": "RemoteFunction"
+      },
+      "LoadAvatarTemplateRemote": {
+        "$className": "RemoteFunction"
+      },
       "Packages": {
         "$path": "Packages"
       },

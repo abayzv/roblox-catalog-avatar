@@ -149,4 +149,9 @@ function AvatarTemplateService.loadTemplate(player: Player, templateId: string):
 	}
 end
 
+local ListAvatarTemplatesRemote = require(ReplicatedStorage.Shared.remotes.ListAvatarTemplatesRemote)
+ListAvatarTemplatesRemote.OnServerInvoke = function(player: Player, params: any)
+	return AvatarTemplateService.listTemplates(player, params)
+end
+
 return AvatarTemplateService
