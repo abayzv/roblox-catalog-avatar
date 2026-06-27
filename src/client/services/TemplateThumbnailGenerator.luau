@@ -157,6 +157,10 @@ local function processJob(job)
 		return
 	end
 
+	print("\n[TemplateThumbnailGenerator] Snapshot data for", job.templateId)
+	print(HumanoidDescriptionSerializer.debugPrint(job.descriptionSnapshot))
+	print("--------------------------------------------------\n")
+
 	local description = HumanoidDescriptionSerializer.deserialize(job.descriptionSnapshot)
 
 	local ok, err = pcall(function()
