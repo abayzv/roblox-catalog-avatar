@@ -29,8 +29,13 @@ local function generateUniqueCode(): string
 			code ..= string.sub(ALPHABET, index, index)
 		end
 		
-		-- Wait until we hook up to DataStore, but for now we still check mockStore
-		if not mockStore.codeToTemplateId[code] then
+		-- Check DataStore directly
+		local success, result = pcall(function()
+			return CodeToTemplateId:GetAsync("code:" .. code)
+		end)
+		
+		-- If success and result is nil, the code is unique
+		if success and result == nil then
 			return code
 		end
 	end
@@ -247,7 +252,7 @@ function AvatarTemplateService.saveTemplate(player: Player): any
 		name = player.Name .. "'s Avatar",
 		creatorId = player.UserId,
 		creatorUsername = player.Name,
-		createdTime = os.time(),
+		createdAt = os.time(),
 		thumbnail = {
 			imageUrl = nil,
 			state = "Placeholder",
@@ -257,9 +262,19 @@ function AvatarTemplateService.saveTemplate(player: Player): any
 		loadCount = 0,
 	}
 	
+	local success = saveTemplateToDataStore(record)
+	
+	if not success then
+		return {
+			success = false,
+			error = "Failed to save template to database."
+		}
+	end
+	
+	-- Keep mockStore updated for now so listTemplates doesn't break until we refactor it
 	mockStore.templatesById[record.templateId] = record
 	mockStore.codeToTemplateId[code] = record.templateId
-	table.insert(mockStore.templateIndex, 1, record.templateId) -- insert at beginning
+	table.insert(mockStore.templateIndex, 1, record.templateId)
 	
 	return {
 		success = true,
