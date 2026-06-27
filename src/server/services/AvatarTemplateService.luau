@@ -359,14 +359,18 @@ function AvatarTemplateService.searchAvatarLoader(player: Player, query: string)
 	end
 	
 	if targetUserId then
+		print("[AvatarTemplateService] Resolved query '" .. q .. "' to UserId:", targetUserId)
 		local RobloxAvatarApiClient = require(script.Parent.RobloxAvatarApiClient)
 		local userOutfits = RobloxAvatarApiClient.getUserOutfits(targetUserId)
+		
+		print("[AvatarTemplateService] userOutfits result:", userOutfits)
 		
 		if userOutfits then
 			local outfitIds = {}
 			for _, outfit in ipairs(userOutfits) do
 				table.insert(outfitIds, outfit.id)
 			end
+			print("[AvatarTemplateService] Found", #outfitIds, "outfits for UserId", targetUserId)
 			
 			local thumbnails = RobloxAvatarApiClient.getOutfitThumbnails(outfitIds)
 			
@@ -400,7 +404,11 @@ function AvatarTemplateService.searchAvatarLoader(player: Player, query: string)
 				},
 				outfits = outfitCards,
 			}
+		else
+			print("[AvatarTemplateService] userOutfits was nil (API failed or returned nothing)")
 		end
+	else
+		print("[AvatarTemplateService] Could not resolve '" .. q .. "' to a valid UserId.")
 	end
 	
 	-- 3. Nothing found

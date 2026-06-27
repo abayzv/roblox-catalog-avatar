@@ -6,6 +6,7 @@ local AVATAR_API_BASE = "https://avatar.roproxy.com/v1"
 
 function RobloxAvatarApiClient.getUserOutfits(userId: number)
 	local url = AVATAR_API_BASE .. "/users/" .. tostring(userId) .. "/outfits?page=1&itemsPerPage=25"
+	print("[RobloxAvatarApiClient] Fetching outfits from:", url)
 	local success, response = pcall(function()
 		return HttpService:GetAsync(url)
 	end)
@@ -19,11 +20,17 @@ function RobloxAvatarApiClient.getUserOutfits(userId: number)
 		return HttpService:JSONDecode(response)
 	end)
 	
-	if not decodeSuccess or not data or not data.data then
+	if not decodeSuccess or not data then
 		warn("[RobloxAvatarApiClient] Failed to decode outfits response")
 		return nil
 	end
 	
+	if not data.data then
+		warn("[RobloxAvatarApiClient] API response missing 'data' field. Full response:", response)
+		return nil
+	end
+	
+	print("[RobloxAvatarApiClient] Successfully decoded outfits. Count:", #data.data)
 	return data.data
 end
 
