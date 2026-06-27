@@ -483,7 +483,7 @@ function AvatarTemplateService.init()
 	
 	local SaveAvatarTemplateRemote = require(ReplicatedStorage.Shared.remotes.SaveAvatarTemplateRemote)
 	SaveAvatarTemplateRemote.OnServerInvoke = function(player: Player)
-		return AvatarTemplateService.saveTemplate(player)
+		return AvatarTemplateService.saveCurrentAvatarAsTemplate(player)
 	end
 	
 	local SearchAvatarLoaderRemote = require(ReplicatedStorage.Shared.remotes.SearchAvatarLoaderRemote)
