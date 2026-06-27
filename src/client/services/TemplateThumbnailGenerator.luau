@@ -44,7 +44,11 @@ end
 
 local function sanitizeStaticAvatar(model: Model)
 	for _, inst in ipairs(model:GetDescendants()) do
-		if inst:IsA("Script") or inst:IsA("LocalScript") then
+		if inst:IsA("Humanoid") then
+			inst:Destroy()
+		elseif inst:IsA("Animator") then
+			inst:Destroy()
+		elseif inst:IsA("Script") or inst:IsA("LocalScript") then
 			inst:Destroy()
 		elseif inst:IsA("BasePart") then
 			inst.Anchored = true
@@ -55,9 +59,7 @@ local function sanitizeStaticAvatar(model: Model)
 		end
 	end
 	
-	if ENABLE_BREAK_JOINTS_FOR_STATIC_THUMBNAIL then
-		model:BreakJoints()
-	end
+	-- No BreakJoints, keep Motor6D, Weld, Attachment, WrapLayer, etc. intact
 end
 
 local function positionCamera(camera: Camera, staticModel: Model)
@@ -158,7 +160,7 @@ local function processJob(job)
 	local description = HumanoidDescriptionSerializer.deserialize(job.descriptionSnapshot)
 
 	local ok, err = pcall(function()
-		humanoid:ApplyDescription(description)
+		humanoid:ApplyDescriptionResetAsync(description, Enum.AssetTypeVerification.Default)
 	end)
 
 	if not ok then
