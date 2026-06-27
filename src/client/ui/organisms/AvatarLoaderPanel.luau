@@ -35,6 +35,7 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 	local isLoading, setIsLoading = React.useState(true)
 	local searchState, setSearchState = React.useState("idle")
 	local currentPage, setCurrentPage = React.useState(1)
+	local containerWidth, setContainerWidth = React.useState(804)
 	
 	local pageToken = "avatar_loader_page_" .. tostring(currentPage)
 	
@@ -212,8 +213,6 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 					local columns = 5
 					local scrollBarThickness = 6
 					local sidePadding = 16
-					-- Approximate container width based on standard design
-					local containerWidth = 804 
 					local usableWidth = math.max(containerWidth - scrollBarThickness - sidePadding, 1)
 					local gapX = 18
 					local gapY = 14
@@ -236,6 +235,12 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 						ScrollBarImageColor3 = Theme.Color.Border,
 						CanvasSize = UDim2.new(0, 0, 0, estimatedContentHeight),
 						LayoutOrder = 7,
+						[React.Change.AbsoluteSize] = function(rbx)
+							local nextWidth = rbx.AbsoluteSize.X
+							if nextWidth > 0 and nextWidth ~= containerWidth then
+								setContainerWidth(nextWidth)
+							end
+						end,
 					}, {
 						Layout = React.createElement("UIGridLayout", {
 							CellSize = UDim2.fromOffset(math.floor(targetCellWidth), targetCellHeight),
