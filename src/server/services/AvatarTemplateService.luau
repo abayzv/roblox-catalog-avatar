@@ -411,6 +411,41 @@ function AvatarTemplateService.searchAvatarLoader(player: Player, query: string)
 	}
 end
 
+function AvatarTemplateService.loadRobloxOutfit(player: Player, userOutfitId: number): AvatarTemplateTypes.LoadTemplateResponse
+	local now = os.time()
+	local lastLoad = loadCooldowns[player.UserId] or 0
+	if now - lastLoad < LOAD_COOLDOWN then
+		return { success = false, error = "Please wait before loading another outfit." }
+	end
+	
+	loadCooldowns[player.UserId] = now
+	
+	local RobloxOutfitConverter = require(script.Parent.RobloxOutfitConverter)
+	local snapshot = RobloxOutfitConverter.getSnapshotFromOutfitId(userOutfitId)
+	
+	if not snapshot then
+		return { success = false, error = "Failed to load outfit data from Roblox." }
+	end
+	
+	local success, err = AvatarAppearanceService.applyDescriptionSnapshot(player, snapshot, "avatar_loader")
+	if not success then
+		return {
+			success = false,
+			error = err,
+		}
+	end
+	
+	local liveSnapshot = AvatarAppearanceService.getLiveSnapshot(player)
+	local liveRevision = AvatarAppearanceService.getLiveRevision(player)
+	
+	return {
+		success = true,
+		liveSnapshot = liveSnapshot,
+		liveRevision = liveRevision,
+		templateId = "roblox_outfit_" .. userOutfitId, -- just a dummy id
+	}
+end
+
 function AvatarTemplateService.init()
 	local ListAvatarTemplatesRemote = require(ReplicatedStorage.Shared.remotes.ListAvatarTemplatesRemote)
 	ListAvatarTemplatesRemote.OnServerInvoke = function(player: Player, params: any)
@@ -430,6 +465,11 @@ function AvatarTemplateService.init()
 	local SearchAvatarLoaderRemote = require(ReplicatedStorage.Shared.remotes.SearchAvatarLoaderRemote)
 	SearchAvatarLoaderRemote.OnServerInvoke = function(player: Player, query: string)
 		return AvatarTemplateService.searchAvatarLoader(player, query)
+	end
+	
+	local LoadRobloxOutfitRemote = require(ReplicatedStorage.Shared.remotes.LoadRobloxOutfitRemote)
+	LoadRobloxOutfitRemote.OnServerInvoke = function(player: Player, userOutfitId: number)
+		return AvatarTemplateService.loadRobloxOutfit(player, userOutfitId)
 	end
 end
 
