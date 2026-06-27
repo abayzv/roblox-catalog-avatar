@@ -137,7 +137,7 @@ function AvatarTemplateService.saveCurrentAvatarAsTemplate(player: Player): Avat
 end
 
 function AvatarTemplateService.saveTemplate(player: Player): any
-	local appearanceState = AvatarAppearanceService.getAppearanceState(player)
+	local appearanceState = AvatarAppearanceService.getState(player)
 	if not appearanceState or not appearanceState.liveSnapshot then
 		return { success = false, error = "No live snapshot available" }
 	end
