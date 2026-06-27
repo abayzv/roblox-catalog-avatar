@@ -4,13 +4,16 @@ local React = require(ReplicatedStorage.Packages.React)
 
 local Theme = require(script.Parent.Parent.theme.Theme)
 local Icons = require(script.Parent.Parent.theme.Icons)
+local InitialRobloxCharacter = require(script.Parent.Parent.Parent.services.InitialRobloxCharacter)
+local AvatarAppearanceClient = require(script.Parent.Parent.Parent.services.AvatarAppearanceClient)
+local AvatarTemplateCache = require(script.Parent.Parent.Parent.services.AvatarTemplateCache)
+local ViewportStageManager = require(script.Parent.Parent.Parent.services.ViewportStageManager)
 local GlassButton = require(script.Parent.Parent.atoms.GlassButton)
 local useAppearanceState = require(script.Parent.Parent.Parent.hooks.useAppearanceState)
 local usePreviewState = require(script.Parent.Parent.Parent.hooks.usePreviewState)
 local HumanoidDescriptionSerializer = require(ReplicatedStorage.Shared.avatar.HumanoidDescriptionSerializer)
 local ApplyAvatarRemote = require(ReplicatedStorage.Shared.remotes.ApplyAvatarRemote)
 local SaveAvatarTemplateRemote = require(ReplicatedStorage.Shared.remotes.SaveAvatarTemplateRemote)
-local AvatarAppearanceClient = require(script.Parent.Parent.Parent.services.AvatarAppearanceClient)
 
 local LOCAL_PLAYER = Players.LocalPlayer
 local INITIAL_RIG_YAW = math.rad(180)
@@ -372,6 +375,12 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 								local res = SaveAvatarTemplateRemote:InvokeServer()
 								if res.success then
 									setSaveSuccessText("Saved!")
+									
+									if res.template then
+										AvatarTemplateCache.add("mine", res.template)
+										AvatarTemplateCache.add("all", res.template)
+									end
+									
 									if props.onTemplateSaved then
 										props.onTemplateSaved()
 									end

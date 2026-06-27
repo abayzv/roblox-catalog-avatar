@@ -11,6 +11,7 @@ local Icons = require(script.Parent.Parent.theme.Icons)
 local AvatarTemplateTypes = require(ReplicatedStorage.Shared.types.AvatarTemplateTypes)
 local AvatarAppearanceClient = require(script.Parent.Parent.Parent.services.AvatarAppearanceClient)
 local TemplateThumbnailGenerator = require(script.Parent.Parent.Parent.services.TemplateThumbnailGenerator)
+local AvatarTemplateCache = require(script.Parent.Parent.Parent.services.AvatarTemplateCache)
 local ListAvatarTemplatesRemote = require(ReplicatedStorage.Shared.remotes.ListAvatarTemplatesRemote)
 local LoadAvatarTemplateRemote = require(ReplicatedStorage.Shared.remotes.LoadAvatarTemplateRemote)
 local SearchAvatarLoaderRemote = require(ReplicatedStorage.Shared.remotes.SearchAvatarLoaderRemote)
@@ -52,31 +53,55 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 	
 	local templateCategory = props.templateCategory or "all"
 	
+	local activeRequestToken = React.useRef(0)
+	
 	React.useEffect(function()
 		local active = true
-		setIsLoading(true)
-		setSearchState("searching")
 		
 		task.spawn(function()
 			if searchQuery == "" then
+				-- Check cache
+				if not AvatarTemplateCache.isStale(templateCategory, 300) then
+					local cached = AvatarTemplateCache.get(templateCategory)
+					if cached then
+						setTemplates(cached)
+						setSearchState("idle")
+						setIsLoading(false)
+						return
+					end
+				end
+				
+				setIsLoading(true)
+				setSearchState("searching")
+				
+				activeRequestToken.current += 1
+				local token = activeRequestToken.current
+				
 				local response = ListAvatarTemplatesRemote:InvokeServer({
 					limit = 30,
 					mode = templateCategory,
 				})
 				
-				if active then
+				if active and token == activeRequestToken.current then
 					setIsLoading(false)
 					if response and response.success and response.templates then
+						AvatarTemplateCache.set(templateCategory, response.templates)
 						setTemplates(response.templates)
 						setSearchState("idle")
 					end
 				end
 			else
+				setIsLoading(true)
+				setSearchState("searching")
+				
+				activeRequestToken.current += 1
+				local token = activeRequestToken.current
+				
 				print("[AvatarLoaderPanel] Invoking SearchAvatarLoaderRemote with query:", searchQuery)
 				local response = SearchAvatarLoaderRemote:InvokeServer(searchQuery)
 				print("[AvatarLoaderPanel] Search response:", response)
 				
-				if active then
+				if active and token == activeRequestToken.current then
 					setIsLoading(false)
 					if response and response.success then
 						if response.resultType == "template_results" and response.templates then
