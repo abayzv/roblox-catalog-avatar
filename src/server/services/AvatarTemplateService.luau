@@ -202,19 +202,21 @@ function AvatarTemplateService.loadTemplate(player: Player, templateId: string):
 	}
 end
 
-local ListAvatarTemplatesRemote = require(ReplicatedStorage.Shared.remotes.ListAvatarTemplatesRemote)
-ListAvatarTemplatesRemote.OnServerInvoke = function(player: Player, params: any)
-	return AvatarTemplateService.listTemplates(player, params)
-end
-
-local LoadAvatarTemplateRemote = require(ReplicatedStorage.Shared.remotes.LoadAvatarTemplateRemote)
-LoadAvatarTemplateRemote.OnServerInvoke = function(player: Player, templateId: string)
-	return AvatarTemplateService.loadTemplate(player, templateId)
-end
-
-local SaveAvatarTemplateRemote = require(ReplicatedStorage.Shared.remotes.SaveAvatarTemplateRemote)
-SaveAvatarTemplateRemote.OnServerInvoke = function(player: Player)
-	return AvatarTemplateService.saveTemplate(player)
+function AvatarTemplateService.init()
+	local ListAvatarTemplatesRemote = require(ReplicatedStorage.Shared.remotes.ListAvatarTemplatesRemote)
+	ListAvatarTemplatesRemote.OnServerInvoke = function(player: Player, params: any)
+		return AvatarTemplateService.listTemplates(player, params)
+	end
+	
+	local LoadAvatarTemplateRemote = require(ReplicatedStorage.Shared.remotes.LoadAvatarTemplateRemote)
+	LoadAvatarTemplateRemote.OnServerInvoke = function(player: Player, templateId: string)
+		return AvatarTemplateService.loadTemplate(player, templateId)
+	end
+	
+	local SaveAvatarTemplateRemote = require(ReplicatedStorage.Shared.remotes.SaveAvatarTemplateRemote)
+	SaveAvatarTemplateRemote.OnServerInvoke = function(player: Player)
+		return AvatarTemplateService.saveTemplate(player)
+	end
 end
 
 return AvatarTemplateService
