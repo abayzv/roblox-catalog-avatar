@@ -173,6 +173,12 @@ local function processJob(job)
 		return
 	end
 	
+	local appliedDesc = humanoid:GetAppliedDescription()
+	local appliedSnapshot = HumanoidDescriptionSerializer.serialize(appliedDesc)
+	print("\n[TemplateThumbnailGenerator] APPLIED Snapshot data for", job.templateId)
+	print(HumanoidDescriptionSerializer.debugPrint(appliedSnapshot))
+	print("--------------------------------------------------\n")
+	
 	-- Make sure we are still on the same page after the async call!
 	if job.pageToken ~= activePageToken then
 		generatorRig:Destroy()
