@@ -8,6 +8,9 @@ local AvatarTemplateCard = require(script.Parent.Parent.molecules.AvatarTemplate
 local AvatarTemplateTypes = require(ReplicatedStorage.Shared.types.AvatarTemplateTypes)
 local AvatarPreviewController = require(script.Parent.Parent.Parent.controllers.AvatarPreviewController)
 
+local ListAvatarTemplatesRemote = require(ReplicatedStorage.Shared.remotes.ListAvatarTemplatesRemote)
+local LoadAvatarTemplateRemote = require(ReplicatedStorage.Shared.remotes.LoadAvatarTemplateRemote)
+
 export type AvatarLoaderPanelProps = {
 	layoutOrder: number?,
 	isMobile: boolean?,
@@ -33,7 +36,6 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 		setIsLoading(true)
 		
 		task.spawn(function()
-			local ListAvatarTemplatesRemote = ReplicatedStorage.Shared.remotes:FindFirstChild("ListAvatarTemplatesRemote")
 			if not ListAvatarTemplatesRemote then
 				warn("ListAvatarTemplatesRemote not found")
 				if active then setIsLoading(false) end
@@ -188,7 +190,6 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 												isLoading = isLoading,
 												onLoad = function(id)
 													task.spawn(function()
-														local LoadAvatarTemplateRemote = ReplicatedStorage.Shared.remotes:FindFirstChild("LoadAvatarTemplateRemote")
 														if LoadAvatarTemplateRemote then
 															local res = LoadAvatarTemplateRemote:InvokeServer(id)
 															if not res.success then

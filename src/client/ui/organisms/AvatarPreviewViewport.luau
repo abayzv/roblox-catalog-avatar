@@ -9,6 +9,7 @@ local useAppearanceState = require(script.Parent.Parent.Parent.hooks.useAppearan
 local usePreviewState = require(script.Parent.Parent.Parent.hooks.usePreviewState)
 local HumanoidDescriptionSerializer = require(ReplicatedStorage.Shared.avatar.HumanoidDescriptionSerializer)
 local ApplyAvatarRemote = require(ReplicatedStorage.Shared.remotes.ApplyAvatarRemote)
+local SaveAvatarTemplateRemote = require(ReplicatedStorage.Shared.remotes.SaveAvatarTemplateRemote)
 local AvatarAppearanceClient = require(script.Parent.Parent.Parent.services.AvatarAppearanceClient)
 
 local LOCAL_PLAYER = Players.LocalPlayer
@@ -328,7 +329,6 @@ local function AvatarPreviewViewport()
 					layoutOrder = 1,
 					onActivated = function()
 						task.spawn(function()
-							local SaveAvatarTemplateRemote = ReplicatedStorage.Shared.remotes:FindFirstChild("SaveAvatarTemplateRemote")
 							if SaveAvatarTemplateRemote then
 								local res = SaveAvatarTemplateRemote:InvokeServer()
 								if res.success then
