@@ -72,14 +72,14 @@ export type RobloxOutfitCardData = {
 
 export type SearchAvatarLoaderResponse = {
 	success: boolean,
-	resultType: "template" | "roblox_outfits" | "empty" | "error",
-	template: AvatarTemplateCardData?,
-	owner: {
-		userId: number,
-		username: string,
-	}?,
-	outfits: { RobloxOutfitCardData }?,
+	resultType: "loaded_template_code" | "loaded_username_avatar" | "template_results" | "empty" | "error",
+	liveSnapshot: any?,
+	liveRevision: number?,
+	resolvedUserId: number?,
+	resolvedUsername: string?,
+	templates: { AvatarTemplateCardData }?,
 	message: string?,
+	code: string?,
 }
 
 return {}

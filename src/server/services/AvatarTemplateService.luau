@@ -324,30 +324,33 @@ function AvatarTemplateService.searchAvatarLoader(player: Player, query: string?
 		return { success = true, resultType = "empty", message = "Please enter a code or username." }
 	end
 
-	-- 1. Try code lookup
+	-- 1. Try code lookup (direct load)
 	local code = normalizeCode(q)
 	if code then
 		local template = getTemplateByCodeFromDataStore(code)
 		if template then
-			local card: AvatarTemplateTypes.AvatarTemplateCardData = {
-				templateId = template.templateId,
-				code = template.code,
-				name = template.name,
-				creatorUsername = template.creatorUsername,
-				thumbnailUrl = template.thumbnail.imageUrl,
-				thumbnailState = template.thumbnail.state,
-				loadCount = template.loadCount,
-			}
-			return {
-				success = true,
-				resultType = "template",
-				template = card,
-			}
+			local loadResult = AvatarTemplateService.loadTemplate(player, template.templateId)
+			if loadResult.success then
+				return {
+					success = true,
+					resultType = "loaded_template_code",
+					liveSnapshot = loadResult.liveSnapshot,
+					liveRevision = loadResult.liveRevision,
+					code = template.code,
+				}
+			else
+				return {
+					success = false,
+					resultType = "error",
+					message = "Failed to load template code: " .. tostring(loadResult.error),
+				}
+			end
 		end
 	end
 	
-	-- 2. Try Roblox user lookup
+	-- 2. Try Roblox user lookup (direct load)
 	local targetUserId = tonumber(q)
+	local targetUsername = q
 	if not targetUserId then
 		local success, userId = pcall(function()
 			local Players = game:GetService("Players")
@@ -356,73 +359,76 @@ function AvatarTemplateService.searchAvatarLoader(player: Player, query: string?
 		if success and userId then
 			targetUserId = userId
 		end
+	else
+		pcall(function()
+			targetUsername = game:GetService("Players"):GetNameFromUserIdAsync(targetUserId)
+		end)
 	end
 	
 	if targetUserId then
-		print("[AvatarTemplateService] Resolved query '" .. q .. "' to UserId:", targetUserId)
-		local RobloxAvatarApiClient = require(script.Parent.RobloxAvatarApiClient)
-		local userOutfits, apiErr = RobloxAvatarApiClient.getUserOutfits(targetUserId)
+		local success, description = pcall(function()
+			return game:GetService("Players"):GetHumanoidDescriptionFromUserId(targetUserId)
+		end)
 		
-		print("[AvatarTemplateService] userOutfits result:", userOutfits, "err:", apiErr)
-		
-		if userOutfits then
-			local outfitIds = {}
-			for _, outfit in ipairs(userOutfits) do
-				table.insert(outfitIds, outfit.id)
-			end
-			print("[AvatarTemplateService] Found", #outfitIds, "outfits for UserId", targetUserId)
+		if success and description then
+			local HumanoidDescriptionSerializer = require(ReplicatedStorage.Shared.avatar.HumanoidDescriptionSerializer)
+			local snapshot = HumanoidDescriptionSerializer.serialize(description)
+			description:Destroy()
 			
-			local thumbnails = RobloxAvatarApiClient.getOutfitThumbnails(outfitIds)
-			
-			local ownerName = q
-			pcall(function()
-				ownerName = game:GetService("Players"):GetNameFromUserIdAsync(targetUserId)
-			end)
-			
-			local outfitCards = {}
-			for _, outfit in ipairs(userOutfits) do
-				local thumb = thumbnails[outfit.id]
-				local card: AvatarTemplateTypes.RobloxOutfitCardData = {
-					sourceType = "roblox_outfit",
-					userOutfitId = outfit.id,
-					name = outfit.name,
-					ownerUserId = targetUserId,
-					ownerUsername = ownerName,
-					thumbnailUrl = thumb and thumb.imageUrl or nil,
-					thumbnailState = thumb and thumb.state or "Pending",
-					canLoad = outfit.isEditable,
-				}
-				table.insert(outfitCards, card)
-			end
-			
-			return {
-				success = true,
-				resultType = "roblox_outfits",
-				owner = {
-					userId = targetUserId,
-					username = ownerName,
-				},
-				outfits = outfitCards,
-			}
-		else
-			print("[AvatarTemplateService] userOutfits was nil (API failed or returned nothing)")
-			if apiErr and string.find(tostring(apiErr), "429") then
+			local applySuccess, err = AvatarAppearanceService.applyDescriptionSnapshot(player, snapshot, "avatar_loader_username")
+			if applySuccess then
 				return {
 					success = true,
-					resultType = "empty",
-					message = "Roblox API is busy (Too Many Requests). Please wait a moment and try again.",
+					resultType = "loaded_username_avatar",
+					liveSnapshot = AvatarAppearanceService.getLiveSnapshot(player),
+					liveRevision = AvatarAppearanceService.getLiveRevision(player),
+					resolvedUserId = targetUserId,
+					resolvedUsername = targetUsername,
+				}
+			else
+				return {
+					success = false,
+					resultType = "error",
+					message = "Failed to apply user avatar: " .. tostring(err),
 				}
 			end
 		end
-	else
-		print("[AvatarTemplateService] Could not resolve '" .. q .. "' to a valid UserId.")
 	end
 	
-	-- 3. Nothing found
+	-- 3. Template name fallback
+	local recentRecords = listRecentTemplatesFromDataStore(30)
+	local cards = {}
+	local qLower = string.lower(q)
+	
+	for _, record in ipairs(recentRecords) do
+		local nameMatch = string.find(string.lower(record.name), qLower, 1, true)
+		if nameMatch then
+			local card: AvatarTemplateTypes.AvatarTemplateCardData = {
+				templateId = record.templateId,
+				code = record.code,
+				name = record.name,
+				creatorUsername = record.creatorUsername,
+				thumbnailUrl = record.thumbnail.imageUrl,
+				thumbnailState = record.thumbnail.state,
+				loadCount = record.loadCount,
+			}
+			table.insert(cards, card)
+		end
+	end
+	
+	if #cards > 0 then
+		return {
+			success = true,
+			resultType = "template_results",
+			templates = cards,
+		}
+	end
+	
+	-- 4. Nothing found
 	return {
 		success = true,
 		resultType = "empty",
-		message = "No template or user found for '" .. q .. "'.",
+		message = "Template atau username tidak ditemukan.",
 	}
 end
 

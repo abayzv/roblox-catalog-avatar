@@ -2,9 +2,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local Theme = require(script.Parent.Parent.theme.Theme)
 
-local HeaderTabs = require(script.Parent.HeaderTabs)
+local HeaderTabs = require(script.Parent.Parent.molecules.HeaderTabs)
 local SearchToolbar = require(script.Parent.Parent.molecules.SearchToolbar)
 local AvatarTemplateCard = require(script.Parent.Parent.molecules.AvatarTemplateCard)
+local Text = require(script.Parent.Parent.atoms.Text)
 local AvatarTemplateTypes = require(ReplicatedStorage.Shared.types.AvatarTemplateTypes)
 local AvatarAppearanceClient = require(script.Parent.Parent.Parent.services.AvatarAppearanceClient)
 
@@ -32,10 +33,12 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 	
 	local templates, setTemplates = React.useState({})
 	local isLoading, setIsLoading = React.useState(true)
+	local searchState, setSearchState = React.useState("idle")
 	
 	React.useEffect(function()
 		local active = true
 		setIsLoading(true)
+		setSearchState("searching")
 		
 		task.spawn(function()
 			if searchQuery == "" then
@@ -47,6 +50,7 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 					setIsLoading(false)
 					if response and response.success and response.templates then
 						setTemplates(response.templates)
+						setSearchState("idle")
 					end
 				end
 			else
@@ -57,15 +61,23 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 				if active then
 					setIsLoading(false)
 					if response and response.success then
-						if response.resultType == "template" and response.template then
-							setTemplates({response.template})
-						elseif response.resultType == "roblox_outfits" and response.outfits then
-							setTemplates(response.outfits)
+						if response.resultType == "template_results" and response.templates then
+							setTemplates(response.templates)
+							setSearchState("results")
+						elseif response.resultType == "loaded_template_code" or response.resultType == "loaded_username_avatar" then
+							AvatarAppearanceClient.updateState(response.liveSnapshot, response.liveRevision, "avatar_loader_direct")
+							setTemplates({})
+							setSearchState("success_direct")
+						elseif response.resultType == "empty" then
+							setTemplates({})
+							setSearchState("empty")
 						else
 							setTemplates({})
+							setSearchState("error")
 						end
 					else
 						setTemplates({})
+						setSearchState("error")
 					end
 				end
 			end
@@ -144,6 +156,49 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 				}),
 				
 				GridArea = (function()
+					if isLoading then
+						return React.createElement("Frame", {
+							Size = UDim2.new(1, 0, 1, -LIST_OFFSET - 40),
+							BackgroundTransparency = 1,
+							LayoutOrder = 7,
+						}, {
+							LoadingText = React.createElement(Text, {
+								text = "Sedang mencari...",
+								font = Theme.Font.Regular,
+								textSize = 18,
+								color = Theme.Color.TextPrimary,
+								size = UDim2.fromScale(1, 1),
+								textXAlignment = Enum.TextXAlignment.Center,
+								textYAlignment = Enum.TextYAlignment.Center,
+							})
+						})
+					end
+					
+					if #templates == 0 then
+						local emptyText = "Template atau username tidak ditemukan."
+						if searchState == "success_direct" then
+							emptyText = "Berhasil memuat avatar!"
+						elseif searchState == "error" then
+							emptyText = "Gagal memuat pencarian."
+						end
+						
+						return React.createElement("Frame", {
+							Size = UDim2.new(1, 0, 1, -LIST_OFFSET - 40),
+							BackgroundTransparency = 1,
+							LayoutOrder = 7,
+						}, {
+							EmptyText = React.createElement(Text, {
+								text = emptyText,
+								font = Theme.Font.Regular,
+								textSize = 18,
+								color = Theme.Color.TextPrimary,
+								size = UDim2.fromScale(1, 1),
+								textXAlignment = Enum.TextXAlignment.Center,
+								textYAlignment = Enum.TextYAlignment.Center,
+							})
+						})
+					end
+
 					local columns = 3
 					local scrollBarThickness = 6
 					local sidePadding = 16
