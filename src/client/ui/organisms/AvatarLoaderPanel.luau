@@ -116,37 +116,78 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 					LayoutOrder = 4,
 				}),
 
-				ListArea = React.createElement("ScrollingFrame", {
-					Size = UDim2.new(1, 0, 1, -LIST_OFFSET - 40),
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					ScrollBarThickness = 4,
-					ScrollBarImageColor3 = Theme.Color.Border,
-					CanvasSize = UDim2.new(0, 0, 0, #dummyTemplates * 116),
-					LayoutOrder = 5,
-				}, {
-					Layout = React.createElement("UIListLayout", {
-						FillDirection = Enum.FillDirection.Vertical,
-						SortOrder = Enum.SortOrder.LayoutOrder,
-						Padding = UDim.new(0, 16),
-					}),
+				GridArea = (function()
+					local columns = 3
+					local scrollBarThickness = 6
+					local sidePadding = 16
+					-- Approximate container width based on standard design
+					local containerWidth = 804 
+					local usableWidth = math.max(containerWidth - scrollBarThickness - sidePadding, 1)
+					local gapX = 18
+					local gapY = 14
+					local originalWidth = 248
+					local originalHeight = 252
 					
-					Cards = React.createElement(React.Fragment, nil, 
-						(function()
-							local cards = {}
-							for i, template in ipairs(dummyTemplates) do
-								cards["Card_" .. template.templateId] = React.createElement(AvatarTemplateCard, {
-									templateData = template,
-									layoutOrder = i,
-									onLoad = function(id)
-										print("Load template:", id)
-									end,
-								})
-							end
-							return cards
-						end)()
-					)
-				}),
+					local targetCellWidth = math.max((usableWidth - (gapX * (columns - 1))) / columns, 1)
+					local scale = targetCellWidth / originalWidth
+					local targetCellHeight = math.floor(originalHeight * scale)
+					local itemCount = #dummyTemplates
+					local rowCount = math.max(math.ceil(itemCount / columns), 1)
+					
+					local estimatedContentHeight = 12 + (rowCount * targetCellHeight) + (math.max(rowCount - 1, 0) * gapY) + 96
+
+					return React.createElement("ScrollingFrame", {
+						Size = UDim2.new(1, 0, 1, -LIST_OFFSET - 40),
+						BackgroundTransparency = 1,
+						BorderSizePixel = 0,
+						ScrollBarThickness = scrollBarThickness,
+						ScrollBarImageColor3 = Theme.Color.Border,
+						CanvasSize = UDim2.new(0, 0, 0, estimatedContentHeight),
+						LayoutOrder = 5,
+					}, {
+						Layout = React.createElement("UIGridLayout", {
+							CellSize = UDim2.fromOffset(math.floor(targetCellWidth), targetCellHeight),
+							CellPadding = UDim2.fromOffset(gapX, gapY),
+							FillDirection = Enum.FillDirection.Horizontal,
+							FillDirectionMaxCells = columns,
+							SortOrder = Enum.SortOrder.LayoutOrder,
+							HorizontalAlignment = Enum.HorizontalAlignment.Left,
+						}),
+						Padding = React.createElement("UIPadding", {
+							PaddingTop = UDim.new(0, 12),
+							PaddingBottom = UDim.new(0, 96),
+							PaddingLeft = UDim.new(0, 8),
+							PaddingRight = UDim.new(0, 8),
+						}),
+						
+						Cards = React.createElement(React.Fragment, nil, 
+							(function()
+								local cards = {}
+								for i, template in ipairs(dummyTemplates) do
+									cards["Card_" .. template.templateId] = React.createElement("Frame", {
+										BackgroundTransparency = 1,
+										Size = UDim2.fromScale(1, 1),
+										LayoutOrder = i,
+									}, {
+										ScalerContainer = React.createElement("Frame", {
+											BackgroundTransparency = 1,
+											Size = UDim2.fromOffset(originalWidth, originalHeight),
+										}, {
+											UIScale = React.createElement("UIScale", { Scale = scale }),
+											Card = React.createElement(AvatarTemplateCard, {
+												templateData = template,
+												onLoad = function(id)
+													print("Load template:", id)
+												end,
+											}),
+										}),
+									})
+								end
+								return cards
+							end)()
+						)
+					})
+				end)()
 			}),
 		})
 	)
