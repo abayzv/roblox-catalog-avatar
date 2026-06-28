@@ -299,7 +299,7 @@ function AvatarTemplateService.loadTemplate(player: Player, templateId: string):
 	
 	loadCooldowns[player.UserId] = now
 	
-	local success, err = AvatarAppearanceService.applyDescriptionSnapshot(player, template.snapshot, "avatar_loader")
+	local success, err = AvatarAppearanceService.applyDescriptionSnapshot(player, template.descriptionSnapshot, "avatar_loader")
 	if not success then
 		return {
 			success = false,
