@@ -223,7 +223,7 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 				}),
 				
 				GridArea = (function()
-					if isLoading then
+					if isLoading and #templates == 0 then
 						return React.createElement("Frame", {
 							Size = UDim2.new(1, 0, 1, -LIST_OFFSET - 40),
 							BackgroundTransparency = 1,
