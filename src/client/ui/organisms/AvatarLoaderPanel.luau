@@ -339,13 +339,23 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 												pageToken = pageToken,
 												onLoad = function(id)
 													task.spawn(function()
+														local requestId = -1
+														if template.descriptionSnapshot then
+															requestId = AvatarAppearanceClient.setOptimisticState(template.descriptionSnapshot, "avatar_loader")
+														end
+														
 														if template.sourceType == "roblox_outfit" then
 															if LoadRobloxOutfitRemote then
 																local res = LoadRobloxOutfitRemote:InvokeServer(id)
 																if not res.success then
 																	warn("Failed to load outfit:", res.error)
+																	if requestId ~= -1 then AvatarAppearanceClient.rollbackOptimisticState(requestId) end
 																else
-																	AvatarAppearanceClient.updateState(res.liveSnapshot, res.liveRevision, "avatar_loader")
+																	if requestId ~= -1 then
+																		AvatarAppearanceClient.resolveOptimisticState(requestId, res.liveSnapshot, res.liveRevision, "avatar_loader")
+																	else
+																		AvatarAppearanceClient.updateState(res.liveSnapshot, res.liveRevision, "avatar_loader")
+																	end
 																end
 															end
 														else
@@ -353,8 +363,13 @@ local function AvatarLoaderPanel(props: AvatarLoaderPanelProps)
 																local res = LoadAvatarTemplateRemote:InvokeServer(id)
 																if not res.success then
 																	warn("Failed to load template:", res.error)
+																	if requestId ~= -1 then AvatarAppearanceClient.rollbackOptimisticState(requestId) end
 																else
-																	AvatarAppearanceClient.updateState(res.liveSnapshot, res.liveRevision, "avatar_loader")
+																	if requestId ~= -1 then
+																		AvatarAppearanceClient.resolveOptimisticState(requestId, res.liveSnapshot, res.liveRevision, "avatar_loader")
+																	else
+																		AvatarAppearanceClient.updateState(res.liveSnapshot, res.liveRevision, "avatar_loader")
+																	end
 																end
 															end
 														end

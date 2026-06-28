@@ -94,6 +94,9 @@ function AvatarPreviewController.ToggleItemPreview(item)
 		-- Build next snapshot
 		local nextSnapshot = AvatarDescriptionDraft.applyPayloadToSnapshot(state.liveSnapshot, nextPayload)
 		
+		-- Set Optimistic State
+		local requestId = AvatarAppearanceClient.setOptimisticState(nextSnapshot, "catalog_try_on")
+		
 		-- Send live apply request
 		task.spawn(function()
 			local ok, result = pcall(function()
@@ -105,9 +108,10 @@ function AvatarPreviewController.ToggleItemPreview(item)
 			end)
 			
 			if ok and result and result.success then
-				AvatarAppearanceClient.updateState(result.liveSnapshot, result.liveRevision, result.source)
+				AvatarAppearanceClient.resolveOptimisticState(requestId, result.liveSnapshot, result.liveRevision, result.source)
 			else
 				warn("[CatalogPreview] TryOn failed:", result and result.message or "unknown error")
+				AvatarAppearanceClient.rollbackOptimisticState(requestId)
 			end
 		end)
 	else
@@ -159,6 +163,8 @@ function AvatarPreviewController.RemoveWornItem(item)
 		nextSnapshot = AvatarDescriptionDraft.applyPayloadToSnapshot(state.liveSnapshot, removePayload)
 	end
 	
+	local requestId = AvatarAppearanceClient.setOptimisticState(nextSnapshot, "catalog_remove_worn")
+	
 	task.spawn(function()
 		local ok, result = pcall(function()
 			return TryOnDescriptionRemote:InvokeServer({
@@ -169,9 +175,10 @@ function AvatarPreviewController.RemoveWornItem(item)
 		end)
 		
 		if ok and result and result.success then
-			AvatarAppearanceClient.updateState(result.liveSnapshot, result.liveRevision, result.source)
+			AvatarAppearanceClient.resolveOptimisticState(requestId, result.liveSnapshot, result.liveRevision, result.source)
 		else
 			warn("[CatalogPreview] Remove failed:", result and result.message or "unknown error")
+			AvatarAppearanceClient.rollbackOptimisticState(requestId)
 		end
 	end)
 end

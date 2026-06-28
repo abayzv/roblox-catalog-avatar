@@ -219,7 +219,9 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 	local saveSuccessText, setSaveSuccessText = React.useState(nil :: string?)
 
 	local state = useAppearanceState()
-	local liveRevision = state.liveRevision
+	
+	local activeSnapshot = if state.optimisticState and state.optimisticState.isOptimistic then state.optimisticState.predictedSnapshot else state.liveSnapshot
+	local activeRevision = if state.optimisticState and state.optimisticState.isOptimistic then state.liveRevision + (state.optimisticState.requestId * 1000) else state.liveRevision
 
 	local ViewportAnimationController = require(script.Parent.Parent.Parent.controllers.ViewportAnimationController)
 
@@ -234,12 +236,12 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 		if not viewport then return nil end
 
 		yawRef.current = INITIAL_RIG_YAW
-		rigRef.current = setupViewport(viewport, state.liveSnapshot)
+		rigRef.current = setupViewport(viewport, activeSnapshot)
 
 		return function()
 			rigRef.current = nil
 		end
-	end, { liveRevision })
+	end, { activeRevision })
 
 	local beginDrag = React.useCallback(function(_, input)
 		if not isPrimaryDragInput(input) then return end

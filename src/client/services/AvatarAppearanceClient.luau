@@ -9,10 +9,19 @@ export type AppearanceSnapshot = {
 	[string]: any,
 }
 
+export type OptimisticState = {
+	isOptimistic: boolean,
+	requestId: number,
+	previousSnapshot: AppearanceSnapshot?,
+	predictedSnapshot: AppearanceSnapshot?,
+	actionType: string?,
+}
+
 export type ClientAppearanceState = {
 	liveSnapshot: AppearanceSnapshot?,
 	liveRevision: number,
 	lastApplySource: string?,
+	optimisticState: OptimisticState?,
 }
 
 local AvatarAppearanceClient = {}
@@ -20,6 +29,7 @@ local state: ClientAppearanceState = {
 	liveSnapshot = nil,
 	liveRevision = 0,
 	lastApplySource = nil,
+	optimisticState = nil,
 }
 
 local listeners = {}
@@ -151,6 +161,74 @@ function AvatarAppearanceClient.getState(): ClientAppearanceState
 	return state
 end
 
+local nextRequestId = 0
+
+function AvatarAppearanceClient.setOptimisticState(snapshot: AppearanceSnapshot, actionType: string?): number
+	nextRequestId += 1
+	local requestId = nextRequestId
+	
+	state = {
+		liveSnapshot = state.liveSnapshot,
+		liveRevision = state.liveRevision,
+		lastApplySource = state.lastApplySource,
+		optimisticState = {
+			isOptimistic = true,
+			requestId = requestId,
+			previousSnapshot = state.liveSnapshot,
+			predictedSnapshot = snapshot,
+			actionType = actionType,
+		},
+	}
+	notifyListeners()
+	
+	return requestId
+end
+
+function AvatarAppearanceClient.resolveOptimisticState(requestId: number, liveSnapshot: AppearanceSnapshot, liveRevision: number, source: string?)
+	if state.optimisticState and state.optimisticState.requestId == requestId then
+		state = {
+			liveSnapshot = liveSnapshot,
+			liveRevision = liveRevision,
+			lastApplySource = source,
+			optimisticState = {
+				isOptimistic = false,
+				requestId = 0,
+				previousSnapshot = nil,
+				predictedSnapshot = nil,
+				actionType = nil,
+			},
+		}
+	else
+		-- If the request ID doesn't match, it means a newer optimistic update took precedence.
+		-- We just update the live state quietly without clearing the current optimistic state.
+		state = {
+			liveSnapshot = liveSnapshot,
+			liveRevision = liveRevision,
+			lastApplySource = source,
+			optimisticState = state.optimisticState,
+		}
+	end
+	notifyListeners()
+end
+
+function AvatarAppearanceClient.rollbackOptimisticState(requestId: number)
+	if state.optimisticState and state.optimisticState.requestId == requestId then
+		state = {
+			liveSnapshot = state.liveSnapshot,
+			liveRevision = state.liveRevision,
+			lastApplySource = state.lastApplySource,
+			optimisticState = {
+				isOptimistic = false,
+				requestId = 0,
+				previousSnapshot = nil,
+				predictedSnapshot = nil,
+				actionType = nil,
+			},
+		}
+		notifyListeners()
+	end
+end
+
 function AvatarAppearanceClient.fetchStateAsync(): ClientAppearanceState
 	local ok, result = pcall(function()
 		return GetAppearanceStateRemote:InvokeServer()
@@ -161,6 +239,7 @@ function AvatarAppearanceClient.fetchStateAsync(): ClientAppearanceState
 			liveSnapshot = result.liveSnapshot,
 			liveRevision = result.liveRevision,
 			lastApplySource = result.lastApplySource,
+			optimisticState = state.optimisticState, -- preserve optimistic state
 		}
 		notifyListeners()
 	else
@@ -175,6 +254,7 @@ function AvatarAppearanceClient.updateState(liveSnapshot: AppearanceSnapshot, li
 		liveSnapshot = liveSnapshot,
 		liveRevision = liveRevision,
 		lastApplySource = source,
+		optimisticState = state.optimisticState, -- preserve optimistic state
 	}
 	notifyListeners()
 end
