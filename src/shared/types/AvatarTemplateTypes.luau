@@ -39,6 +39,8 @@ export type AvatarTemplateCardData = {
 export type ListTemplatesResponse = {
 	success: boolean,
 	templates: { AvatarTemplateCardData }?,
+	page: number?,
+	hasNextPage: boolean?,
 	nextCursor: string?,
 	error: string?,
 }
@@ -73,7 +75,11 @@ export type RobloxOutfitCardData = {
 
 export type SearchAvatarLoaderResponse = {
 	success: boolean,
-	resultType: "loaded_template_code" | "loaded_username_avatar" | "template_results" | "empty" | "error",
+	resultType: "loaded_template_code"
+		| "loaded_username_avatar"
+		| "template_results"
+		| "empty"
+		| "error",
 	liveSnapshot: any?,
 	liveRevision: number?,
 	resolvedUserId: number?,

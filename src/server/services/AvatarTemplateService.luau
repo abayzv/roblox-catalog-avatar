@@ -10,7 +10,8 @@ local DataStoreService = game:GetService("DataStoreService")
 
 local AvatarTemplateById = DataStoreService:GetDataStore("AvatarTemplateById_v1")
 local CodeToTemplateId = DataStoreService:GetDataStore("CodeToTemplateId_v1")
-local RecentAvatarTemplateIndex = DataStoreService:GetOrderedDataStore("RecentAvatarTemplateIndex_v1")
+local RecentAvatarTemplateIndex =
+	DataStoreService:GetOrderedDataStore("RecentAvatarTemplateIndex_v1")
 local UserAvatarTemplateIndex = DataStoreService:GetOrderedDataStore("UserAvatarTemplateIndex_v1")
 
 local ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -23,12 +24,12 @@ local function generateUniqueCode(): string
 			local index = math.random(1, #ALPHABET)
 			code ..= string.sub(ALPHABET, index, index)
 		end
-		
+
 		-- Check DataStore directly
 		local success, result = pcall(function()
 			return CodeToTemplateId:GetAsync("code:" .. code)
 		end)
-		
+
 		-- If success and result is nil, the code is unique
 		if success and result == nil then
 			return code
@@ -41,75 +42,104 @@ local function saveTemplateToDataStore(record: AvatarTemplateTypes.AvatarTemplat
 	local success, err = pcall(function()
 		-- Write to main store
 		AvatarTemplateById:SetAsync("template:" .. record.templateId, record)
-		
+
 		-- Write code mapping
 		CodeToTemplateId:SetAsync("code:" .. record.code, {
 			templateId = record.templateId,
 			createdAt = record.createdAt,
 		})
-		
+
 		-- Write to recent ordered index
 		RecentAvatarTemplateIndex:SetAsync(record.templateId, record.createdAt)
-		
+
 		-- Write to user's ordered index
-		local UserIndex = DataStoreService:GetOrderedDataStore("UserAvatarTemplateIndex_v1", tostring(record.creatorUserId))
+		local UserIndex = DataStoreService:GetOrderedDataStore(
+			"UserAvatarTemplateIndex_v1",
+			tostring(record.creatorUserId)
+		)
 		UserIndex:SetAsync(record.templateId, record.createdAt)
 	end)
-	
+
 	if not success then
 		warn("[AvatarTemplateService] Failed to save template to DataStore:", err)
 		return false
 	end
-	
+
 	return true
 end
 
-local function getTemplateFromDataStore(templateId: string): AvatarTemplateTypes.AvatarTemplateRecord?
+local function getTemplateFromDataStore(
+	templateId: string
+): AvatarTemplateTypes.AvatarTemplateRecord?
 	local success, result = pcall(function()
 		return AvatarTemplateById:GetAsync("template:" .. templateId)
 	end)
-	
+
 	if success and result then
 		return result
 	end
-	
+
 	return nil
 end
 
-local function getTemplateByCodeFromDataStore(code: string): AvatarTemplateTypes.AvatarTemplateRecord?
+local function getTemplateByCodeFromDataStore(
+	code: string
+): AvatarTemplateTypes.AvatarTemplateRecord?
 	local success, result = pcall(function()
 		return CodeToTemplateId:GetAsync("code:" .. code)
 	end)
-	
+
 	if success and result and result.templateId then
 		return getTemplateFromDataStore(result.templateId)
 	end
-	
+
 	return nil
 end
 
-local function listTemplatesFromDataStore(limit: number, mode: string?, userId: number?)
+local function listTemplatesFromDataStore(
+	limit: number,
+	mode: string?,
+	userId: number?,
+	page: number?
+)
+	local requestedPage = math.max(math.floor(page or 1), 1)
 	local success, pages = pcall(function()
 		local indexToUse = RecentAvatarTemplateIndex
 		if mode == "mine" and userId then
-			indexToUse = DataStoreService:GetOrderedDataStore("UserAvatarTemplateIndex_v1", tostring(userId))
+			indexToUse =
+				DataStoreService:GetOrderedDataStore("UserAvatarTemplateIndex_v1", tostring(userId))
 		end
 		return indexToUse:GetSortedAsync(false, limit)
 	end)
-	
+
 	if not success or not pages then
 		warn("[AvatarTemplateService] Failed to fetch template index:", pages)
-		return {}
+		return {}, false
 	end
-	
+
+	for _ = 2, requestedPage do
+		if pages.IsFinished then
+			return {}, false
+		end
+
+		local successAdvance, err = pcall(function()
+			pages:AdvanceToNextPageAsync()
+		end)
+
+		if not successAdvance then
+			warn("[AvatarTemplateService] Failed to advance template page:", err)
+			return {}, false
+		end
+	end
+
 	local successPage, currentPage = pcall(function()
 		return pages:GetCurrentPage()
 	end)
-	
+
 	if not successPage or not currentPage then
-		return {}
+		return {}, false
 	end
-	
+
 	local results = {}
 	for _, item in ipairs(currentPage) do
 		local templateId = item.key
@@ -118,24 +148,32 @@ local function listTemplatesFromDataStore(limit: number, mode: string?, userId: 
 			table.insert(results, record)
 		end
 	end
-	
-	return results
+
+	return results, not pages.IsFinished
 end
 
-function AvatarTemplateService.getTemplate(templateId: string): AvatarTemplateTypes.AvatarTemplateRecord?
+function AvatarTemplateService.getTemplate(
+	templateId: string
+): AvatarTemplateTypes.AvatarTemplateRecord?
 	return getTemplateFromDataStore(templateId)
 end
 
-function AvatarTemplateService.listTemplates(player: Player, params: any): AvatarTemplateTypes.ListTemplatesResponse
-	local limit = params and params.limit or 30
+function AvatarTemplateService.listTemplates(
+	player: Player,
+	params: any
+): AvatarTemplateTypes.ListTemplatesResponse
+	local limit = params and params.limit or 10
+	local page = params and params.page or 1
 	local query = params and params.query
 	local mode = params and params.mode or "all"
-	if query then query = string.lower(query) end
-	
-	local recentRecords = listTemplatesFromDataStore(limit, mode, player.UserId)
+	if query then
+		query = string.lower(query)
+	end
+
+	local recentRecords, hasNextPage = listTemplatesFromDataStore(limit, mode, player.UserId, page)
 	local cards = {}
 	local count = 0
-	
+
 	for _, record in ipairs(recentRecords) do
 		local matches = true
 		if query and query ~= "" then
@@ -145,7 +183,7 @@ function AvatarTemplateService.listTemplates(player: Player, params: any): Avata
 				matches = false
 			end
 		end
-		
+
 		if matches then
 			local card: AvatarTemplateTypes.AvatarTemplateCardData = {
 				templateId = record.templateId,
@@ -164,28 +202,32 @@ function AvatarTemplateService.listTemplates(player: Player, params: any): Avata
 			end
 		end
 	end
-	
+
 	return {
 		success = true,
 		templates = cards,
+		page = page,
+		hasNextPage = hasNextPage,
 		nextCursor = nil,
 	}
 end
 
-function AvatarTemplateService.saveCurrentAvatarAsTemplate(player: Player): AvatarTemplateTypes.SaveTemplateResponse
+function AvatarTemplateService.saveCurrentAvatarAsTemplate(
+	player: Player
+): AvatarTemplateTypes.SaveTemplateResponse
 	local liveSnapshot = AvatarAppearanceService.getLiveSnapshot(player)
-	
+
 	if not liveSnapshot then
 		return {
 			success = false,
 			error = "No LiveSnapshot found. Cannot save template.",
 		}
 	end
-	
+
 	local templateId = HttpService:GenerateGUID(false)
 	local code = generateUniqueCode()
 	local globalCount = 0 -- In DataStore MVP we won't show global count easily, use random for dummy name
-	
+
 	local newRecord: AvatarTemplateTypes.AvatarTemplateRecord = {
 		templateId = templateId,
 		code = code,
@@ -203,15 +245,15 @@ function AvatarTemplateService.saveCurrentAvatarAsTemplate(player: Player): Avat
 		updatedAt = os.time(),
 		version = 1,
 	}
-	
+
 	local success = saveTemplateToDataStore(newRecord)
 	if not success then
 		return {
 			success = false,
-			error = "Failed to save template to database."
+			error = "Failed to save template to database.",
 		}
 	end
-	
+
 	local card: AvatarTemplateTypes.AvatarTemplateCardData = {
 		templateId = newRecord.templateId,
 		code = newRecord.code,
@@ -222,7 +264,7 @@ function AvatarTemplateService.saveCurrentAvatarAsTemplate(player: Player): Avat
 		loadCount = newRecord.loadCount,
 		descriptionSnapshot = newRecord.descriptionSnapshot,
 	}
-	
+
 	return {
 		success = true,
 		template = card,
@@ -241,7 +283,7 @@ function AvatarTemplateService.saveTemplate(player: Player): any
 	if now - lastSave < SAVE_COOLDOWN then
 		return { success = false, error = "Please wait before saving another template." }
 	end
-	
+
 	local appearanceState = AvatarAppearanceService.getState(player)
 	if not appearanceState or not appearanceState.liveSnapshot then
 		return { success = false, error = "No live snapshot available" }
@@ -250,7 +292,7 @@ function AvatarTemplateService.saveTemplate(player: Player): any
 	saveCooldowns[player.UserId] = now
 
 	local code = generateUniqueCode()
-	
+
 	local record: AvatarTemplateTypes.AvatarTemplateRecord = {
 		templateId = "Tpl_" .. tostring(os.time()) .. "_" .. tostring(math.random(1000, 9999)),
 		code = code,
@@ -266,29 +308,32 @@ function AvatarTemplateService.saveTemplate(player: Player): any
 		isPublic = true,
 		loadCount = 0,
 	}
-	
+
 	local success = saveTemplateToDataStore(record)
-	
+
 	if not success then
 		return {
 			success = false,
-			error = "Failed to save template to database."
+			error = "Failed to save template to database.",
 		}
 	end
-	
+
 	return {
 		success = true,
 		template = record,
 	}
 end
 
-function AvatarTemplateService.loadTemplate(player: Player, templateId: string): AvatarTemplateTypes.LoadTemplateResponse
+function AvatarTemplateService.loadTemplate(
+	player: Player,
+	templateId: string
+): AvatarTemplateTypes.LoadTemplateResponse
 	local now = os.time()
 	local lastLoad = loadCooldowns[player.UserId] or 0
 	if now - lastLoad < LOAD_COOLDOWN then
 		return { success = false, error = "Please wait before loading another template." }
 	end
-	
+
 	local template = getTemplateFromDataStore(templateId)
 	if not template then
 		return {
@@ -296,23 +341,27 @@ function AvatarTemplateService.loadTemplate(player: Player, templateId: string):
 			error = "Template not found",
 		}
 	end
-	
+
 	loadCooldowns[player.UserId] = now
-	
-	local success, err = AvatarAppearanceService.applyDescriptionSnapshot(player, template.descriptionSnapshot, "avatar_loader")
+
+	local success, err = AvatarAppearanceService.applyDescriptionSnapshot(
+		player,
+		template.descriptionSnapshot,
+		"avatar_loader"
+	)
 	if not success then
 		return {
 			success = false,
 			error = err,
 		}
 	end
-	
+
 	template.loadCount += 1
 	template.updatedAt = os.time()
-	
+
 	local liveSnapshot = AvatarAppearanceService.getLiveSnapshot(player)
 	local liveRevision = AvatarAppearanceService.getLiveRevision(player)
-	
+
 	return {
 		success = true,
 		liveSnapshot = liveSnapshot,
@@ -330,7 +379,10 @@ local function normalizeCode(query: string): string?
 	return nil
 end
 
-function AvatarTemplateService.searchAvatarLoader(player: Player, query: string?): AvatarTemplateTypes.SearchAvatarLoaderResponse
+function AvatarTemplateService.searchAvatarLoader(
+	player: Player,
+	query: string?
+): AvatarTemplateTypes.SearchAvatarLoaderResponse
 	local q = if query then string.gsub(query, "^%s*(.-)%s*$", "%1") else ""
 	if q == "" then
 		return { success = true, resultType = "empty", message = "Please enter a code or username." }
@@ -359,7 +411,7 @@ function AvatarTemplateService.searchAvatarLoader(player: Player, query: string?
 			end
 		end
 	end
-	
+
 	-- 2. Try Roblox user lookup (direct load)
 	local targetUserId = tonumber(q)
 	local targetUsername = q
@@ -376,18 +428,23 @@ function AvatarTemplateService.searchAvatarLoader(player: Player, query: string?
 			targetUsername = game:GetService("Players"):GetNameFromUserIdAsync(targetUserId)
 		end)
 	end
-	
+
 	if targetUserId then
 		local success, description = pcall(function()
 			return game:GetService("Players"):GetHumanoidDescriptionFromUserId(targetUserId)
 		end)
-		
+
 		if success and description then
-			local HumanoidDescriptionSerializer = require(ReplicatedStorage.Shared.avatar.HumanoidDescriptionSerializer)
+			local HumanoidDescriptionSerializer =
+				require(ReplicatedStorage.Shared.avatar.HumanoidDescriptionSerializer)
 			local snapshot = HumanoidDescriptionSerializer.serialize(description)
 			description:Destroy()
-			
-			local applySuccess, err = AvatarAppearanceService.applyDescriptionSnapshot(player, snapshot, "avatar_loader_username")
+
+			local applySuccess, err = AvatarAppearanceService.applyDescriptionSnapshot(
+				player,
+				snapshot,
+				"avatar_loader_username"
+			)
 			if applySuccess then
 				return {
 					success = true,
@@ -406,12 +463,12 @@ function AvatarTemplateService.searchAvatarLoader(player: Player, query: string?
 			end
 		end
 	end
-	
+
 	-- 3. Template name fallback
-	local recentRecords = listRecentTemplatesFromDataStore(30)
+	local recentRecords = listTemplatesFromDataStore(10, "all", player.UserId, 1)
 	local cards = {}
 	local qLower = string.lower(q)
-	
+
 	for _, record in ipairs(recentRecords) do
 		local nameMatch = string.find(string.lower(record.name), qLower, 1, true)
 		if nameMatch then
@@ -428,7 +485,7 @@ function AvatarTemplateService.searchAvatarLoader(player: Player, query: string?
 			table.insert(cards, card)
 		end
 	end
-	
+
 	if #cards > 0 then
 		return {
 			success = true,
@@ -436,7 +493,7 @@ function AvatarTemplateService.searchAvatarLoader(player: Player, query: string?
 			templates = cards,
 		}
 	end
-	
+
 	-- 4. Nothing found
 	return {
 		success = true,
@@ -445,33 +502,37 @@ function AvatarTemplateService.searchAvatarLoader(player: Player, query: string?
 	}
 end
 
-function AvatarTemplateService.loadRobloxOutfit(player: Player, userOutfitId: number): AvatarTemplateTypes.LoadTemplateResponse
+function AvatarTemplateService.loadRobloxOutfit(
+	player: Player,
+	userOutfitId: number
+): AvatarTemplateTypes.LoadTemplateResponse
 	local now = os.time()
 	local lastLoad = loadCooldowns[player.UserId] or 0
 	if now - lastLoad < LOAD_COOLDOWN then
 		return { success = false, error = "Please wait before loading another outfit." }
 	end
-	
+
 	loadCooldowns[player.UserId] = now
-	
+
 	local RobloxOutfitConverter = require(script.Parent.RobloxOutfitConverter)
 	local snapshot = RobloxOutfitConverter.getSnapshotFromOutfitId(userOutfitId)
-	
+
 	if not snapshot then
 		return { success = false, error = "Failed to load outfit data from Roblox." }
 	end
-	
-	local success, err = AvatarAppearanceService.applyDescriptionSnapshot(player, snapshot, "avatar_loader")
+
+	local success, err =
+		AvatarAppearanceService.applyDescriptionSnapshot(player, snapshot, "avatar_loader")
 	if not success then
 		return {
 			success = false,
 			error = err,
 		}
 	end
-	
+
 	local liveSnapshot = AvatarAppearanceService.getLiveSnapshot(player)
 	local liveRevision = AvatarAppearanceService.getLiveRevision(player)
-	
+
 	return {
 		success = true,
 		liveSnapshot = liveSnapshot,
@@ -481,26 +542,30 @@ function AvatarTemplateService.loadRobloxOutfit(player: Player, userOutfitId: nu
 end
 
 function AvatarTemplateService.init()
-	local ListAvatarTemplatesRemote = require(ReplicatedStorage.Shared.remotes.ListAvatarTemplatesRemote)
+	local ListAvatarTemplatesRemote =
+		require(ReplicatedStorage.Shared.remotes.ListAvatarTemplatesRemote)
 	ListAvatarTemplatesRemote.OnServerInvoke = function(player: Player, params: any)
 		return AvatarTemplateService.listTemplates(player, params)
 	end
-	
-	local LoadAvatarTemplateRemote = require(ReplicatedStorage.Shared.remotes.LoadAvatarTemplateRemote)
+
+	local LoadAvatarTemplateRemote =
+		require(ReplicatedStorage.Shared.remotes.LoadAvatarTemplateRemote)
 	LoadAvatarTemplateRemote.OnServerInvoke = function(player: Player, templateId: string)
 		return AvatarTemplateService.loadTemplate(player, templateId)
 	end
-	
-	local SaveAvatarTemplateRemote = require(ReplicatedStorage.Shared.remotes.SaveAvatarTemplateRemote)
+
+	local SaveAvatarTemplateRemote =
+		require(ReplicatedStorage.Shared.remotes.SaveAvatarTemplateRemote)
 	SaveAvatarTemplateRemote.OnServerInvoke = function(player: Player)
 		return AvatarTemplateService.saveCurrentAvatarAsTemplate(player)
 	end
-	
-	local SearchAvatarLoaderRemote = require(ReplicatedStorage.Shared.remotes.SearchAvatarLoaderRemote)
+
+	local SearchAvatarLoaderRemote =
+		require(ReplicatedStorage.Shared.remotes.SearchAvatarLoaderRemote)
 	SearchAvatarLoaderRemote.OnServerInvoke = function(player: Player, query: string)
 		return AvatarTemplateService.searchAvatarLoader(player, query)
 	end
-	
+
 	local LoadRobloxOutfitRemote = require(ReplicatedStorage.Shared.remotes.LoadRobloxOutfitRemote)
 	LoadRobloxOutfitRemote.OnServerInvoke = function(player: Player, userOutfitId: number)
 		return AvatarTemplateService.loadRobloxOutfit(player, userOutfitId)

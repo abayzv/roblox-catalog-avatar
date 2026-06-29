@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local HumanoidDescriptionSerializer = require(ReplicatedStorage.Shared.avatar.HumanoidDescriptionSerializer)
+local HumanoidDescriptionSerializer =
+	require(ReplicatedStorage.Shared.avatar.HumanoidDescriptionSerializer)
 
 local THUMBNAIL_JOB_DELAY = 0.08
 local MAX_STATIC_THUMBNAIL_CACHE = 20
@@ -12,6 +13,7 @@ local queue = {}
 local isProcessing = false
 local staticModelCache = {}
 local cacheOrder = {}
+local inFlightJobs = {}
 local activePageToken = nil
 local jobCounter = 0
 
@@ -23,7 +25,7 @@ local function getBaseRig()
 			return rig
 		end
 	end
-	
+
 	return nil
 end
 
@@ -47,7 +49,7 @@ local function sanitizeStaticAvatar(model: Model)
 			inst.Massless = true
 		end
 	end
-	
+
 	-- No BreakJoints, keep Motor6D, Weld, Attachment, WrapLayer, etc. intact
 end
 
@@ -109,37 +111,129 @@ local function addToCache(templateId: string, staticModel: Model)
 			staticModelCache[oldestTemplateId] = nil
 		end
 	end
-	
+
 	table.insert(cacheOrder, templateId)
 	staticModelCache[templateId] = staticModel
+end
+
+local function clearInFlightJobs()
+	inFlightJobs = {}
+end
+
+local function clearInFlightJob(templateId: string, pageToken: string?)
+	local inFlight = inFlightJobs[templateId]
+	if not inFlight then
+		return
+	end
+
+	if pageToken and inFlight.pageToken ~= pageToken then
+		return
+	end
+
+	inFlightJobs[templateId] = nil
+end
+
+local function addWaiter(
+	templateId: string,
+	pageToken: string?,
+	viewportFrame: ViewportFrame,
+	options: table?
+)
+	local inFlight = inFlightJobs[templateId]
+	if not inFlight then
+		return
+	end
+
+	for _, waiter in ipairs(inFlight.waiters) do
+		if waiter.viewportFrame == viewportFrame then
+			waiter.pageToken = pageToken
+			waiter.onRendered = options and options.onRendered
+			waiter.onFailed = options and options.onFailed
+			return
+		end
+	end
+
+	table.insert(inFlight.waiters, {
+		pageToken = pageToken,
+		viewportFrame = viewportFrame,
+		onRendered = options and options.onRendered,
+		onFailed = options and options.onFailed,
+	})
+end
+
+local function failWaiters(templateId: string, pageToken: string?)
+	local inFlight = inFlightJobs[templateId]
+	clearInFlightJob(templateId, pageToken)
+
+	if not inFlight then
+		return
+	end
+
+	if pageToken and inFlight.pageToken ~= pageToken then
+		return
+	end
+
+	for _, waiter in ipairs(inFlight.waiters) do
+		if waiter.pageToken == pageToken and waiter.onFailed then
+			task.defer(waiter.onFailed)
+		end
+	end
+end
+
+local function renderWaiters(templateId: string, pageToken: string?, staticModel: Model)
+	local inFlight = inFlightJobs[templateId]
+	clearInFlightJob(templateId, pageToken)
+
+	if not inFlight then
+		return
+	end
+
+	if pageToken and inFlight.pageToken ~= pageToken then
+		return
+	end
+
+	for _, waiter in ipairs(inFlight.waiters) do
+		if waiter.pageToken == pageToken then
+			if waiter.viewportFrame and waiter.viewportFrame.Parent then
+				local clone = staticModel:Clone()
+				renderStaticModelToViewport(waiter.viewportFrame, clone)
+				if waiter.onRendered then
+					task.defer(waiter.onRendered)
+				end
+			elseif waiter.onFailed then
+				task.defer(waiter.onFailed)
+			end
+		end
+	end
 end
 
 local function processJob(job)
 	-- Double check page token before processing
 	if job.pageToken ~= activePageToken then
+		clearInFlightJob(job.templateId, job.pageToken)
 		return
 	end
-	
+
 	-- Check cache again in case it was loaded while waiting
 	if staticModelCache[job.templateId] then
-		local clone = staticModelCache[job.templateId]:Clone()
-		renderStaticModelToViewport(job.viewportFrame, clone)
+		renderWaiters(job.templateId, job.pageToken, staticModelCache[job.templateId])
 		return
 	end
-	
+
 	local baseRig = getBaseRig()
 	if not baseRig then
 		warn("[TemplateThumbnailGenerator] Cannot generate thumbnail: BaseThumbnailRig missing.")
+		failWaiters(job.templateId, job.pageToken)
 		return
 	end
-	
+
 	local generatorRig = baseRig:Clone()
-	
+
 	local hrp = generatorRig:FindFirstChild("HumanoidRootPart")
 	if hrp and not generatorRig.PrimaryPart then
 		generatorRig.PrimaryPart = hrp
 	end
-	
+
 	-- [Real Flow - Mode B: StaticWithHumanoidFallback]
 	-- 1. Generate rig and place in temporary Workspace (fallback/workaround to ensure ApplyDescription loads assets)
 	-- 2. Call ApplyDescriptionResetAsync
@@ -147,8 +241,8 @@ local function processJob(job)
 	-- 4. Destroy generator rig
 	-- 5. Sanitize clone (keep Humanoid to prevent 2D clothing composite destruction, remove Animator, keep all joints)
 	-- 6. Render static clone to ViewportFrame
-	
-	-- Note: Placing in Workspace is a temporary workaround because ApplyDescription 
+
+	-- Note: Placing in Workspace is a temporary workaround because ApplyDescription
 	-- sometimes fails to fetch and build Layered Clothing meshes in ReplicatedStorage.
 	-- We place it high in the sky to avoid FallenPartsDestroyHeight.
 	generatorRig:PivotTo(CFrame.new(0, 100000, 0))
@@ -158,6 +252,7 @@ local function processJob(job)
 	if not humanoid then
 		generatorRig:Destroy()
 		warn("[TemplateThumbnailGenerator] Generator rig missing Humanoid")
+		failWaiters(job.templateId, job.pageToken)
 		return
 	end
 
@@ -170,12 +265,14 @@ local function processJob(job)
 	if not ok then
 		generatorRig:Destroy()
 		warn("[TemplateThumbnailGenerator] Failed to apply description:", err)
+		failWaiters(job.templateId, job.pageToken)
 		return
 	end
-	
+
 	-- Make sure we are still on the same page after the async call!
 	if job.pageToken ~= activePageToken then
 		generatorRig:Destroy()
+		clearInFlightJob(job.templateId, job.pageToken)
 		return
 	end
 
@@ -183,15 +280,11 @@ local function processJob(job)
 	generatorRig:Destroy()
 
 	sanitizeStaticAvatar(staticModel)
-	
+
 	-- Cache the sanitized model
 	addToCache(job.templateId, staticModel)
 
-	-- Render a clone to the Viewport
-	if job.viewportFrame and job.viewportFrame.Parent then
-		local cloneToRender = staticModel:Clone()
-		renderStaticModelToViewport(job.viewportFrame, cloneToRender)
-	end
+	renderWaiters(job.templateId, job.pageToken, staticModel)
 end
 
 local function processQueue()
@@ -220,28 +313,47 @@ function TemplateThumbnailGenerator.renderTemplateCard(
 	options: table?
 )
 	local pageToken = options and options.pageToken
-	
+
 	-- Auto-set active page token if not provided or different
 	if pageToken and activePageToken ~= pageToken then
 		activePageToken = pageToken
 		queue = {} -- clear old jobs
+		clearInFlightJobs()
 	end
-	
+
 	if staticModelCache[templateId] then
+		if not viewportFrame or not viewportFrame.Parent then
+			if options and options.onFailed then
+				task.defer(options.onFailed)
+			end
+			return
+		end
+
 		local clone = staticModelCache[templateId]:Clone()
 		renderStaticModelToViewport(viewportFrame, clone)
+		if options and options.onRendered then
+			task.defer(options.onRendered)
+		end
 		return
 	end
-	
-	jobCounter += 1
-	table.insert(queue, {
-		jobId = jobCounter,
-		pageToken = activePageToken,
-		templateId = templateId,
-		descriptionSnapshot = descriptionSnapshot,
-		viewportFrame = viewportFrame,
-	})
-	
+
+	if inFlightJobs[templateId] then
+		addWaiter(templateId, activePageToken, viewportFrame, options)
+	else
+		jobCounter += 1
+		inFlightJobs[templateId] = {
+			pageToken = activePageToken,
+			waiters = {},
+		}
+		addWaiter(templateId, activePageToken, viewportFrame, options)
+		table.insert(queue, {
+			jobId = jobCounter,
+			pageToken = activePageToken,
+			templateId = templateId,
+			descriptionSnapshot = descriptionSnapshot,
+		})
+	end
+
 	task.spawn(processQueue)
 end
 
@@ -249,6 +361,7 @@ function TemplateThumbnailGenerator.cancelPage(pageToken: string)
 	if activePageToken == pageToken then
 		activePageToken = nil
 		queue = {}
+		clearInFlightJobs()
 	end
 end
 
@@ -258,6 +371,7 @@ function TemplateThumbnailGenerator.clearCache()
 	end
 	staticModelCache = {}
 	cacheOrder = {}
+	clearInFlightJobs()
 end
 
 return TemplateThumbnailGenerator
