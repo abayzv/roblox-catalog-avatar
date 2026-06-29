@@ -119,6 +119,7 @@ local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 		then "#" .. data.code
 		elseif data.sourceType == "roblox_outfit" then "OUTFIT"
 		else ""
+	local isBusy = isApplying or props.isLoading == true
 
 	return React.createElement(
 		"Frame",
@@ -238,15 +239,12 @@ local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 					Padding = UDim.new(0, 8),
 				}),
 				LoadButton = React.createElement(GradientButton, {
-					text = if isApplying
-						then "Applying..."
-						elseif props.isLoading then "Loading..."
-						else "Load",
+					text = "Load",
 					size = UDim2.new(1, -4, 1, 0),
-					disabled = props.isLoading or isApplying,
+					disabled = isBusy,
 					layoutOrder = 1,
 					onActivated = function()
-						if not props.isLoading and not isApplying then
+						if not isBusy then
 							setIsApplying(true)
 							local id = if data.sourceType == "roblox_outfit"
 								then data.userOutfitId

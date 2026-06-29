@@ -4,7 +4,7 @@ local Theme = require(script.Parent.Parent.theme.Theme)
 local ButtonBase = require(script.Parent.ButtonBase)
 
 export type GradientButtonProps = {
-	text: string,
+	text: string?,
 	size: UDim2?,
 	onActivated: (() -> ())?,
 	disabled: boolean?,
@@ -22,10 +22,14 @@ local function GradientButton(props: GradientButtonProps)
 
 			local overlayTransparency = 1
 			local overlayColor = Color3.new(1, 1, 1)
+			local buttonTransparency = 0
+			local textTransparency = 0
 
 			if props.disabled then
-				overlayTransparency = 0.5
-				overlayColor = Color3.new(0.5, 0.5, 0.5)
+				buttonTransparency = 0.35
+				textTransparency = 0.25
+				overlayTransparency = 0.68
+				overlayColor = Color3.new(1, 1, 1)
 			elseif isPressed then
 				overlayTransparency = 0.8
 				overlayColor = Color3.new(0, 0, 0)
@@ -39,7 +43,7 @@ local function GradientButton(props: GradientButtonProps)
 				{
 					Size = UDim2.fromScale(1, 1),
 					BackgroundColor3 = Color3.new(1, 1, 1),
-					BackgroundTransparency = 0,
+					BackgroundTransparency = buttonTransparency,
 					AnchorPoint = Vector2.new(0.5, 0.5),
 					Position = UDim2.fromScale(0.5, 0.5),
 				},
@@ -66,8 +70,9 @@ local function GradientButton(props: GradientButtonProps)
 					TextLabel = React.createElement("TextLabel", {
 						Size = UDim2.fromScale(1, 1),
 						BackgroundTransparency = 1,
-						Text = props.text,
+						Text = props.text or "",
 						TextColor3 = Color3.new(1, 1, 1),
+						TextTransparency = textTransparency,
 						Font = Theme.Font.Bold,
 						TextSize = Theme.Text.Button,
 						ZIndex = 3,
