@@ -264,9 +264,7 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 	local activeSnapshot = if state.optimisticState and state.optimisticState.isOptimistic
 		then state.optimisticState.predictedSnapshot
 		else state.liveSnapshot
-	local activeRevision = if state.optimisticState and state.optimisticState.isOptimistic
-		then state.liveRevision + (state.optimisticState.requestId * 1000)
-		else state.liveRevision
+	local activeRevision = state.previewRevision
 
 	local ViewportAnimationController =
 		require(script.Parent.Parent.Parent.controllers.ViewportAnimationController)
