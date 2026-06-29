@@ -162,7 +162,7 @@ local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 				}),
 				LoadButton = React.createElement(GradientButton, {
 					text = if isApplying then "Applying..." elseif props.isLoading then "Loading..." else "Load",
-					size = UDim2.new(0.5, -4, 1, 0),
+					size = UDim2.new(1, -4, 1, 0),
 					disabled = props.isLoading or isApplying,
 					layoutOrder = 1,
 					onActivated = function()
@@ -177,15 +177,15 @@ local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 						end
 					end,
 				}),
-				ShareButton = React.createElement(GradientButton, {
-					text = "Share",
-					size = UDim2.new(0.5, -4, 1, 0),
-					disabled = false,
-					layoutOrder = 2,
-					onActivated = function()
-						print("[AvatarLoader] Share Template Code:", data.code)
-					end,
-				}),
+				-- ShareButton = React.createElement(GradientButton, {
+				-- 	text = "Share",
+				-- 	size = UDim2.new(0.5, -4, 1, 0),
+				-- 	disabled = false,
+				-- 	layoutOrder = 2,
+				-- 	onActivated = function()
+				-- 		print("[AvatarLoader] Share Template Code:", data.code)
+				-- 	end,
+				-- }),
 			}),
 		})
 	)
