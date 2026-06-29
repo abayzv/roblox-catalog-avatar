@@ -8,8 +8,8 @@ local AvatarAppearanceClient = require(script.Parent.Parent.Parent.services.Avat
 local AvatarTemplateCache = require(script.Parent.Parent.Parent.services.AvatarTemplateCache)
 local GlassButton = require(script.Parent.Parent.atoms.GlassButton)
 local useAppearanceState = require(script.Parent.Parent.Parent.hooks.useAppearanceState)
-local usePreviewState = require(script.Parent.Parent.Parent.hooks.usePreviewState)
-local HumanoidDescriptionSerializer = require(ReplicatedStorage.Shared.avatar.HumanoidDescriptionSerializer)
+local HumanoidDescriptionSerializer =
+	require(ReplicatedStorage.Shared.avatar.HumanoidDescriptionSerializer)
 local ApplyAvatarRemote = require(ReplicatedStorage.Shared.remotes.ApplyAvatarRemote)
 local SaveAvatarTemplateRemote = require(ReplicatedStorage.Shared.remotes.SaveAvatarTemplateRemote)
 
@@ -22,11 +22,11 @@ local IDLE_ANIMATION_BY_RIG_TYPE = {
 	[Enum.HumanoidRigType.R15] = "rbxassetid://507766666",
 }
 
-
-
 local function playIdleAnimation(model: Model, desc: HumanoidDescription?)
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
-	if not humanoid then return end
+	if not humanoid then
+		return
+	end
 
 	local animator = humanoid:FindFirstChildOfClass("Animator")
 	if not animator then
@@ -42,23 +42,24 @@ local function playIdleAnimation(model: Model, desc: HumanoidDescription?)
 
 	local animation = Instance.new("Animation")
 	animation.Name = "CatalogPreviewIdle"
-	
+
 	local animationId = IDLE_ANIMATION_BY_RIG_TYPE[humanoid.RigType]
 		or IDLE_ANIMATION_BY_RIG_TYPE[Enum.HumanoidRigType.R15]
-		
+
 	if desc and desc.IdleAnimation and desc.IdleAnimation > 0 then
 		local animate = model:FindFirstChild("Animate")
 		if animate then
 			local idle = animate:FindFirstChild("idle")
 			if idle then
-				local anim1 = idle:FindFirstChild("Animation1") or idle:FindFirstChildWhichIsA("Animation")
+				local anim1 = idle:FindFirstChild("Animation1")
+					or idle:FindFirstChildWhichIsA("Animation")
 				if anim1 and anim1:IsA("Animation") and anim1.AnimationId ~= "" then
 					animationId = anim1.AnimationId
 				end
 			end
 		end
 	end
-	
+
 	animation.AnimationId = animationId
 
 	local ok, trackOrError = pcall(function()
@@ -93,6 +94,20 @@ local function prepareRig(model: Model)
 	end
 end
 
+local function cloneCurrentCharacterRig(): Model?
+	local character = LOCAL_PLAYER.Character or LOCAL_PLAYER.CharacterAdded:Wait()
+	if not character:FindFirstChildOfClass("Humanoid") then
+		character:WaitForChild("Humanoid", 5)
+	end
+
+	local previousArchivable = character.Archivable
+	character.Archivable = true
+	local rig = character:Clone()
+	character.Archivable = previousArchivable
+
+	return rig
+end
+
 local function pivotRig(model: Model, yaw: number?)
 	local humanoidRootPart = model:FindFirstChild("HumanoidRootPart")
 	if humanoidRootPart and humanoidRootPart:IsA("BasePart") then
@@ -113,9 +128,25 @@ local function frameCamera(camera: Camera, model: Model)
 	camera.CFrame = CFrame.new(cameraPosition, target)
 end
 
+local function renderRigToViewport(
+	worldModel: WorldModel,
+	camera: Camera,
+	rig: Model,
+	desc: HumanoidDescription?,
+	yaw: number
+)
+	worldModel:ClearAllChildren()
+	rig.Parent = worldModel
+	rig:PivotTo(CFrame.new())
+	pivotRig(rig, yaw)
+	frameCamera(camera, rig)
+	playIdleAnimation(rig, desc)
+end
+
 local function setupViewport(
 	viewport: ViewportFrame,
-	liveSnapshot: any
+	liveSnapshot: any,
+	onRigReady: ((Model, number) -> ())?
 )
 	local token = (viewport:GetAttribute("PreviewToken") or 0) + 1
 	viewport:SetAttribute("PreviewToken", token)
@@ -135,62 +166,72 @@ local function setupViewport(
 		worldModel.Name = "PreviewWorld"
 		worldModel.Parent = viewport
 	end
-	
-	local character = LOCAL_PLAYER.Character or LOCAL_PLAYER.CharacterAdded:Wait()
-	if not character:FindFirstChildOfClass("Humanoid") then
-		character:WaitForChild("Humanoid", 5)
-	end
 
-	local previousArchivable = character.Archivable
-	character.Archivable = true
-	local rig = character:Clone()
-	character.Archivable = previousArchivable
-	
-	if not rig then return nil end
+	local ViewportAnimationController =
+		require(script.Parent.Parent.Parent.controllers.ViewportAnimationController)
 
-	rig.Name = "CatalogPreviewRig"
-	prepareRig(rig)
-	
-	local ViewportAnimationController = require(script.Parent.Parent.Parent.controllers.ViewportAnimationController)
-	
 	if liveSnapshot then
 		task.spawn(function()
-			local humanoid = rig:FindFirstChildOfClass("Humanoid")
-			if humanoid then
-				local desc = HumanoidDescriptionSerializer.deserialize(liveSnapshot)
-				
-				ViewportAnimationController.stopViewportAnimation()
-				
-				rig.Parent = game.Workspace
-				rig:PivotTo(CFrame.new(0, -1000, 0))
-				
-				pcall(function()
-					humanoid:ApplyDescription(desc)
-				end)
-				
-				if viewport:GetAttribute("PreviewToken") ~= token then
-					rig:Destroy()
-					return
+			local descOk, descOrError = pcall(function()
+				return HumanoidDescriptionSerializer.deserialize(liveSnapshot)
+			end)
+			if not descOk then
+				warn("[CatalogPreview] Failed to deserialize preview snapshot:", descOrError)
+				return
+			end
+
+			local desc = descOrError
+			local ok, rigOrError = pcall(function()
+				return Players:CreateHumanoidModelFromDescriptionAsync(
+					desc,
+					Enum.HumanoidRigType.R15,
+					Enum.AssetTypeVerification.Default
+				)
+			end)
+
+			if viewport:GetAttribute("PreviewToken") ~= token then
+				if ok and rigOrError and typeof(rigOrError) == "Instance" then
+					rigOrError:Destroy()
 				end
-				
-				worldModel:ClearAllChildren()
-				rig.Parent = worldModel
-				rig:PivotTo(CFrame.new())
-				pivotRig(rig)
-				frameCamera(camera, rig)
-				
-				playIdleAnimation(rig, desc)
+				return
+			end
+
+			if
+				not ok
+				or not rigOrError
+				or typeof(rigOrError) ~= "Instance"
+				or not rigOrError:IsA("Model")
+			then
+				warn("[CatalogPreview] Failed to create preview model:", rigOrError)
+				return
+			end
+
+			local rig = rigOrError
+			rig.Name = "CatalogPreviewRig"
+			prepareRig(rig)
+
+			ViewportAnimationController.stopViewportAnimation()
+			renderRigToViewport(worldModel, camera, rig, desc, INITIAL_RIG_YAW)
+
+			if onRigReady then
+				onRigReady(rig, token)
 			end
 		end)
 	else
-		worldModel:ClearAllChildren()
-		rig.Parent = worldModel
-		pivotRig(rig)
-		frameCamera(camera, rig)
-		playIdleAnimation(rig, nil)
+		local rig = cloneCurrentCharacterRig()
+		if rig then
+			rig.Name = "CatalogPreviewRig"
+			prepareRig(rig)
+			renderRigToViewport(worldModel, camera, rig, nil, INITIAL_RIG_YAW)
+			if onRigReady then
+				onRigReady(rig, token)
+			end
+		else
+			warn("[CatalogPreview] Failed to clone current character for blank preview.")
+		end
 	end
 
-	return rig
+	return token
 end
 
 local function isPrimaryDragInput(input: InputObject): boolean
@@ -214,16 +255,21 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 	local draggingRef = React.useRef(false)
 	local lastDragXRef = React.useRef(0)
 	local yawRef = React.useRef(INITIAL_RIG_YAW)
-	
+
 	local isSaving, setIsSaving = React.useState(false)
 	local saveSuccessText, setSaveSuccessText = React.useState(nil :: string?)
 
 	local state = useAppearanceState()
-	
-	local activeSnapshot = if state.optimisticState and state.optimisticState.isOptimistic then state.optimisticState.predictedSnapshot else state.liveSnapshot
-	local activeRevision = if state.optimisticState and state.optimisticState.isOptimistic then state.liveRevision + (state.optimisticState.requestId * 1000) else state.liveRevision
 
-	local ViewportAnimationController = require(script.Parent.Parent.Parent.controllers.ViewportAnimationController)
+	local activeSnapshot = if state.optimisticState and state.optimisticState.isOptimistic
+		then state.optimisticState.predictedSnapshot
+		else state.liveSnapshot
+	local activeRevision = if state.optimisticState and state.optimisticState.isOptimistic
+		then state.liveRevision + (state.optimisticState.requestId * 1000)
+		else state.liveRevision
+
+	local ViewportAnimationController =
+		require(script.Parent.Parent.Parent.controllers.ViewportAnimationController)
 
 	React.useEffect(function()
 		return function()
@@ -233,24 +279,38 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 
 	React.useEffect(function()
 		local viewport = viewportRef.current
-		if not viewport then return nil end
+		if not viewport then
+			return nil
+		end
 
 		yawRef.current = INITIAL_RIG_YAW
-		rigRef.current = setupViewport(viewport, activeSnapshot)
+		rigRef.current = nil
+		local token = setupViewport(viewport, activeSnapshot, function(rig, renderToken)
+			if viewport:GetAttribute("PreviewToken") == renderToken then
+				rigRef.current = rig
+			end
+		end)
 
 		return function()
+			if viewport:GetAttribute("PreviewToken") == token then
+				viewport:SetAttribute("PreviewToken", token + 1)
+			end
 			rigRef.current = nil
 		end
 	end, { activeRevision })
 
 	local beginDrag = React.useCallback(function(_, input)
-		if not isPrimaryDragInput(input) then return end
+		if not isPrimaryDragInput(input) then
+			return
+		end
 		draggingRef.current = true
 		lastDragXRef.current = input.Position.X
 	end, {})
 
 	local updateDrag = React.useCallback(function(_, input)
-		if not draggingRef.current or not isDragMoveInput(input) then return end
+		if not draggingRef.current or not isDragMoveInput(input) then
+			return
+		end
 		local nextX = input.Position.X
 		local deltaX = nextX - lastDragXRef.current
 		lastDragXRef.current = nextX
@@ -333,14 +393,21 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 						task.spawn(function()
 							local ok, response = pcall(function()
 								return ApplyAvatarRemote:InvokeServer({
-									action = "ResetToOriginal"
+									action = "ResetToOriginal",
 								})
 							end)
-							
+
 							if ok and response and response.success then
-								AvatarAppearanceClient.updateState(response.liveSnapshot, response.liveRevision, response.source)
+								AvatarAppearanceClient.updateState(
+									response.liveSnapshot,
+									response.liveRevision,
+									response.source
+								)
 							else
-								warn("[CatalogPreview] Failed to reset to original:", response and response.message or response)
+								warn(
+									"[CatalogPreview] Failed to reset to original:",
+									response and response.message or response
+								)
 							end
 						end)
 					end,
@@ -361,45 +428,52 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 					Padding = UDim.new(0, Theme.Space.MD),
 				}),
 
-				SaveTemplateButton = props.showSaveTemplate and React.createElement(GlassButton, {
-					text = if isSaving then "Saving..." else (saveSuccessText or "Save Template"),
-					icon = if saveSuccessText then Icons.Apply else Icons.Save,
-					color = if saveSuccessText then Theme.Color.Success else Theme.Color.TextPrimary,
-					size = UDim2.fromScale(1, 1),
-					onActivated = function()
-						if isSaving or saveSuccessText then return end
-						
-						setIsSaving(true)
-						task.spawn(function()
-							if SaveAvatarTemplateRemote then
-								local res = SaveAvatarTemplateRemote:InvokeServer()
-								if res.success then
-									setSaveSuccessText("Saved!")
-									
-									if res.template then
-										AvatarTemplateCache.add("mine", res.template)
-										AvatarTemplateCache.add("all", res.template)
-									end
-									
-									if props.onTemplateSaved then
-										props.onTemplateSaved()
-									end
-									-- Reset success text after 2 seconds
-									task.delay(2, function()
-										setSaveSuccessText(nil)
-									end)
-								else
-									warn("Failed to save template:", res.error)
-									setSaveSuccessText("Failed")
-									task.delay(2, function()
-										setSaveSuccessText(nil)
-									end)
-								end
+				SaveTemplateButton = props.showSaveTemplate
+					and React.createElement(GlassButton, {
+						text = if isSaving
+							then "Saving..."
+							else (saveSuccessText or "Save Template"),
+						icon = if saveSuccessText then Icons.Apply else Icons.Save,
+						color = if saveSuccessText
+							then Theme.Color.Success
+							else Theme.Color.TextPrimary,
+						size = UDim2.fromScale(1, 1),
+						onActivated = function()
+							if isSaving or saveSuccessText then
+								return
 							end
-							setIsSaving(false)
-						end)
-					end,
-				}),
+
+							setIsSaving(true)
+							task.spawn(function()
+								if SaveAvatarTemplateRemote then
+									local res = SaveAvatarTemplateRemote:InvokeServer()
+									if res.success then
+										setSaveSuccessText("Saved!")
+
+										if res.template then
+											AvatarTemplateCache.add("mine", res.template)
+											AvatarTemplateCache.add("all", res.template)
+										end
+
+										if props.onTemplateSaved then
+											props.onTemplateSaved()
+										end
+										-- Reset success text after 2 seconds
+										task.delay(2, function()
+											setSaveSuccessText(nil)
+										end)
+									else
+										warn("Failed to save template:", res.error)
+										setSaveSuccessText("Failed")
+										task.delay(2, function()
+											setSaveSuccessText(nil)
+										end)
+									end
+								end
+								setIsSaving(false)
+							end)
+						end,
+					}),
 			}),
 		}),
 	})
