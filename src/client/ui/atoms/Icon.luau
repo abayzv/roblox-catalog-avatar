@@ -8,6 +8,8 @@ export type IconProps = {
 	color: Color3?,
 	transparency: number?,
 	layoutOrder: number?,
+	anchorPoint: Vector2?,
+	position: UDim2?,
 }
 
 local function Icon(props: IconProps)
@@ -21,6 +23,8 @@ local function Icon(props: IconProps)
 		BackgroundTransparency = 1,
 		ScaleType = Enum.ScaleType.Fit,
 		LayoutOrder = props.layoutOrder,
+		AnchorPoint = props.anchorPoint or Vector2.new(0, 0),
+		Position = props.position or UDim2.new(0, 0, 0, 0),
 	})
 end
 

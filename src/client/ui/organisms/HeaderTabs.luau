@@ -74,6 +74,17 @@ local function HeaderTabs(props: HeaderTabsProps)
 							end
 						end,
 					}),
+					Checkout = React.createElement(HeaderTabButton, {
+						text = "Checkout",
+						icon = Icons.Cart or "rbxassetid://0",
+						active = activeTab == "Checkout",
+						layoutOrder = 4,
+						onActivated = function()
+							if props.onTabSelected then
+								props.onTabSelected("Checkout")
+							end
+						end,
+					}),
 				})
 			),
 			DividerContainer = React.createElement(
@@ -99,7 +110,11 @@ local function HeaderTabs(props: HeaderTabsProps)
 							BackgroundColor3 = Color3.new(1, 1, 1),
 							BorderSizePixel = 0,
 							Position = UDim2.fromOffset(
-								activeTab == "Item Catalog" and 0 or (274 + Theme.Space.MD),
+								(activeTab == "Item Catalog" and 0)
+									or (activeTab == "Avatar Loader" and (274 + Theme.Space.MD))
+									or (activeTab == "My Avatar" and (274 * 2 + Theme.Space.MD * 2))
+									or (activeTab == "Checkout" and (274 * 3 + Theme.Space.MD * 3))
+									or 0,
 								0
 							),
 						},

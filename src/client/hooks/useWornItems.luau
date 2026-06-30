@@ -2,13 +2,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local AvatarAppearanceClient = require(script.Parent.Parent.services.AvatarAppearanceClient)
 local WornItemExtractor = require(ReplicatedStorage.Shared.avatar.WornItemExtractor)
-local WornItemDetailsService = require(script.Parent.Parent.services.WornItemDetailsService)
+local ItemDetailsService = require(script.Parent.Parent.services.ItemDetailsService)
 
 export type WornItemWithDetails = WornItemExtractor.WornItem & {
 	name: string,
 	price: number,
 	creator: string,
 	image: string,
+	isFree: boolean,
+	isOffSale: boolean,
 }
 
 export type UseWornItemsResult = {
@@ -31,26 +33,36 @@ local function useWornItems(): UseWornItemsResult
 		setError(nil)
 
 		task.spawn(function()
-			local items = WornItemExtractor.extract(snapshot)
-
-			-- Resolve details
-			local ids = {}
-			for _, item in ipairs(items) do
-				table.insert(ids, item.id)
-			end
-
-			local details = WornItemDetailsService.resolveDetails(ids)
-
+			local worn = WornItemExtractor.extract(snapshot)
 			local itemsWithDetails = {}
-			for _, item in ipairs(items) do
-				local detail = details[item.id]
-				local combined = table.clone(item)
-				combined.name = detail and detail.name or item.property
-				combined.price = detail and detail.price or 0
-				combined.creator = detail and detail.creator or "Unknown"
-				combined.image = detail and detail.image
-					or ("rbxthumb://type=Asset&id=" .. item.id .. "&w=150&h=150")
-				table.insert(itemsWithDetails, combined)
+
+			if #worn > 0 then
+				local itemsToFetch = {}
+				for _, item in ipairs(worn) do
+					table.insert(itemsToFetch, { id = item.id, itemType = item.itemType })
+				end
+				local details = ItemDetailsService.resolveDetails(itemsToFetch)
+
+				for _, item in ipairs(worn) do
+					local combined = table.clone(item)
+					local cacheKey = item.itemType .. ":" .. item.id
+					local detail = details[cacheKey]
+
+					combined.name = detail and detail.name or ("Item " .. item.id)
+					combined.price = detail and detail.price or 0
+					combined.creator = detail and detail.creator or "Unknown"
+					combined.image = detail and detail.image
+						or (
+							"rbxthumb://type="
+							.. (item.itemType == "Bundle" and "BundleThumbnail" or "Asset")
+							.. "&id="
+							.. item.id
+							.. "&w=150&h=150"
+						)
+					combined.isFree = detail and detail.isFree or false
+					combined.isOffSale = detail and detail.isOffSale or false
+					table.insert(itemsWithDetails, combined)
+				end
 			end
 
 			setWornItems(itemsWithDetails)

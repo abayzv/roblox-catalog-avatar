@@ -89,4 +89,17 @@ function CommerceService.resolveBatch(items)
 	end
 end
 
+-- Listen to purchases to automatically update ownership cache
+MarketplaceService.PromptPurchaseFinished:Connect(function(player, assetId, isPurchased)
+	if isPurchased and player == Players.LocalPlayer then
+		setOwnership("Asset:" .. tostring(assetId), true)
+	end
+end)
+
+MarketplaceService.PromptBundlePurchaseFinished:Connect(function(player, bundleId, isPurchased)
+	if isPurchased and player == Players.LocalPlayer then
+		setOwnership("Bundle:" .. tostring(bundleId), true)
+	end
+end)
+
 return CommerceService

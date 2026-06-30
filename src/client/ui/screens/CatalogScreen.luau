@@ -4,6 +4,7 @@ local CatalogPanel = require(script.Parent.Parent.organisms.CatalogPanel)
 local MyAvatarPanel = require(script.Parent.Parent.organisms.MyAvatarPanel)
 local AvatarLoaderPanel = require(script.Parent.Parent.organisms.AvatarLoaderPanel)
 local AvatarPreviewViewport = require(script.Parent.Parent.organisms.AvatarPreviewViewport)
+local CheckoutPanel = require(script.Parent.Parent.organisms.CheckoutPanel)
 
 local CATALOG_WIDTH_SCALE = 0.68
 local PREVIEW_WIDTH_SCALE = 1 - CATALOG_WIDTH_SCALE
@@ -82,6 +83,12 @@ local function CatalogScreen()
 							refreshTrigger = templateListRefreshCount,
 						}
 					)
+					elseif activeTab == "Checkout" then React.createElement(CheckoutPanel, {
+						viewportSize = catalogBoundsSize,
+						contentScale = catalogContentScale,
+						activeTab = activeTab,
+						setActiveTab = setActiveTab,
+					})
 					else React.createElement(CatalogPanel, {
 						viewportSize = catalogBoundsSize,
 						contentScale = catalogContentScale,

@@ -13,6 +13,9 @@ local Icons = {
 	Reset = "rbxassetid://6723921202", -- TODO: Update with real icon asset ID
 	Apply = "rbxassetid://11768914234", -- TODO: Update with real icon asset ID
 	Save = "rbxassetid://11768914234", -- TODO: Update with real icon asset ID
+	Cart = "rbxassetid://0",
+	Trash = "rbxassetid://0",
+	Lock = "rbxassetid://0",
 }
 
 return Icons
