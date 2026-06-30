@@ -10,10 +10,13 @@ export type DisplayItemDetails = {
 	assetType: string,
 	isFree: boolean,
 	isOffSale: boolean,
+	bundledItemIds: { [number]: boolean }?,
 }
 
 local ItemDetailsService = {}
 local cache = {}
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ResolveBundleFromAssetRemote = ReplicatedStorage:WaitForChild("ResolveBundleFromAssetRemote")
 
 -- items is an array of { id: number, itemType: string }
 function ItemDetailsService.resolveDetails(
@@ -71,6 +74,15 @@ function ItemDetailsService.resolveDetails(
 					isOffSale = isOffSale,
 				}
 
+				if typeString == "Bundle" and detail.BundledItems then
+					displayItem.bundledItemIds = {}
+					for _, bItem in ipairs(detail.BundledItems) do
+						if bItem.Id then
+							displayItem.bundledItemIds[bItem.Id] = true
+						end
+					end
+				end
+
 				local cacheKey = typeString .. ":" .. id
 				cache[cacheKey] = displayItem
 				results[cacheKey] = displayItem
@@ -103,6 +115,17 @@ function ItemDetailsService.resolveDetails(
 	processBatch(bundlesToFetch, Enum.AvatarItemType.Bundle, "Bundle")
 
 	return results
+end
+
+function ItemDetailsService.resolveBundlesFromAssets(assetIds: {number})
+	if not ResolveBundleFromAssetRemote then return {} end
+	local success, result = pcall(function()
+		return ResolveBundleFromAssetRemote:InvokeServer(assetIds)
+	end)
+	if success and result then
+		return result
+	end
+	return {}
 end
 
 return ItemDetailsService

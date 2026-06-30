@@ -4,6 +4,8 @@ local usePreviewState = require(script.Parent.usePreviewState)
 local PreviewPayloadCache = require(script.Parent.Parent.services.PreviewPayloadCache)
 local ItemDetailsService = require(script.Parent.Parent.services.ItemDetailsService)
 local CommerceService = require(script.Parent.Parent.services.CommerceService)
+local AvatarAppearanceClient = require(script.Parent.Parent.services.AvatarAppearanceClient)
+local WornItemExtractor = require(ReplicatedStorage.Shared.avatar.WornItemExtractor)
 
 export type CheckoutItem = {
 	key: string,
@@ -21,62 +23,112 @@ export type CheckoutItem = {
 
 local function useCheckoutItems()
 	local equippedKeys = usePreviewState()
+	local liveSnapshot, setLiveSnapshot = React.useState(nil)
+	
+	React.useEffect(function()
+		local state = AvatarAppearanceClient.getState()
+		if state and state.liveSnapshot then
+			setLiveSnapshot(state.liveSnapshot)
+		end
+
+		local unsubscribe = AvatarAppearanceClient.subscribe(function(newState)
+			if newState and newState.liveSnapshot then
+				setLiveSnapshot(newState.liveSnapshot)
+			end
+		end)
+		return unsubscribe
+	end, {})
 	
 	local ownedKeys, setOwnedKeys = React.useState({})
 	local itemDetails, setItemDetails = React.useState({})
+	local validItems, setValidItems = React.useState({})
+	local hiddenAssets, setHiddenAssets = React.useState({})
 	local isLoading, setIsLoading = React.useState(true)
 
 	React.useEffect(function()
 		local isMounted = true
 		local cleanupFns = {}
 		
-		-- Gather items
-		local toResolve = {}
-		local toFetchDetails = {}
-		
-		for key, isEquipped in pairs(equippedKeys) do
-			if isEquipped then
-				local payload = PreviewPayloadCache.get(key)
-				if payload and payload.kind ~= "Emote" then
-					table.insert(toResolve, {
-						key = payload.key,
-						id = payload.id,
-						itemType = payload.itemType,
-					})
-					table.insert(toFetchDetails, {
-						id = payload.id,
-						itemType = payload.itemType,
-					})
-				end
-			end
-		end
-
-		if #toResolve == 0 then
+		if not liveSnapshot then
 			setIsLoading(false)
 			return
 		end
 
 		setIsLoading(true)
 
-		-- Start background fetch for ownership
-		CommerceService.resolveBatch(toResolve)
-		for _, item in ipairs(toResolve) do
-			local unsubscribe = CommerceService.listen(item.key, function(isOwned)
-				if not isMounted then return end
-				setOwnedKeys(function(prev)
-					if prev[item.key] == isOwned then return prev end
-					local nextState = table.clone(prev)
-					nextState[item.key] = isOwned
-					return nextState
-				end)
-			end)
-			table.insert(cleanupFns, unsubscribe)
-		end
-
-		-- Start background fetch for item details
 		task.spawn(function()
+			local rawWorn = WornItemExtractor.extract(liveSnapshot)
+			local bodyPartIds = {}
+			for _, item in ipairs(rawWorn) do
+				local p = item.property
+				if p == "Head" or p == "Torso" or p == "LeftArm" or p == "RightArm" or p == "LeftLeg" or p == "RightLeg" then
+					table.insert(bodyPartIds, item.id)
+				end
+			end
+
+			local resolvedBundlesMap = {}
+			if #bodyPartIds > 0 then
+				resolvedBundlesMap = ItemDetailsService.resolveBundlesFromAssets(bodyPartIds)
+			end
+			
+			if not isMounted then return end
+
+			local toResolve = {}
+			local toFetchDetails = {}
+			local addedKeys = {}
+
+			local function addTarget(key, id, itemType, property)
+				if addedKeys[key] then return end
+				addedKeys[key] = true
+				table.insert(toResolve, { key = key, id = id, itemType = itemType, property = property })
+				table.insert(toFetchDetails, { id = id, itemType = itemType })
+			end
+
+			for key, isEquipped in pairs(equippedKeys) do
+				if isEquipped then
+					local payload = PreviewPayloadCache.get(key)
+					if payload and payload.kind ~= "Emote" then
+						addTarget(payload.key, payload.id, payload.itemType, payload.itemType)
+					end
+				end
+			end
+
+			for _, bundleId in pairs(resolvedBundlesMap) do
+				local key = "Bundle:" .. bundleId
+				addTarget(key, bundleId, "Bundle", "Bundle")
+			end
+
+			for _, item in ipairs(rawWorn) do
+				local key = "Asset:" .. item.id
+				addTarget(key, item.id, "Asset", item.property)
+			end
+
 			local details = ItemDetailsService.resolveDetails(toFetchDetails)
 			if not isMounted then return end
+
+			local newHiddenAssets = {}
+			for key, _ in pairs(addedKeys) do
+				local detail = details[key]
+				if detail and detail.bundledItemIds then
+					for bId, _ in pairs(detail.bundledItemIds) do
+						newHiddenAssets[bId] = true
+					end
+				end
+			end
+
+			CommerceService.resolveBatch(toResolve)
+			for _, item in ipairs(toResolve) do
+				local unsubscribe = CommerceService.listen(item.key, function(isOwned)
+					if not isMounted then return end
+					setOwnedKeys(function(prev)
+						if prev[item.key] == isOwned then return prev end
+						local nextState = table.clone(prev)
+						nextState[item.key] = isOwned
+						return nextState
+					end)
+				end)
+				table.insert(cleanupFns, unsubscribe)
+			end
 			
 			setItemDetails(function(prev)
 				local nextState = table.clone(prev)
@@ -86,6 +138,8 @@ local function useCheckoutItems()
 				return nextState
 			end)
 			
+			setValidItems(toResolve)
+			setHiddenAssets(newHiddenAssets)
 			setIsLoading(false)
 		end)
 
@@ -95,52 +149,44 @@ local function useCheckoutItems()
 				fn()
 			end
 		end
-	end, { equippedKeys })
+	end, { equippedKeys, liveSnapshot })
 
 	local checkoutItems = React.useMemo(function()
 		if isLoading then return {} end
 		
 		local items = {}
-		for key, isEquipped in pairs(equippedKeys) do
-			if isEquipped then
-				local payload = PreviewPayloadCache.get(key)
-				if payload and payload.kind ~= "Emote" then
-					local isOwned = ownedKeys[key] == true
-					
-					if not isOwned then
-						local detailKey = payload.itemType .. ":" .. payload.id
-						local detail = itemDetails[detailKey]
-						
-						if detail then
-							local checkoutItem: CheckoutItem = {
-								key = payload.key,
-								id = payload.id,
-								itemType = payload.itemType,
-								property = payload.itemType, -- Use ItemType as property since Bundles don't have Accessory properties
-								name = detail.name,
-								price = detail.price,
-								creator = detail.creator,
-								image = detail.image,
-								isFree = detail.isFree,
-								isOffSale = detail.isOffSale,
-								isOwned = isOwned,
-							}
-							table.insert(items, checkoutItem)
-						end
-					end
+		for _, vItem in ipairs(validItems) do
+			if vItem.itemType == "Asset" and hiddenAssets[vItem.id] then
+				continue
+			end
+			
+			local isOwned = ownedKeys[vItem.key] == true
+			if not isOwned then
+				local detail = itemDetails[vItem.key]
+				if detail then
+					table.insert(items, {
+						key = vItem.key,
+						id = vItem.id,
+						itemType = vItem.itemType,
+						property = vItem.property,
+						name = detail.name,
+						price = detail.price,
+						creator = detail.creator,
+						image = detail.image,
+						isFree = detail.isFree,
+						isOffSale = detail.isOffSale,
+						isOwned = isOwned,
+					})
 				end
 			end
 		end
 		
-		-- Sort by id just to have consistent order
 		table.sort(items, function(a, b) return a.id < b.id end)
-		
 		return items
-	end, { equippedKeys, ownedKeys, itemDetails, isLoading })
+	end, { validItems, ownedKeys, itemDetails, hiddenAssets, isLoading })
 
 	local totalRobux = 0
 	local buyableCount = 0
-	
 	for _, item in ipairs(checkoutItems) do
 		if not item.isOffSale and not item.isFree and not item.isOwned then
 			totalRobux += item.price

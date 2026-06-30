@@ -161,9 +161,16 @@ function AvatarPreviewController.RemoveWornItem(item)
 		Face = true,
 	}
 
-	if BODY_RESTORE_FIELDS[item.property] and state.originalSnapshot then
+	if (BODY_RESTORE_FIELDS[item.property] or item.property == "Bundle") and state.originalSnapshot then
 		nextSnapshot = table.clone(state.liveSnapshot)
-		nextSnapshot[item.property] = state.originalSnapshot[item.property]
+		
+		if item.property == "Bundle" then
+			for field, _ in pairs(BODY_RESTORE_FIELDS) do
+				nextSnapshot[field] = state.originalSnapshot[field]
+			end
+		else
+			nextSnapshot[item.property] = state.originalSnapshot[item.property]
+		end
 
 		local scales = {
 			"BodyTypeScale",

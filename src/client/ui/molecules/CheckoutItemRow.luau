@@ -7,6 +7,7 @@ local Icon = require(script.Parent.Parent.atoms.Icon)
 local AvatarPreviewController =
 	require(script.Parent.Parent.Parent.controllers.AvatarPreviewController)
 local CheckoutController = require(script.Parent.Parent.Parent.controllers.CheckoutController)
+local PreviewPayloadCache = require(script.Parent.Parent.Parent.services.PreviewPayloadCache)
 
 export type CheckoutItemRowProps = {
 	item: any, -- CheckoutItem
@@ -17,7 +18,12 @@ local function CheckoutItemRow(props: CheckoutItemRowProps)
 	local item = props.item
 
 	local onRemove = React.useCallback(function()
-		AvatarPreviewController.ToggleItemPreview(item)
+		local payload = PreviewPayloadCache.get(item.key)
+		if payload then
+			AvatarPreviewController.ToggleItemPreview(item)
+		else
+			AvatarPreviewController.RemoveWornItem(item)
+		end
 	end, { item })
 
 	local onBuy = React.useCallback(function()
