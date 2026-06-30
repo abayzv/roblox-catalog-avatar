@@ -94,6 +94,10 @@ local function clearedOptimisticState(): OptimisticState
 	}
 end
 
+local function shouldPreserveOptimisticPreview(actionType: string?): boolean
+	return actionType == "avatar_loader"
+end
+
 local function extractEquippedKeys(snapshot: AppearanceSnapshot)
 	local desc = HumanoidDescriptionSerializer.deserialize(snapshot)
 	local keys = {}
@@ -287,7 +291,9 @@ function AvatarAppearanceClient.resolveOptimisticState(
 )
 	if state.optimisticState and state.optimisticState.requestId == requestId then
 		local optimisticSnapshot = state.optimisticState.predictedSnapshot
-		local nextPreviewRevision = if valuesEqual(optimisticSnapshot, liveSnapshot)
+		local actionType = state.optimisticState.actionType
+		local nextPreviewRevision = if shouldPreserveOptimisticPreview(actionType)
+				or valuesEqual(optimisticSnapshot, liveSnapshot)
 			then state.previewRevision
 			else state.previewRevision + 1
 
