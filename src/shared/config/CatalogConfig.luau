@@ -9,7 +9,7 @@ local CatalogConfig = {
 		[8] = "HatAccessory", -- Hat
 		[11] = "Shirt", -- Shirt (Classic)
 		[12] = "Pants", -- Pants (Classic)
-		
+
 		-- Body Parts
 		[17] = "Head",
 		[18] = "Face",

@@ -24,21 +24,23 @@ local function useWornItems(): UseWornItemsResult
 	local error, setError = React.useState(nil :: string?)
 
 	local processSnapshot = React.useCallback(function(snapshot)
-		if not snapshot then return end
+		if not snapshot then
+			return
+		end
 		setIsLoading(true)
 		setError(nil)
 
 		task.spawn(function()
 			local items = WornItemExtractor.extract(snapshot)
-			
+
 			-- Resolve details
 			local ids = {}
 			for _, item in ipairs(items) do
 				table.insert(ids, item.id)
 			end
-			
+
 			local details = WornItemDetailsService.resolveDetails(ids)
-			
+
 			local itemsWithDetails = {}
 			for _, item in ipairs(items) do
 				local detail = details[item.id]
@@ -46,10 +48,11 @@ local function useWornItems(): UseWornItemsResult
 				combined.name = detail and detail.name or item.property
 				combined.price = detail and detail.price or 0
 				combined.creator = detail and detail.creator or "Unknown"
-				combined.image = detail and detail.image or ("rbxthumb://type=Asset&id=" .. item.id .. "&w=150&h=150")
+				combined.image = detail and detail.image
+					or ("rbxthumb://type=Asset&id=" .. item.id .. "&w=150&h=150")
 				table.insert(itemsWithDetails, combined)
 			end
-			
+
 			setWornItems(itemsWithDetails)
 			setIsLoading(false)
 		end)

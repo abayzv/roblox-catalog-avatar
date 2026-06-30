@@ -34,9 +34,18 @@ MyAvatarCategoryConfig.MainCategories = {
 			{ id = "hair", label = "Hair", properties = { "HairAccessory" } },
 			{ id = "head", label = "Head", properties = { "Head" } },
 			{ id = "face", label = "Face", properties = { "Face" } },
-			{ id = "body_parts", label = "Body Parts", properties = {
-				"Head", "Torso", "LeftArm", "RightArm", "LeftLeg", "RightLeg",
-			}},
+			{
+				id = "body_parts",
+				label = "Body Parts",
+				properties = {
+					"Head",
+					"Torso",
+					"LeftArm",
+					"RightArm",
+					"LeftLeg",
+					"RightLeg",
+				},
+			},
 		},
 	},
 
@@ -76,7 +85,11 @@ MyAvatarCategoryConfig.MainCategories = {
 			{ id = "hats", label = "Hats", properties = { "HatAccessory" } },
 			{ id = "face", label = "Face", properties = { "FaceAccessory" } },
 			{ id = "neck", label = "Neck", properties = { "NeckAccessory" } },
-			{ id = "shoulder", label = "Shoulder", properties = { "ShoulderAccessory", "ShouldersAccessory" } },
+			{
+				id = "shoulder",
+				label = "Shoulder",
+				properties = { "ShoulderAccessory", "ShouldersAccessory" },
+			},
 			{ id = "front", label = "Front", properties = { "FrontAccessory" } },
 			{ id = "back", label = "Back", properties = { "BackAccessory" } },
 			{ id = "waist", label = "Waist", properties = { "WaistAccessory" } },

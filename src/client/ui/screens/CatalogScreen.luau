@@ -63,30 +63,31 @@ local function CatalogScreen()
 					end
 				end,
 			}, {
-				Panel = if activeTab == "My Avatar" then
-					React.createElement(MyAvatarPanel, {
+				Panel = if activeTab == "My Avatar"
+					then React.createElement(MyAvatarPanel, {
 						viewportSize = catalogBoundsSize,
 						contentScale = catalogContentScale,
 						activeTab = activeTab,
 						setActiveTab = setActiveTab,
 					})
-				elseif activeTab == "Avatar Loader" then
-					React.createElement(AvatarLoaderPanel, {
+					elseif activeTab == "Avatar Loader" then React.createElement(
+						AvatarLoaderPanel,
+						{
+							viewportSize = catalogBoundsSize,
+							contentScale = catalogContentScale,
+							activeTab = activeTab,
+							setActiveTab = setActiveTab,
+							templateCategory = templateCategory,
+							setTemplateCategory = setTemplateCategory,
+							refreshTrigger = templateListRefreshCount,
+						}
+					)
+					else React.createElement(CatalogPanel, {
 						viewportSize = catalogBoundsSize,
 						contentScale = catalogContentScale,
 						activeTab = activeTab,
 						setActiveTab = setActiveTab,
-						templateCategory = templateCategory,
-						setTemplateCategory = setTemplateCategory,
-						refreshTrigger = templateListRefreshCount,
-					})
-				else
-					React.createElement(CatalogPanel, {
-						viewportSize = catalogBoundsSize,
-						contentScale = catalogContentScale,
-						activeTab = activeTab,
-						setActiveTab = setActiveTab,
-					})
+					}),
 			}),
 		}),
 

@@ -20,29 +20,50 @@ export type SubCategoryChipsProps = {
 
 local MAIN_TO_SUB = {
 	All = {
-		"Featured", "Recommended", "Premium"
+		"Featured",
+		"Recommended",
+		"Premium",
 	},
 	Body = {
-		"Body Bundles", "Hair", "Head", "Faces"
+		"Body Bundles",
+		"Hair",
+		"Head",
+		"Faces",
 	},
 	["Modern Clothing"] = {
-		"T-Shirt", "Shirt", "Pants", "Jacket", "Sweater", "Shorts", "Dress / Skirt", "Shoes Bundle"
+		"T-Shirt",
+		"Shirt",
+		"Pants",
+		"Jacket",
+		"Sweater",
+		"Shorts",
+		"Dress / Skirt",
+		"Shoes Bundle",
 	},
 	["Classic Clothing"] = {
-		"Classic T-Shirt", "Classic Shirt", "Classic Pants"
+		"Classic T-Shirt",
+		"Classic Shirt",
+		"Classic Pants",
 	},
 	Accessory = {
-		"Hats", "Face Accessories", "Neck", "Shoulder", "Front", "Back", "Waist"
+		"Hats",
+		"Face Accessories",
+		"Neck",
+		"Shoulder",
+		"Front",
+		"Back",
+		"Waist",
 	},
 	Animation = {
-		"Emotes", "Animation Bundles"
-	}
+		"Emotes",
+		"Animation Bundles",
+	},
 }
 
 local function SubCategoryChips(props: SubCategoryChipsProps)
 	local activeMain = props.activeMainCategory or "All"
 	local activeSubCategory = props.activeSubCategory or "Featured"
-	
+
 	local subcategories = {}
 	if props.categories then
 		-- Search for the active main category

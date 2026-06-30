@@ -9,7 +9,8 @@ local useCatalogState = require(script.Parent.Parent.hooks.useCatalogState)
 local useWornItems = require(script.Parent.Parent.Parent.hooks.useWornItems)
 local WornItemExtractor = require(ReplicatedStorage.Shared.avatar.WornItemExtractor)
 local MyAvatarCategoryConfig = require(ReplicatedStorage.Shared.avatar.MyAvatarCategoryConfig)
-local AvatarPreviewController = require(script.Parent.Parent.Parent.controllers.AvatarPreviewController)
+local AvatarPreviewController =
+	require(script.Parent.Parent.Parent.controllers.AvatarPreviewController)
 
 export type MyAvatarPanelProps = {
 	layoutOrder: number?,
@@ -24,12 +25,16 @@ export type MyAvatarPanelProps = {
 local function MyAvatarPanel(props: MyAvatarPanelProps)
 	local state, actions = useCatalogState("my_avatar")
 	local wornData = useWornItems()
-	
+
 	local contentScale = props.contentScale or 1
 	local contentSizeScale = if contentScale > 0 then 1 / contentScale else 1
 
 	local filteredItems = React.useMemo(function()
-		return WornItemExtractor.filterItems(wornData.wornItems, state.activeMainCategory, state.activeSubCategory)
+		return WornItemExtractor.filterItems(
+			wornData.wornItems,
+			state.activeMainCategory,
+			state.activeSubCategory
+		)
 	end, { wornData.wornItems, state.activeMainCategory, state.activeSubCategory })
 
 	-- Format worn items for CatalogGrid
@@ -44,11 +49,12 @@ local function MyAvatarPanel(props: MyAvatarPanelProps)
 				creator = worn.creator,
 				image = worn.image,
 				property = worn.property,
+				isOwned = true,
 			})
 		end
 		return items
 	end, { filteredItems })
-	
+
 	-- Everything is "ready" since it's just raw data right now
 	local readyKeys = React.useMemo(function()
 		local keys = {}
@@ -99,7 +105,7 @@ local function MyAvatarPanel(props: MyAvatarPanelProps)
 					onTabSelected = props.setActiveTab,
 					layoutOrder = 1,
 				}),
-				
+
 				Spacer1 = React.createElement("Frame", {
 					Size = UDim2.new(1, 0, 0, 16),
 					BackgroundTransparency = 1,
@@ -147,7 +153,8 @@ local function MyAvatarPanel(props: MyAvatarPanelProps)
 						isLimitReached = true,
 						columns = 5,
 						viewportScale = contentScale,
-						emptyText = if state.activeMainCategory == "all" and state.activeSubCategory == "all"
+						emptyText = if state.activeMainCategory == "all"
+								and state.activeSubCategory == "all"
 							then "Belum ada item yang bisa ditampilkan."
 							else "Kamu belum memakai item di kategori ini.",
 						onTryOn = function(item)

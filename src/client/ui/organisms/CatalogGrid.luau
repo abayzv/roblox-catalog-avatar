@@ -13,6 +13,7 @@ export type CatalogItem = CatalogTypes.CatalogItem
 export type CatalogGridProps = {
 	items: { CatalogItem }?,
 	readyKeys: { [string]: boolean }?,
+	ownedKeys: { [string]: boolean }?,
 	isLoading: boolean?,
 	isFetchingNextPage: boolean?,
 	hasNextPage: boolean?,
@@ -99,7 +100,7 @@ local function CatalogGrid(props: CatalogGridProps)
 		elseif props.items then
 			for i, item in ipairs(props.items) do
 				local isReady = props.readyKeys and item.key and props.readyKeys[item.key]
-				
+
 				if isReady then
 					local payload = PreviewPayloadCache.get(item.key)
 					local isEmote = payload and payload.kind == "Emote"
@@ -107,7 +108,7 @@ local function CatalogGrid(props: CatalogGridProps)
 					if not isEmote then
 						isPreviewing = (equippedKeys[item.key] == true)
 					end
-					
+
 					local actionText = nil
 					if isEmote then
 						if activeEmote and activeEmote.key == item.key then
@@ -130,6 +131,10 @@ local function CatalogGrid(props: CatalogGridProps)
 							Card = React.createElement(ItemCard, {
 								name = item.name,
 								price = item.price,
+								isFree = item.isFree,
+								isOffSale = item.isOffSale,
+								isOwned = item.isOwned
+									or (props.ownedKeys and props.ownedKeys[item.key]),
 								image = item.image,
 								isPreviewing = isPreviewing,
 								actionText = actionText,
@@ -157,7 +162,7 @@ local function CatalogGrid(props: CatalogGridProps)
 					})
 				end
 			end
-			
+
 			if props.isFetchingNextPage then
 				local offset = #props.items
 				for i = 1, columns do
@@ -214,14 +219,18 @@ local function CatalogGrid(props: CatalogGridProps)
 				local currentTime = os.clock()
 				if currentTime - lastScrollTime.current > 0.5 then
 					lastScrollTime.current = currentTime
-					if props.hasNextPage and not props.isFetchingNextPage and props.onLoadNextPage then
+					if
+						props.hasNextPage
+						and not props.isFetchingNextPage
+						and props.onLoadNextPage
+					then
 						props.onLoadNextPage()
 					end
 				end
 			end
 		end,
 	}, children)
-	
+
 	return gridFrame
 end
 

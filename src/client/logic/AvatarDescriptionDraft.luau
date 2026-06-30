@@ -1,10 +1,11 @@
 local AvatarDescriptionDraft = {}
 
-local HumanoidDescriptionSerializer = require(game:GetService("ReplicatedStorage").Shared.avatar.HumanoidDescriptionSerializer)
+local HumanoidDescriptionSerializer =
+	require(game:GetService("ReplicatedStorage").Shared.avatar.HumanoidDescriptionSerializer)
 
 function AvatarDescriptionDraft.applyPayloadToSnapshot(snapshot: any, payload: any): any
 	local desc = HumanoidDescriptionSerializer.deserialize(snapshot)
-	
+
 	if payload.propertyName and payload.assetIds then
 		local ok, err = pcall(function()
 			local currentValue = (desc :: any)[payload.propertyName]
@@ -43,13 +44,17 @@ function AvatarDescriptionDraft.applyPayloadToSnapshot(snapshot: any, payload: a
 				end
 			end
 		end)
-		
+
 		if not ok then
 			-- It might be a layered clothing pseudo-property (like "JacketAccessory")
 			local accessoryName = payload.propertyName:gsub("Accessory", "")
-			if accessoryName == "Shoulders" then accessoryName = "Shoulder" end
-			local enumSuccess, enumItem = pcall(function() return Enum.AccessoryType[accessoryName] end)
-			
+			if accessoryName == "Shoulders" then
+				accessoryName = "Shoulder"
+			end
+			local enumSuccess, enumItem = pcall(function()
+				return Enum.AccessoryType[accessoryName]
+			end)
+
 			if enumSuccess and enumItem then
 				local accs = desc:GetAccessories(true)
 				if payload.action == "remove" then
@@ -77,7 +82,7 @@ function AvatarDescriptionDraft.applyPayloadToSnapshot(snapshot: any, payload: a
 							AccessoryType = enumItem,
 							AssetId = assetId,
 							IsLayered = true,
-							Order = i
+							Order = i,
 						})
 					end
 				end
@@ -87,25 +92,29 @@ function AvatarDescriptionDraft.applyPayloadToSnapshot(snapshot: any, payload: a
 			end
 		end
 	end
-	
+
 	if payload.bodyParts then
 		for partName, assetId in pairs(payload.bodyParts) do
 			local ok, err = pcall(function()
 				(desc :: any)[partName] = if payload.action == "remove" then 0 else assetId
 			end)
-			if not ok then warn("Failed to set body part", partName, "err:", err) end
+			if not ok then
+				warn("Failed to set body part", partName, "err:", err)
+			end
 		end
 	end
-	
+
 	if payload.animations then
 		for animName, assetId in pairs(payload.animations) do
 			local ok, err = pcall(function()
 				(desc :: any)[animName] = if payload.action == "remove" then 0 else assetId
 			end)
-			if not ok then warn("Failed to set animation", animName, "err:", err) end
+			if not ok then
+				warn("Failed to set animation", animName, "err:", err)
+			end
 		end
 	end
-	
+
 	local nextSnapshot = HumanoidDescriptionSerializer.serialize(desc)
 	return nextSnapshot
 end

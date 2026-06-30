@@ -25,30 +25,94 @@ local PROPERTY_CLASSIFICATION = {
 	RightLeg = { mainCategory = "body", subCategory = "body_parts", groupId = "body" },
 
 	-- 3D Clothing
-	TShirtAccessory = { mainCategory = "3d_clothing", subCategory = "tshirt", groupId = "3d_clothing" },
-	ShirtAccessory = { mainCategory = "3d_clothing", subCategory = "shirt", groupId = "3d_clothing" },
-	PantsAccessory = { mainCategory = "3d_clothing", subCategory = "pants", groupId = "3d_clothing" },
-	JacketAccessory = { mainCategory = "3d_clothing", subCategory = "jacket", groupId = "3d_clothing" },
-	SweaterAccessory = { mainCategory = "3d_clothing", subCategory = "sweater", groupId = "3d_clothing" },
-	ShortsAccessory = { mainCategory = "3d_clothing", subCategory = "shorts", groupId = "3d_clothing" },
-	DressSkirtAccessory = { mainCategory = "3d_clothing", subCategory = "dress_skirt", groupId = "3d_clothing" },
-	LeftShoeAccessory = { mainCategory = "3d_clothing", subCategory = "left_shoe", groupId = "3d_clothing" },
-	RightShoeAccessory = { mainCategory = "3d_clothing", subCategory = "right_shoe", groupId = "3d_clothing" },
+	TShirtAccessory = {
+		mainCategory = "3d_clothing",
+		subCategory = "tshirt",
+		groupId = "3d_clothing",
+	},
+	ShirtAccessory = {
+		mainCategory = "3d_clothing",
+		subCategory = "shirt",
+		groupId = "3d_clothing",
+	},
+	PantsAccessory = {
+		mainCategory = "3d_clothing",
+		subCategory = "pants",
+		groupId = "3d_clothing",
+	},
+	JacketAccessory = {
+		mainCategory = "3d_clothing",
+		subCategory = "jacket",
+		groupId = "3d_clothing",
+	},
+	SweaterAccessory = {
+		mainCategory = "3d_clothing",
+		subCategory = "sweater",
+		groupId = "3d_clothing",
+	},
+	ShortsAccessory = {
+		mainCategory = "3d_clothing",
+		subCategory = "shorts",
+		groupId = "3d_clothing",
+	},
+	DressSkirtAccessory = {
+		mainCategory = "3d_clothing",
+		subCategory = "dress_skirt",
+		groupId = "3d_clothing",
+	},
+	LeftShoeAccessory = {
+		mainCategory = "3d_clothing",
+		subCategory = "left_shoe",
+		groupId = "3d_clothing",
+	},
+	RightShoeAccessory = {
+		mainCategory = "3d_clothing",
+		subCategory = "right_shoe",
+		groupId = "3d_clothing",
+	},
 
 	-- Classic Clothing
-	GraphicTShirt = { mainCategory = "classic_clothing", subCategory = "classic_tshirt", groupId = "classic_clothing" },
-	Shirt = { mainCategory = "classic_clothing", subCategory = "classic_shirt", groupId = "classic_clothing" },
-	Pants = { mainCategory = "classic_clothing", subCategory = "classic_pants", groupId = "classic_clothing" },
+	GraphicTShirt = {
+		mainCategory = "classic_clothing",
+		subCategory = "classic_tshirt",
+		groupId = "classic_clothing",
+	},
+	Shirt = {
+		mainCategory = "classic_clothing",
+		subCategory = "classic_shirt",
+		groupId = "classic_clothing",
+	},
+	Pants = {
+		mainCategory = "classic_clothing",
+		subCategory = "classic_pants",
+		groupId = "classic_clothing",
+	},
 
 	-- Accessories
 	HatAccessory = { mainCategory = "accessories", subCategory = "hats", groupId = "accessories" },
 	FaceAccessory = { mainCategory = "accessories", subCategory = "face", groupId = "accessories" },
 	NeckAccessory = { mainCategory = "accessories", subCategory = "neck", groupId = "accessories" },
-	ShoulderAccessory = { mainCategory = "accessories", subCategory = "shoulder", groupId = "accessories" },
-	ShouldersAccessory = { mainCategory = "accessories", subCategory = "shoulder", groupId = "accessories" },
-	FrontAccessory = { mainCategory = "accessories", subCategory = "front", groupId = "accessories" },
+	ShoulderAccessory = {
+		mainCategory = "accessories",
+		subCategory = "shoulder",
+		groupId = "accessories",
+	},
+	ShouldersAccessory = {
+		mainCategory = "accessories",
+		subCategory = "shoulder",
+		groupId = "accessories",
+	},
+	FrontAccessory = {
+		mainCategory = "accessories",
+		subCategory = "front",
+		groupId = "accessories",
+	},
 	BackAccessory = { mainCategory = "accessories", subCategory = "back", groupId = "accessories" },
-	WaistAccessory = { mainCategory = "accessories", subCategory = "waist", groupId = "accessories" },
+	WaistAccessory = {
+		mainCategory = "accessories",
+		subCategory = "waist",
+		groupId = "accessories",
+	},
 }
 
 local WornItemExtractor = {}
@@ -72,14 +136,14 @@ end
 
 function WornItemExtractor.extract(snapshot: any): { WornItem }
 	local wornItems: { WornItem } = {}
-	
+
 	if not snapshot or type(snapshot) ~= "table" then
 		return wornItems
 	end
 
 	for propertyName, classification in pairs(PROPERTY_CLASSIFICATION) do
 		local value = snapshot[propertyName]
-		
+
 		if value then
 			local isCsvProperty = string.match(propertyName, "Accessory") ~= nil
 			-- Special case for classic accessories vs layered clothing vs single id properties
@@ -120,12 +184,16 @@ function WornItemExtractor.extract(snapshot: any): { WornItem }
 	return wornItems
 end
 
-function WornItemExtractor.filterItems(wornItems: { WornItem }, mainCategoryId: string, subCategoryId: string): { WornItem }
+function WornItemExtractor.filterItems(
+	wornItems: { WornItem },
+	mainCategoryId: string,
+	subCategoryId: string
+): { WornItem }
 	local filteredItems = {}
-	
+
 	for _, item in ipairs(wornItems) do
 		local matches = false
-		
+
 		if mainCategoryId == "all" then
 			if subCategoryId == "all" then
 				matches = true
@@ -142,12 +210,12 @@ function WornItemExtractor.filterItems(wornItems: { WornItem }, mainCategoryId: 
 				end
 			end
 		end
-		
+
 		if matches then
 			table.insert(filteredItems, item)
 		end
 	end
-	
+
 	return filteredItems
 end
 

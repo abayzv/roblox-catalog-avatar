@@ -4,10 +4,12 @@ local CatalogTypes = require(ReplicatedStorage.Shared.types.CatalogTypes)
 local CatalogService = require(script.Parent.Parent.services.CatalogService)
 local CatalogWarmupQueue = require(script.Parent.Parent.services.CatalogWarmupQueue)
 local PreviewPayloadCache = require(script.Parent.Parent.services.PreviewPayloadCache)
+local CommerceService = require(script.Parent.Parent.services.CommerceService)
 
 export type UseCatalogItemsResult = {
 	items: { CatalogTypes.CatalogItem },
 	readyKeys: { [string]: boolean },
+	ownedKeys: { [string]: boolean },
 	status: "Idle" | "Loading" | "FetchingNextPage" | "Error",
 	loadNextPage: () -> (),
 	hasNextPage: boolean,
@@ -16,13 +18,18 @@ export type UseCatalogItemsResult = {
 
 local SearchCache = {}
 
-local function useCatalogItems(category: string, subCategory: string, searchQuery: string): UseCatalogItemsResult
+local function useCatalogItems(
+	category: string,
+	subCategory: string,
+	searchQuery: string
+): UseCatalogItemsResult
 	local items, setItems = React.useState({})
 	local readyKeys, setReadyKeys = React.useState({})
+	local ownedKeys, setOwnedKeys = React.useState({})
 	local status, setStatus = React.useState("Loading")
 	local hasNextPage, setHasNextPage = React.useState(true)
 	local isLimitReached, setIsLimitReached = React.useState(false)
-	
+
 	-- Keep track of active request so old requests don't override new ones (Request Token)
 	local activeRequestToken = React.useRef(0)
 	local pageCount = React.useRef(0)
@@ -31,14 +38,14 @@ local function useCatalogItems(category: string, subCategory: string, searchQuer
 		local isSearchMode = searchQuery ~= ""
 		local MAX_PAGES = if isSearchMode then 2 else 3
 		local cacheKey = `{category}_{subCategory}_{searchQuery}`
-		
+
 		if not isNextPage then
 			setStatus("Loading")
 			setItems({})
 			setHasNextPage(true)
 			setIsLimitReached(false)
 			pageCount.current = 0
-			
+
 			activeRequestToken.current += 1
 		else
 			if
@@ -65,7 +72,9 @@ local function useCatalogItems(category: string, subCategory: string, searchQuer
 			-- Check cache only for initial page
 			if not isNextPage then
 				if SearchCache[cacheKey] then
-					if activeRequestToken.current ~= currentToken then return end
+					if activeRequestToken.current ~= currentToken then
+						return
+					end
 					local cachedData = SearchCache[cacheKey]
 					setItems(cachedData.items)
 					pageCount.current = 1
@@ -73,6 +82,7 @@ local function useCatalogItems(category: string, subCategory: string, searchQuer
 					setIsLimitReached(pageCount.current >= MAX_PAGES)
 					setStatus("Idle")
 					CatalogWarmupQueue.warmup(cachedData.items, currentToken, activeRequestToken)
+					CommerceService.resolveBatch(cachedData.items)
 					return
 				end
 			end
@@ -81,32 +91,32 @@ local function useCatalogItems(category: string, subCategory: string, searchQuer
 			if isNextPage then
 				task.wait(0.4)
 			end
-			
+
 			local params = {
 				category = category,
 				subCategory = subCategory,
 				searchQuery = searchQuery,
 				cursor = if isNextPage then "next" else nil,
 			}
-			
+
 			local result = CatalogService.fetchPage(params)
-			
+
 			-- If request was cancelled / new request started, ignore results
 			if activeRequestToken.current ~= currentToken then
 				return
 			end
-			
+
 			if result.isThrottled then
 				setStatus("Error")
 				return
 			end
-			
+
 			setItems(function(prevItems)
 				local newItems = if isNextPage then table.clone(prevItems) else {}
 				for _, item in ipairs(result.items) do
 					table.insert(newItems, item)
 				end
-				
+
 				-- Save to cache if it's the first page
 				if not isNextPage then
 					SearchCache[cacheKey] = {
@@ -114,58 +124,90 @@ local function useCatalogItems(category: string, subCategory: string, searchQuer
 						nextCursor = result.nextCursor,
 					}
 				end
-				
+
 				return newItems
 			end)
-			
+
 			pageCount.current += 1
-			
-			local reachedLimit = pageCount.current >= MAX_PAGES or (isNextPage and (#items + #result.items) >= 90)
+
+			local reachedLimit = pageCount.current >= MAX_PAGES
+				or (isNextPage and (#items + #result.items) >= 90)
 			setHasNextPage(result.nextCursor ~= nil and not reachedLimit)
 			setIsLimitReached(reachedLimit)
 			setStatus("Idle")
-			
+
 			-- Warmup new items with request token
 			CatalogWarmupQueue.warmup(result.items, currentToken, activeRequestToken)
+			CommerceService.resolveBatch(result.items)
 		end)
 	end, { category, subCategory, searchQuery, status, hasNextPage, items })
 
 	-- Effect to load initial items when deps change
 	React.useEffect(function()
 		fetchItems(false)
-		
+
 		return function()
 			activeRequestToken.current += 1 -- Cancel pending request
 		end
 	end, { category, subCategory, searchQuery })
 
-	-- Effect to listen for payload readiness
+	-- Effect to listen for payload readiness and ownership
 	React.useEffect(function()
 		local connections = {}
 		local mounted = true
-		
+
 		for _, item in ipairs(items) do
-			if item.key and not readyKeys[item.key] then
-				if PreviewPayloadCache.has(item.key) then
-					setReadyKeys(function(prev)
-						local nextMap = table.clone(prev)
-						nextMap[item.key] = true
-						return nextMap
-					end)
-				else
-					local disconnect = PreviewPayloadCache.listen(item.key, function()
-						if not mounted then return end
+			if item.key then
+				-- Listen for Payload Readiness
+				if not readyKeys[item.key] then
+					if PreviewPayloadCache.has(item.key) then
 						setReadyKeys(function(prev)
 							local nextMap = table.clone(prev)
 							nextMap[item.key] = true
 							return nextMap
 						end)
-					end)
-					table.insert(connections, disconnect)
+					else
+						local disconnect = PreviewPayloadCache.listen(item.key, function()
+							if not mounted then
+								return
+							end
+							setReadyKeys(function(prev)
+								local nextMap = table.clone(prev)
+								nextMap[item.key] = true
+								return nextMap
+							end)
+						end)
+						table.insert(connections, disconnect)
+					end
+				end
+
+				-- Listen for Ownership
+				if not ownedKeys[item.key] then
+					if CommerceService.getOwnership(item.key) == true then
+						setOwnedKeys(function(prev)
+							local nextMap = table.clone(prev)
+							nextMap[item.key] = true
+							return nextMap
+						end)
+					else
+						local disconnect = CommerceService.listen(item.key, function(isOwned)
+							if not mounted then
+								return
+							end
+							if isOwned then
+								setOwnedKeys(function(prev)
+									local nextMap = table.clone(prev)
+									nextMap[item.key] = true
+									return nextMap
+								end)
+							end
+						end)
+						table.insert(connections, disconnect)
+					end
 				end
 			end
 		end
-		
+
 		return function()
 			mounted = false
 			for _, disconnect in ipairs(connections) do
@@ -177,6 +219,7 @@ local function useCatalogItems(category: string, subCategory: string, searchQuer
 	return {
 		items = items,
 		readyKeys = readyKeys,
+		ownedKeys = ownedKeys,
 		status = status,
 		loadNextPage = function()
 			fetchItems(true)

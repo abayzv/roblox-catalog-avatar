@@ -19,41 +19,64 @@ export type CatalogStateActions = {
 
 local MAIN_TO_SUB = {
 	All = {
-		"Featured", "Recommended", "Premium"
+		"Featured",
+		"Recommended",
+		"Premium",
 	},
 	Body = {
-		"Body Bundles", "Hair", "Head", "Faces"
+		"Body Bundles",
+		"Hair",
+		"Head",
+		"Faces",
 	},
 	["Modern Clothing"] = {
-		"T-Shirt", "Shirt", "Pants", "Jacket", "Sweater", "Shorts", "Dress / Skirt", "Shoes Bundle"
+		"T-Shirt",
+		"Shirt",
+		"Pants",
+		"Jacket",
+		"Sweater",
+		"Shorts",
+		"Dress / Skirt",
+		"Shoes Bundle",
 	},
 	["Classic Clothing"] = {
-		"Classic T-Shirt", "Classic Shirt", "Classic Pants"
+		"Classic T-Shirt",
+		"Classic Shirt",
+		"Classic Pants",
 	},
 	Accessory = {
-		"Hats", "Face Accessories", "Neck", "Shoulder", "Front", "Back", "Waist"
+		"Hats",
+		"Face Accessories",
+		"Neck",
+		"Shoulder",
+		"Front",
+		"Back",
+		"Waist",
 	},
 	Animation = {
-		"Emotes", "Animation Bundles"
-	}
+		"Emotes",
+		"Animation Bundles",
+	},
 }
 
 local MyAvatarCategoryConfig = require(ReplicatedStorage.Shared.avatar.MyAvatarCategoryConfig)
 
 local function useCatalogState(configType: string?)
-	local activeMainCategory, setActiveMainCategoryInternal = React.useState(if configType == "my_avatar" then "all" else "All")
-	local activeSubCategory, setActiveSubCategory = React.useState(if configType == "my_avatar" then "all" else "Featured")
+	local activeMainCategory, setActiveMainCategoryInternal =
+		React.useState(if configType == "my_avatar" then "all" else "All")
+	local activeSubCategory, setActiveSubCategory =
+		React.useState(if configType == "my_avatar" then "all" else "Featured")
 	local searchInput, setSearchInput = React.useState("")
 	local searchQuery, setSearchQuery = React.useState("")
 	local selectedItemId, setSelectedItemId = React.useState(nil :: string?)
 
 	local function setActiveMainCategory(category: string)
 		setActiveMainCategoryInternal(category)
-		
+
 		-- Clear search when switching main category
 		setSearchInput("")
 		setSearchQuery("")
-		
+
 		if configType == "my_avatar" then
 			local defaultSub = "all"
 			for _, mainCat in ipairs(MyAvatarCategoryConfig.MainCategories) do

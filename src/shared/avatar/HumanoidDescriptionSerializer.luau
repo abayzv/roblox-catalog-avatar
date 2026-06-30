@@ -110,12 +110,16 @@ function HumanoidDescriptionSerializer.serialize(description: HumanoidDescriptio
 		})
 	end
 	snapshot.SerializedAccessories = serializedAccessories
-	
+
 	-- Legacy layered clothing serialization for backward compatibility if ever needed
 	for _, prop in ipairs(LAYERED_CLOTHING_PROPERTIES) do
 		local accessoryName = prop:gsub("Accessory", "")
-		if accessoryName == "Shoulders" then accessoryName = "Shoulder" end
-		local enumSuccess, enumItem = pcall(function() return Enum.AccessoryType[accessoryName] end)
+		if accessoryName == "Shoulders" then
+			accessoryName = "Shoulder"
+		end
+		local enumSuccess, enumItem = pcall(function()
+			return Enum.AccessoryType[accessoryName]
+		end)
 		if enumSuccess and enumItem then
 			local ids = {}
 			for _, acc in ipairs(accessories) do
@@ -162,10 +166,12 @@ function HumanoidDescriptionSerializer.deserialize(snapshot: table): HumanoidDes
 	end
 
 	local accessories = description:GetAccessories(true)
-	
+
 	if snapshot.SerializedAccessories then
 		for _, acc in ipairs(snapshot.SerializedAccessories) do
-			local enumSuccess, enumItem = pcall(function() return Enum.AccessoryType[acc.AccessoryType] end)
+			local enumSuccess, enumItem = pcall(function()
+				return Enum.AccessoryType[acc.AccessoryType]
+			end)
 			if enumSuccess and enumItem then
 				table.insert(accessories, {
 					AccessoryType = enumItem,
@@ -182,8 +188,12 @@ function HumanoidDescriptionSerializer.deserialize(snapshot: table): HumanoidDes
 			local value = snapshot[prop]
 			if value and type(value) == "string" and value ~= "" then
 				local accessoryName = prop:gsub("Accessory", "")
-				if accessoryName == "Shoulders" then accessoryName = "Shoulder" end
-				local enumSuccess, enumItem = pcall(function() return Enum.AccessoryType[accessoryName] end)
+				if accessoryName == "Shoulders" then
+					accessoryName = "Shoulder"
+				end
+				local enumSuccess, enumItem = pcall(function()
+					return Enum.AccessoryType[accessoryName]
+				end)
 				if enumSuccess and enumItem then
 					for idStr in string.gmatch(value, "[^%,]+") do
 						local id = tonumber(idStr)
@@ -192,7 +202,7 @@ function HumanoidDescriptionSerializer.deserialize(snapshot: table): HumanoidDes
 								AccessoryType = enumItem,
 								AssetId = id,
 								IsLayered = true,
-								Order = #accessories + 1
+								Order = #accessories + 1,
 							})
 						end
 					end
@@ -200,7 +210,7 @@ function HumanoidDescriptionSerializer.deserialize(snapshot: table): HumanoidDes
 			end
 		end
 	end
-	
+
 	pcall(function()
 		description:SetAccessories(accessories, true)
 	end)

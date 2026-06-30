@@ -41,10 +41,11 @@ local function CatalogPanel(props: CatalogPanelProps)
 	local contentScale = props.contentScale or 1
 	local contentSizeScale = if contentScale > 0 then 1 / contentScale else 1
 
-	local catalogData = useCatalogItems(state.activeMainCategory, state.activeSubCategory, state.searchQuery)
+	local catalogData =
+		useCatalogItems(state.activeMainCategory, state.activeSubCategory, state.searchQuery)
 
 	local lastSearchSubmitAt = React.useRef(0)
-	
+
 	local submitSearch = React.useCallback(function(query: string)
 		local now = os.clock()
 		-- Debounce for 0.7 seconds
@@ -52,20 +53,20 @@ local function CatalogPanel(props: CatalogPanelProps)
 			return
 		end
 		lastSearchSubmitAt.current = now
-		
+
 		-- Normalize query
 		query = tostring(query or "")
 		query = string.gsub(query, "^%s+", "")
 		query = string.gsub(query, "%s+$", "")
 		query = string.gsub(query, "%s+", " ")
-		
+
 		if query ~= "" and #query < 2 then
 			warn("[Search] Query minimal 2 karakter")
 			return
 		end
-		
+
 		actions.setSearchQuery(query)
-	end, {actions.setSearchQuery})
+	end, { actions.setSearchQuery })
 
 	return React.createElement(
 		"Frame",
@@ -161,6 +162,7 @@ local function CatalogPanel(props: CatalogPanelProps)
 					Grid = React.createElement(CatalogGrid, {
 						items = catalogData.items,
 						readyKeys = catalogData.readyKeys,
+						ownedKeys = catalogData.ownedKeys,
 						isLoading = catalogData.status == "Loading",
 						isFetchingNextPage = catalogData.status == "FetchingNextPage",
 						hasNextPage = catalogData.hasNextPage,

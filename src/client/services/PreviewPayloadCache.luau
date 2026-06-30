@@ -13,7 +13,7 @@ end
 
 function PreviewPayloadCache.set(key: CatalogTypes.ItemKey, payload: PreviewTypes.PreviewPayload)
 	cache[key] = payload
-	
+
 	-- Notify listeners
 	local callbacks = listeners[key]
 	if callbacks then
@@ -31,7 +31,7 @@ function PreviewPayloadCache.patch(key: CatalogTypes.ItemKey, partial: any)
 		for k, v in pairs(partial) do
 			payload[k] = v
 		end
-		
+
 		-- Notify listeners even for patches, in case UI depends on state changes
 		local callbacks = listeners[key]
 		if callbacks then
@@ -50,18 +50,21 @@ function PreviewPayloadCache.getAll(): { [CatalogTypes.ItemKey]: PreviewTypes.Pr
 	return cache
 end
 
-function PreviewPayloadCache.listen(key: CatalogTypes.ItemKey, callback: (payload: PreviewTypes.PreviewPayload) -> ()): () -> ()
+function PreviewPayloadCache.listen(
+	key: CatalogTypes.ItemKey,
+	callback: (payload: PreviewTypes.PreviewPayload) -> ()
+): () -> ()
 	if cache[key] then
 		-- Already cached, fire immediately
 		task.spawn(callback, cache[key])
 		return function() end
 	end
-	
+
 	if not listeners[key] then
 		listeners[key] = {}
 	end
 	table.insert(listeners[key], callback)
-	
+
 	return function()
 		local callbacks = listeners[key]
 		if callbacks then

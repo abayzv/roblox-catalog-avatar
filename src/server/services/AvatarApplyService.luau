@@ -19,8 +19,15 @@ function AvatarApplyService.init()
 	end)
 
 	ApplyAvatarRemote.OnServerInvoke = function(player: Player, payload: any)
-		if type(payload) == "table" and (payload.action == "ApplyDescription" or payload.action == "TryOnDescription") then
-			local ok, err = AvatarAppearanceService.applyDescriptionSnapshot(player, payload.description, "catalog_try_on")
+		if
+			type(payload) == "table"
+			and (payload.action == "ApplyDescription" or payload.action == "TryOnDescription")
+		then
+			local ok, err = AvatarAppearanceService.applyDescriptionSnapshot(
+				player,
+				payload.description,
+				"catalog_try_on"
+			)
 			if not ok then
 				return {
 					success = false,
@@ -28,7 +35,7 @@ function AvatarApplyService.init()
 					message = err,
 				}
 			end
-			
+
 			return {
 				success = true,
 				liveSnapshot = AvatarAppearanceService.getLiveSnapshot(player),
@@ -44,7 +51,7 @@ function AvatarApplyService.init()
 					message = err,
 				}
 			end
-			
+
 			return {
 				success = true,
 				liveSnapshot = AvatarAppearanceService.getLiveSnapshot(player),

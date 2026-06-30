@@ -6,7 +6,10 @@ local PriceRow = require(script.Parent.PriceRow)
 
 export type ItemCardProps = {
 	name: string,
-	price: number | string,
+	price: number | string | nil,
+	isFree: boolean?,
+	isOffSale: boolean?,
+	isOwned: boolean?,
 	image: string,
 	isPreviewing: boolean?,
 	onTryOn: (() -> ())?,
@@ -94,6 +97,9 @@ local function ItemCard(props: ItemCardProps)
 			-- 3. Price
 			Price = React.createElement(PriceRow, {
 				price = props.price,
+				isFree = props.isFree,
+				isOffSale = props.isOffSale,
+				isOwned = props.isOwned,
 				layoutOrder = 3,
 			}),
 

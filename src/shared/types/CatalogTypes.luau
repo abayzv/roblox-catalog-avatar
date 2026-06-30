@@ -9,8 +9,13 @@ export type CatalogItem = {
 	id: string | number,
 
 	name: string,
-	price: number | string,
+	price: number | string | nil,
 	image: string,
+
+	priceStatus: string?,
+	isFree: boolean?,
+	isOffSale: boolean?,
+	isOwned: boolean?,
 
 	emoteAssetId: number?,
 	emoteAnimationId: number?,

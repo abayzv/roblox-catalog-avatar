@@ -12,7 +12,9 @@ for _, enumItem in ipairs(Enum.AvatarAssetType:GetEnumItems()) do
 	AssetTypeStringToValue[enumItem.Name] = enumItem.Value
 end
 
-function PreviewPayloadResolver.resolveBatch(items: { CatalogTypes.CatalogItem }): { [string]: PreviewTypes.PreviewPayload }
+function PreviewPayloadResolver.resolveBatch(
+	items: { CatalogTypes.CatalogItem }
+): { [string]: PreviewTypes.PreviewPayload }
 	local payloads = {}
 	if #items == 0 then
 		return payloads
@@ -20,7 +22,7 @@ function PreviewPayloadResolver.resolveBatch(items: { CatalogTypes.CatalogItem }
 
 	local assetIds = {}
 	local bundleIds = {}
-	
+
 	for _, item in ipairs(items) do
 		local id = tonumber(item.assetId or item.id)
 		if id then
@@ -33,7 +35,7 @@ function PreviewPayloadResolver.resolveBatch(items: { CatalogTypes.CatalogItem }
 	end
 
 	local details = {}
-	
+
 	if #assetIds > 0 then
 		local success, result = pcall(function()
 			return AvatarEditorService:GetBatchItemDetails(assetIds, Enum.AvatarItemType.Asset)
@@ -44,7 +46,7 @@ function PreviewPayloadResolver.resolveBatch(items: { CatalogTypes.CatalogItem }
 			end
 		end
 	end
-	
+
 	if #bundleIds > 0 then
 		local success, result = pcall(function()
 			return AvatarEditorService:GetBatchItemDetails(bundleIds, Enum.AvatarItemType.Bundle)
@@ -70,7 +72,10 @@ function PreviewPayloadResolver.resolveBatch(items: { CatalogTypes.CatalogItem }
 
 	local detailsMap = {}
 	for _, detail in ipairs(details) do
-		local typeStr = if tostring(detail.ItemType) == "Bundle" or detail.ItemType == Enum.AvatarItemType.Bundle then "Bundle" else "Asset"
+		local typeStr = if tostring(detail.ItemType) == "Bundle"
+				or detail.ItemType == Enum.AvatarItemType.Bundle
+			then "Bundle"
+			else "Asset"
 		detailsMap[`{typeStr}:{detail.Id}`] = detail
 	end
 
@@ -97,7 +102,7 @@ function PreviewPayloadResolver.resolveBatch(items: { CatalogTypes.CatalogItem }
 					propertyName = CatalogConfig.AssetTypeToProperty[val]
 				end
 			end
-			
+
 			if propertyName == "EmoteAnimation" then
 				payloads[item.key] = {
 					key = item.key,
@@ -122,7 +127,7 @@ function PreviewPayloadResolver.resolveBatch(items: { CatalogTypes.CatalogItem }
 			local bodyParts = {}
 			local animations = {}
 			local assetIds = {}
-			
+
 			if detail.BundledItems then
 				for _, bundled in ipairs(detail.BundledItems) do
 					if bundled.Type == "Asset" and bundled.AssetType then
@@ -132,7 +137,15 @@ function PreviewPayloadResolver.resolveBatch(items: { CatalogTypes.CatalogItem }
 							if prop then
 								if string.match(prop, "Animation$") then
 									animations[prop] = bundled.Id
-								elseif prop == "Head" or prop == "Face" or prop == "Torso" or prop == "LeftArm" or prop == "RightArm" or prop == "LeftLeg" or prop == "RightLeg" then
+								elseif
+									prop == "Head"
+									or prop == "Face"
+									or prop == "Torso"
+									or prop == "LeftArm"
+									or prop == "RightArm"
+									or prop == "LeftLeg"
+									or prop == "RightLeg"
+								then
 									bodyParts[prop] = bundled.Id
 								else
 									table.insert(assetIds, bundled.Id)
@@ -142,17 +155,17 @@ function PreviewPayloadResolver.resolveBatch(items: { CatalogTypes.CatalogItem }
 					end
 				end
 			end
-			
+
 			-- For bundles, we will rely on AvatarEditorService to apply them directly via AssetIds or rely on the actual Asset applying logic.
 			-- Here we just structure what we found.
-			
+
 			local kind = "Bundle"
 			if next(bodyParts) then
 				kind = "BodyBundle"
 			elseif next(animations) then
 				kind = "AnimationBundle"
 			end
-			
+
 			payloads[item.key] = {
 				key = item.key,
 				id = id,

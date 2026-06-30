@@ -27,6 +27,10 @@ local function createMockItem(id: number, name: string): CatalogItem
 		itemType = itemType,
 		name = name,
 		price = 100,
+		priceStatus = nil,
+		isFree = false,
+		isOffSale = false,
+		isOwned = false,
 		image = `rbxthumb://type=Asset&id={id}&w=420&h=420`,
 		assetId = id,
 	}
@@ -54,7 +58,6 @@ local function applyFilters(searchParams: CatalogSearchParams, subCategory: stri
 		searchParams.CategoryFilter = Enum.CatalogCategoryFilter.Recommended
 	elseif subCategory == "Premium" then
 		searchParams.CategoryFilter = Enum.CatalogCategoryFilter.Premium
-		
 	elseif subCategory == "Body Bundles" then
 		searchParams.BundleTypes = { Enum.BundleType.BodyParts }
 	elseif subCategory == "Hair" then
@@ -64,7 +67,6 @@ local function applyFilters(searchParams: CatalogSearchParams, subCategory: stri
 		searchParams.BundleTypes = { Enum.BundleType.DynamicHead }
 	elseif subCategory == "Faces" then
 		searchParams.AssetTypes = { Enum.AvatarAssetType.Face }
-		
 	elseif subCategory == "T-Shirt" then
 		searchParams.AssetTypes = { Enum.AvatarAssetType.TShirtAccessory }
 	elseif subCategory == "Shirt" then
@@ -81,14 +83,12 @@ local function applyFilters(searchParams: CatalogSearchParams, subCategory: stri
 		searchParams.AssetTypes = { Enum.AvatarAssetType.DressSkirtAccessory }
 	elseif subCategory == "Shoes Bundle" then
 		searchParams.BundleTypes = { Enum.BundleType.Shoes }
-		
 	elseif subCategory == "Classic T-Shirt" then
 		searchParams.AssetTypes = { Enum.AvatarAssetType.TShirt }
 	elseif subCategory == "Classic Shirt" then
 		searchParams.AssetTypes = { Enum.AvatarAssetType.Shirt }
 	elseif subCategory == "Classic Pants" then
 		searchParams.AssetTypes = { Enum.AvatarAssetType.Pants }
-		
 	elseif subCategory == "Hats" then
 		searchParams.AssetTypes = { Enum.AvatarAssetType.Hat }
 	elseif subCategory == "Face Accessories" then
@@ -103,7 +103,6 @@ local function applyFilters(searchParams: CatalogSearchParams, subCategory: stri
 		searchParams.AssetTypes = { Enum.AvatarAssetType.BackAccessory }
 	elseif subCategory == "Waist" then
 		searchParams.AssetTypes = { Enum.AvatarAssetType.WaistAccessory }
-		
 	elseif subCategory == "Emotes" then
 		searchParams.AssetTypes = { Enum.AvatarAssetType.EmoteAnimation }
 	elseif subCategory == "Animation Bundles" then
@@ -120,7 +119,7 @@ export type FetchResult = {
 function CatalogService.fetchPage(params: FetchParams): FetchResult
 	local signature = getSearchSignature(params)
 	local isThrottled = false
-	
+
 	if currentCatalogPages and currentSearchSignature == signature and params.cursor ~= nil then
 		-- Fetch next page
 		local success, err = pcall(function()
@@ -140,15 +139,15 @@ function CatalogService.fetchPage(params: FetchParams): FetchResult
 		local searchParams = CatalogSearchParams.new()
 		searchParams.SearchKeyword = params.searchQuery or ""
 		applyFilters(searchParams, params.subCategory)
-		
+
 		-- Setup specific filters if needed
 		searchParams.IncludeOffSale = false
 		searchParams.SortType = Enum.CatalogSortType.Relevance
-		
+
 		local success, pages = pcall(function()
 			return AvatarEditorService:SearchCatalog(searchParams)
 		end)
-		
+
 		if success and pages then
 			currentCatalogPages = pages
 			currentSearchSignature = signature
@@ -165,31 +164,54 @@ function CatalogService.fetchPage(params: FetchParams): FetchResult
 					isThrottled = false,
 				}
 			end
-			
+
 			return { items = {}, nextCursor = nil, isThrottled = isThrottled }
 		end
 	end
 
 	local items: { CatalogItem } = {}
 	local isFinished = true
-	
+
 	if currentCatalogPages then
 		local page = currentCatalogPages:GetCurrentPage()
 		for _, rawItem in ipairs(page) do
-			local itemType: CatalogTypes.AvatarItemType = if rawItem.ItemType == "Bundle" or rawItem.ItemType == Enum.AvatarItemType.Bundle then "Bundle" else "Asset"
+			local itemType: CatalogTypes.AvatarItemType = if rawItem.ItemType == "Bundle"
+					or rawItem.ItemType == Enum.AvatarItemType.Bundle
+				then "Bundle"
+				else "Asset"
 			local key = CatalogTypes.makeItemKey(itemType, rawItem.Id)
-			
+
+			local priceStatus = rawItem.PriceStatus
+			local isFree = false
+			local isOffSale = false
+
+			if priceStatus == "Free" then
+				isFree = true
+			elseif priceStatus == "Off Sale" or priceStatus == "No Price" then
+				isOffSale = true
+			elseif rawItem.Price == 0 then
+				isFree = true
+			elseif rawItem.Price == nil and not priceStatus then
+				isOffSale = true
+			end
+
 			local item: CatalogItem = {
 				key = key,
 				id = rawItem.Id,
 				itemType = itemType,
 				name = rawItem.Name or "Unknown Item",
-				price = rawItem.Price or 0,
-				image = if itemType == "Bundle" 
-					then `rbxthumb://type=BundleThumbnail&id={rawItem.Id}&w=420&h=420` 
+				price = rawItem.Price,
+				priceStatus = priceStatus,
+				isFree = isFree,
+				isOffSale = isOffSale,
+				isOwned = rawItem.IsOwned or rawItem.Owned,
+				image = if itemType == "Bundle"
+					then `rbxthumb://type=BundleThumbnail&id={rawItem.Id}&w=420&h=420`
 					else `rbxthumb://type=Asset&id={rawItem.Id}&w=420&h=420`,
 				assetId = if itemType == "Asset" then rawItem.Id else nil,
-				assetType = if itemType == "Asset" and rawItem.AssetType then rawItem.AssetType.Name else nil,
+				assetType = if itemType == "Asset" and rawItem.AssetType
+					then rawItem.AssetType.Name
+					else nil,
 				category = params.category,
 				subcategory = params.subCategory,
 			}

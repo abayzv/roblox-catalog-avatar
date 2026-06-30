@@ -4,7 +4,9 @@ local activeEmote = nil
 local equippedKeys: { [string]: boolean } = {}
 local listeners = {}
 
-function PreviewState.subscribe(callback: (equippedKeys: { [string]: boolean }, activeEmote: any) -> ())
+function PreviewState.subscribe(
+	callback: (equippedKeys: { [string]: boolean }, activeEmote: any) -> ()
+)
 	table.insert(listeners, callback)
 	return function()
 		local idx = table.find(listeners, callback)
