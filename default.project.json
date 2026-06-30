@@ -4,6 +4,30 @@
     "$className": "DataModel",
     "ReplicatedStorage": {
       "$className": "ReplicatedStorage",
+      "ApplyAvatarRemote": {
+        "$className": "RemoteFunction"
+      },
+      "GetAppearanceStateRemote": {
+        "$className": "RemoteFunction"
+      },
+      "ResolveEmotesRemote": {
+        "$className": "RemoteFunction"
+      },
+      "ListAvatarTemplatesRemote": {
+        "$className": "RemoteFunction"
+      },
+      "SaveAvatarTemplateRemote": {
+        "$className": "RemoteFunction"
+      },
+      "LoadAvatarTemplateRemote": {
+        "$className": "RemoteFunction"
+      },
+      "SearchAvatarLoaderRemote": {
+        "$className": "RemoteFunction"
+      },
+      "LoadRobloxOutfitRemote": {
+        "$className": "RemoteFunction"
+      },
       "Packages": {
         "$path": "Packages"
       },
@@ -19,7 +43,12 @@
           "$path": "src/client"
         }
       }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "Server": {
+        "$path": "src/server"
+      }
     }
   }
 }
-

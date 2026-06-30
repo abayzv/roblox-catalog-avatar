@@ -1,43 +1,113 @@
-local React = require(game:GetService("ReplicatedStorage").Packages.React)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local React = require(ReplicatedStorage.Packages.React)
+local CatalogPanel = require(script.Parent.Parent.organisms.CatalogPanel)
+local MyAvatarPanel = require(script.Parent.Parent.organisms.MyAvatarPanel)
+local AvatarLoaderPanel = require(script.Parent.Parent.organisms.AvatarLoaderPanel)
+local AvatarPreviewViewport = require(script.Parent.Parent.organisms.AvatarPreviewViewport)
 
-local Theme = require(script.Parent.Parent.theme.Theme)
+local CATALOG_WIDTH_SCALE = 0.68
+local PREVIEW_WIDTH_SCALE = 1 - CATALOG_WIDTH_SCALE
+local SCREEN_PADDING_SCALE = 0.01
+local CATALOG_DESIGN_SIZE = Vector2.new(858, 814)
+local MIN_CATALOG_SCALE = 0.35
+
+local function getCatalogContentScale(size: Vector2): number
+	if size.X <= 0 or size.Y <= 0 then
+		return 1
+	end
+
+	local fitScale = math.min(size.X / CATALOG_DESIGN_SIZE.X, size.Y / CATALOG_DESIGN_SIZE.Y)
+	return math.clamp(fitScale, MIN_CATALOG_SCALE, 1)
+end
 
 local function CatalogScreen()
+	local catalogBoundsSize, setCatalogBoundsSize = React.useState(Vector2.new(0, 0))
+	local catalogContentScale = getCatalogContentScale(catalogBoundsSize)
+	local activeTab, setActiveTab = React.useState("Item Catalog")
+	local templateCategory, setTemplateCategory = React.useState("all")
+	local templateListRefreshCount, setTemplateListRefreshCount = React.useState(0)
+
 	return React.createElement("Frame", {
 		Name = "CatalogScreen",
 		BackgroundTransparency = 1,
 		Size = UDim2.fromScale(1, 1),
 	}, {
-		CatalogPanel = React.createElement("Frame", {
-			AnchorPoint = Vector2.new(0, 0.5),
-			BackgroundColor3 = Theme.Color.Panel,
-			Position = UDim2.new(0, 72, 0.5, 0),
-			Size = UDim2.new(0, 858, 1, -8),
+		Padding = React.createElement("UIPadding", {
+			PaddingTop = UDim.new(SCREEN_PADDING_SCALE, 0),
+			PaddingBottom = UDim.new(SCREEN_PADDING_SCALE, 0),
+			PaddingLeft = UDim.new(SCREEN_PADDING_SCALE, 0),
+			PaddingRight = UDim.new(SCREEN_PADDING_SCALE, 0),
+		}),
+
+		CatalogArea = React.createElement("Frame", {
+			BackgroundTransparency = 1,
+			Position = UDim2.fromScale(0, 0),
+			Size = UDim2.fromScale(CATALOG_WIDTH_SCALE, 1),
+			ClipsDescendants = false,
+			ZIndex = 10,
 		}, {
-			Corner = React.createElement("UICorner", {
-				CornerRadius = UDim.new(0, Theme.Radius.Panel),
-			}),
-
-			Stroke = React.createElement("UIStroke", {
-				Color = Theme.Color.Border,
-				Thickness = 1,
-			}),
-
 			Padding = React.createElement("UIPadding", {
-				PaddingBottom = UDim.new(0, Theme.Space.XL),
-				PaddingLeft = UDim.new(0, Theme.Space.XL),
-				PaddingRight = UDim.new(0, Theme.Space.XL),
-				PaddingTop = UDim.new(0, Theme.Space.XL),
+				PaddingTop = UDim.new(0, 0),
+				PaddingBottom = UDim.new(0, 0),
+				PaddingLeft = UDim.new(0, 0),
+				PaddingRight = UDim.new(SCREEN_PADDING_SCALE, 0),
 			}),
 
-			Title = React.createElement("TextLabel", {
+			CatalogBounds = React.createElement("Frame", {
 				BackgroundTransparency = 1,
-				Font = Theme.Font.Bold,
-				Size = UDim2.new(1, 0, 0, 32),
-				Text = "Item Catalog",
-				TextColor3 = Theme.Color.TextPrimary,
-				TextSize = Theme.Text.ScreenTitle,
-				TextXAlignment = Enum.TextXAlignment.Left,
+				Size = UDim2.fromScale(1, 1),
+				[React.Change.AbsoluteSize] = function(rbx)
+					local nextSize = rbx.AbsoluteSize
+					if nextSize.X ~= catalogBoundsSize.X or nextSize.Y ~= catalogBoundsSize.Y then
+						setCatalogBoundsSize(nextSize)
+					end
+				end,
+			}, {
+				Panel = if activeTab == "My Avatar" then
+					React.createElement(MyAvatarPanel, {
+						viewportSize = catalogBoundsSize,
+						contentScale = catalogContentScale,
+						activeTab = activeTab,
+						setActiveTab = setActiveTab,
+					})
+				elseif activeTab == "Avatar Loader" then
+					React.createElement(AvatarLoaderPanel, {
+						viewportSize = catalogBoundsSize,
+						contentScale = catalogContentScale,
+						activeTab = activeTab,
+						setActiveTab = setActiveTab,
+						templateCategory = templateCategory,
+						setTemplateCategory = setTemplateCategory,
+						refreshTrigger = templateListRefreshCount,
+					})
+				else
+					React.createElement(CatalogPanel, {
+						viewportSize = catalogBoundsSize,
+						contentScale = catalogContentScale,
+						activeTab = activeTab,
+						setActiveTab = setActiveTab,
+					})
+			}),
+		}),
+
+		ActiveCharacterPreviewSpace = React.createElement("Frame", {
+			BackgroundTransparency = 1,
+			Position = UDim2.fromScale(CATALOG_WIDTH_SCALE, 0),
+			Size = UDim2.fromScale(PREVIEW_WIDTH_SCALE, 1),
+			ZIndex = 10,
+		}, {
+			Padding = React.createElement("UIPadding", {
+				PaddingTop = UDim.new(0, 0),
+				PaddingBottom = UDim.new(0, 0),
+				PaddingLeft = UDim.new(SCREEN_PADDING_SCALE, 0),
+				PaddingRight = UDim.new(0, 0),
+			}),
+
+			Preview = React.createElement(AvatarPreviewViewport, {
+				showSaveTemplate = activeTab == "Avatar Loader" and templateCategory == "mine",
+				onTemplateSaved = function()
+					setTemplateListRefreshCount(templateListRefreshCount + 1)
+				end,
 			}),
 		}),
 	})
