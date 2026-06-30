@@ -31,7 +31,7 @@ local function CheckoutPanel(props: CheckoutPanelProps)
 	end, { checkoutData.items })
 
 	local HEADER_HEIGHT = 51
-	local BOTTOM_AREA_HEIGHT = 150
+	local BOTTOM_AREA_HEIGHT = 180
 
 	-- Calculate total height of top elements to set scrolling frame offset
 	local GRID_OFFSET = HEADER_HEIGHT + Theme.Space.XL * 2 + 80 -- roughly
@@ -120,7 +120,7 @@ local function CheckoutPanel(props: CheckoutPanelProps)
 			}),
 
 			ListArea = React.createElement("ScrollingFrame", {
-				Size = UDim2.new(1, 0, 1, -(GRID_OFFSET + BOTTOM_AREA_HEIGHT)),
+				Size = UDim2.new(1, 0, 0, 0),
 				BackgroundTransparency = 1,
 				BorderSizePixel = 0,
 				ScrollBarThickness = 4,
@@ -138,6 +138,9 @@ local function CheckoutPanel(props: CheckoutPanelProps)
 					FillDirection = Enum.FillDirection.Vertical,
 					SortOrder = Enum.SortOrder.LayoutOrder,
 					Padding = UDim.new(0, Theme.Space.SM),
+				}),
+				Flex = React.createElement("UIFlexItem", {
+					FlexMode = Enum.UIFlexMode.Fill,
 				}),
 
 				Items = React.createElement(
