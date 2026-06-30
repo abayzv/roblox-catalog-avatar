@@ -52,10 +52,15 @@ local function ItemCardSkeleton(props: ItemCardSkeletonProps)
 		"Frame",
 		{
 			Size = UDim2.fromOffset(248, 252),
-			BackgroundColor3 = Theme.Color.Panel,
+			BackgroundTransparency = 1,
 			LayoutOrder = props.layoutOrder,
 		},
-		React.createElement(React.Fragment, nil, {
+		React.createElement("Frame", {
+			Size = UDim2.new(1, -4, 1, -4),
+			Position = UDim2.fromOffset(2, 2),
+			BackgroundColor3 = Theme.Color.Panel,
+			BorderSizePixel = 0,
+		}, {
 			UICorner = React.createElement("UICorner", {
 				CornerRadius = UDim.new(0, Theme.Radius.LG),
 			}),

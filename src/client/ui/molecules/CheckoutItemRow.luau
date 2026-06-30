@@ -17,7 +17,7 @@ local function CheckoutItemRow(props: CheckoutItemRowProps)
 	local item = props.item
 
 	local onRemove = React.useCallback(function()
-		AvatarPreviewController.RemoveWornItem(item)
+		AvatarPreviewController.ToggleItemPreview(item)
 	end, { item })
 
 	local onBuy = React.useCallback(function()
@@ -37,6 +37,7 @@ local function CheckoutItemRow(props: CheckoutItemRowProps)
 		UIStroke = React.createElement("UIStroke", {
 			Color = Theme.Color.Border,
 			Thickness = 1,
+			BorderStrokePosition = Enum.BorderStrokePosition.Inner
 		}),
 		UIPadding = React.createElement("UIPadding", {
 			PaddingTop = UDim.new(0, Theme.Space.SM),

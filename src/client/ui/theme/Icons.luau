@@ -10,12 +10,12 @@ local Icons = {
 	Animation = "rbxassetid://1114393432",
 	Bundles = "rbxassetid://78111289121317",
 	Robux = "rbxassetid://11560341132",
-	Reset = "rbxassetid://6723921202", -- TODO: Update with real icon asset ID
-	Apply = "rbxassetid://11768914234", -- TODO: Update with real icon asset ID
-	Save = "rbxassetid://11768914234", -- TODO: Update with real icon asset ID
-	Cart = "rbxassetid://0",
-	Trash = "rbxassetid://0",
-	Lock = "rbxassetid://0",
+	Reset = "rbxassetid://6723921202",
+	Apply = "rbxassetid://11768914234",
+	Save = "rbxassetid://11768914234",
+	Cart = "rbxassetid://2161586955",
+	Trash = "rbxassetid://90865958932830",
+	Lock = "rbxassetid://15117261700",
 }
 
 return Icons
