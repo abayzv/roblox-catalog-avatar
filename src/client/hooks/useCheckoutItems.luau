@@ -180,7 +180,7 @@ local function useCheckoutItems()
 			local isOwned = ownedKeys[vItem.key] == true
 			if not isOwned then
 				local detail = itemDetails[vItem.key]
-				if detail then
+				if detail and not detail.isOffSale then
 					table.insert(items, {
 						key = vItem.key,
 						id = vItem.id,
