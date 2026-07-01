@@ -114,6 +114,9 @@ local function CatalogScreen()
 			Preview = React.createElement(AvatarPreviewViewport, {
 				showSaveTemplate = activeTab == "Avatar Loader" and templateCategory == "mine",
 				showBuyButton = activeTab == "Item Catalog",
+				onBuyClicked = function()
+					setActiveTab("Checkout")
+				end,
 				onTemplateSaved = function()
 					setTemplateListRefreshCount(templateListRefreshCount + 1)
 				end,

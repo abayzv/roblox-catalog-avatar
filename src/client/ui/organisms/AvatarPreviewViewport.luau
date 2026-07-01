@@ -249,6 +249,7 @@ export type AvatarPreviewViewportProps = {
 	showSaveTemplate: boolean?,
 	showBuyButton: boolean?,
 	onTemplateSaved: (() -> ())?,
+	onBuyClicked: (() -> ())?,
 }
 
 local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
@@ -477,7 +478,9 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 						color = Theme.Color.Purple,
 						size = UDim2.fromScale(1, 1),
 						onActivated = function()
-							print("Buy clicked")
+							if props.onBuyClicked then
+								props.onBuyClicked()
+							end
 						end,
 					}),
 
