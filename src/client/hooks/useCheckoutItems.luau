@@ -63,8 +63,10 @@ local function useCheckoutItems()
 		task.spawn(function()
 			local rawWorn = WornItemExtractor.extract(liveSnapshot)
 			local bodyPartIds = {}
+			local idToProperty = {}
 			for _, item in ipairs(rawWorn) do
 				local p = item.property
+				idToProperty[item.id] = p
 				if p == "Head" or p == "Torso" or p == "LeftArm" or p == "RightArm" or p == "LeftLeg" or p == "RightLeg" then
 					table.insert(bodyPartIds, item.id)
 				end
@@ -99,7 +101,8 @@ local function useCheckoutItems()
 							local itemType = parts[1]
 							local id = tonumber(parts[2])
 							if id then
-								addTarget(key, id, itemType, itemType)
+								local property = idToProperty[id] or itemType
+								addTarget(key, id, itemType, property)
 							end
 						end
 					end
