@@ -1,7 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local Theme = require(script.Parent.Parent.theme.Theme)
-local GradientButton = require(script.Parent.Parent.atoms.GradientButton)
 local PriceRow = require(script.Parent.PriceRow)
 
 export type ItemCardProps = {
@@ -12,7 +11,7 @@ export type ItemCardProps = {
 	isOwned: boolean?,
 	image: string,
 	isPreviewing: boolean?,
-	onTryOn: (() -> ())?,
+	onActivated: (() -> ())?,
 	layoutOrder: number?,
 	actionText: string?,
 }
@@ -20,13 +19,18 @@ export type ItemCardProps = {
 local function ItemCard(props: ItemCardProps)
 	local isHovered, setIsHovered = React.useState(false)
 
+	local isActive = props.isPreviewing or props.actionText == "Stop"
+
 	return React.createElement(
-		"Frame",
+		"TextButton",
 		{
-			Size = UDim2.fromOffset(248, 252), -- Exactly matches guideline
+			Size = UDim2.fromOffset(248, 208), -- Exactly matches guideline without button
 			BackgroundTransparency = 1,
 			LayoutOrder = props.layoutOrder,
+			AutoButtonColor = false,
+			Text = "",
 			Active = true,
+			[React.Event.Activated] = props.onActivated,
 			[React.Event.MouseEnter] = function()
 				setIsHovered(true)
 			end,
@@ -44,8 +48,8 @@ local function ItemCard(props: ItemCardProps)
 				CornerRadius = UDim.new(0, Theme.Radius.LG),
 			}),
 			UIStroke = React.createElement("UIStroke", {
-				Color = isHovered and Theme.Color.Purple or Theme.Color.Border,
-				Thickness = isHovered and 2 or 1,
+				Color = (isHovered or isActive) and Theme.Color.Purple or Theme.Color.Border,
+				Thickness = (isHovered or isActive) and 2 or 1,
 				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 			}),
 			UIPadding = React.createElement("UIPadding", {
@@ -106,13 +110,6 @@ local function ItemCard(props: ItemCardProps)
 				isOffSale = props.isOffSale,
 				isOwned = props.isOwned,
 				layoutOrder = 3,
-			}),
-
-			-- 4. Try On Button
-			TryOnButton = React.createElement(GradientButton, {
-				text = props.actionText or (props.isPreviewing and "Remove" or "Try On"),
-				onActivated = props.onTryOn,
-				layoutOrder = 4,
 			}),
 		})
 	)

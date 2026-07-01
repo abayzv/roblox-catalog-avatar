@@ -44,7 +44,7 @@ local function CatalogGrid(props: CatalogGridProps)
 	local gapX = 18
 	local gapY = 14
 	local originalWidth = 248
-	local originalHeight = 252
+	local originalHeight = 208
 
 	local targetCellWidth = math.max((usableWidth - (gapX * (columns - 1))) / columns, 1)
 	local scale = targetCellWidth / originalWidth
@@ -138,7 +138,7 @@ local function CatalogGrid(props: CatalogGridProps)
 								image = item.image,
 								isPreviewing = isPreviewing,
 								actionText = actionText,
-								onTryOn = if props.onTryOn
+								onActivated = if props.onTryOn
 									then function()
 										props.onTryOn(item)
 									end
