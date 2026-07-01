@@ -93,6 +93,15 @@ local function useCheckoutItems()
 					local payload = PreviewPayloadCache.get(key)
 					if payload and payload.kind ~= "Emote" then
 						addTarget(payload.key, payload.id, payload.itemType, payload.itemType)
+					elseif not payload then
+						local parts = string.split(key, ":")
+						if #parts == 2 then
+							local itemType = parts[1]
+							local id = tonumber(parts[2])
+							if id then
+								addTarget(key, id, itemType, itemType)
+							end
+						end
 					end
 				end
 			end
