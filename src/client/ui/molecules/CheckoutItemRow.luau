@@ -21,7 +21,7 @@ local function CheckoutItemRow(props: CheckoutItemRowProps)
 	local onRemove = React.useCallback(function()
 		local payload = PreviewPayloadCache.get(item.key)
 		if payload then
-			AvatarPreviewController.ToggleItemPreview(item)
+			AvatarPreviewController.ToggleItemPreview(item, true)
 		else
 			AvatarPreviewController.RemoveWornItem(item)
 		end

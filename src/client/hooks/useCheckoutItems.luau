@@ -23,17 +23,24 @@ export type CheckoutItem = {
 
 local function useCheckoutItems()
 	local equippedKeys = usePreviewState()
-	local liveSnapshot, setLiveSnapshot = React.useState(nil)
+	local activeSnapshot, setActiveSnapshot = React.useState(nil)
 	
 	React.useEffect(function()
+		local function getSnapshot(s)
+			if s.optimisticState and s.optimisticState.isOptimistic then
+				return s.optimisticState.predictedSnapshot
+			end
+			return s.liveSnapshot
+		end
+
 		local state = AvatarAppearanceClient.getState()
-		if state and state.liveSnapshot then
-			setLiveSnapshot(state.liveSnapshot)
+		if state then
+			setActiveSnapshot(getSnapshot(state))
 		end
 
 		local unsubscribe = AvatarAppearanceClient.subscribe(function(newState)
-			if newState and newState.liveSnapshot then
-				setLiveSnapshot(newState.liveSnapshot)
+			if newState then
+				setActiveSnapshot(getSnapshot(newState))
 			end
 		end)
 		return unsubscribe
@@ -49,7 +56,7 @@ local function useCheckoutItems()
 		local isMounted = true
 		local cleanupFns = {}
 		
-		if not liveSnapshot then
+		if not activeSnapshot then
 			setIsLoading(false)
 			return
 		end
@@ -57,7 +64,7 @@ local function useCheckoutItems()
 		setIsLoading(true)
 
 		task.spawn(function()
-			local rawWorn = WornItemExtractor.extract(liveSnapshot)
+			local rawWorn = WornItemExtractor.extract(activeSnapshot)
 			local bodyPartIds = {}
 			for _, item in ipairs(rawWorn) do
 				local p = item.property

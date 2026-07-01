@@ -28,7 +28,7 @@ function AvatarPreviewController.getViewportHumanoid()
 end
 
 -- This function is called when UI clicks "Try On"
-function AvatarPreviewController.ToggleItemPreview(item)
+function AvatarPreviewController.ToggleItemPreview(item, forceRemove: boolean?)
 	local state = AvatarAppearanceClient.getState()
 	if not state.liveSnapshot then
 		warn("[CatalogPreview] Ignore try-on until live snapshot is loaded.")
@@ -92,8 +92,8 @@ function AvatarPreviewController.ToggleItemPreview(item)
 		local isEquipped = equippedKeys[key] == true
 
 		local nextPayload = table.clone(payload)
-		if isEquipped then
-			print("[CatalogPreview] Adding removal payload for equipped item")
+		if isEquipped or forceRemove then
+			print("[CatalogPreview] Adding removal payload for item")
 			nextPayload.action = "remove"
 		else
 			print("[CatalogPreview] Adding equip payload")

@@ -234,8 +234,12 @@ local function extractEquippedKeys(snapshot: AppearanceSnapshot)
 end
 
 local function notifyListeners()
-	if state.liveSnapshot then
-		extractEquippedKeys(state.liveSnapshot)
+	local activeSnapshot = if state.optimisticState and state.optimisticState.isOptimistic
+		then state.optimisticState.predictedSnapshot
+		else state.liveSnapshot
+
+	if activeSnapshot then
+		extractEquippedKeys(activeSnapshot)
 	end
 	for _, listener in ipairs(listeners) do
 		task.spawn(listener, state)

@@ -73,7 +73,10 @@ local function useWornItems(): UseWornItemsResult
 	local refresh = React.useCallback(function()
 		task.spawn(function()
 			local state = AvatarAppearanceClient.fetchStateAsync()
-			processSnapshot(state.liveSnapshot)
+			local snapshot = if state.optimisticState and state.optimisticState.isOptimistic
+				then state.optimisticState.predictedSnapshot
+				else state.liveSnapshot
+			processSnapshot(snapshot)
 		end)
 	end, { processSnapshot })
 
@@ -83,7 +86,10 @@ local function useWornItems(): UseWornItemsResult
 
 		-- Subscribe to changes
 		local unsubscribe = AvatarAppearanceClient.subscribe(function(state)
-			processSnapshot(state.liveSnapshot)
+			local snapshot = if state.optimisticState and state.optimisticState.isOptimistic
+				then state.optimisticState.predictedSnapshot
+				else state.liveSnapshot
+			processSnapshot(snapshot)
 		end)
 
 		return function()

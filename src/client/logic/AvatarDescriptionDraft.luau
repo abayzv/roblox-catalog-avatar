@@ -96,7 +96,13 @@ function AvatarDescriptionDraft.applyPayloadToSnapshot(snapshot: any, payload: a
 	if payload.bodyParts then
 		for partName, assetId in pairs(payload.bodyParts) do
 			local ok, err = pcall(function()
-				(desc :: any)[partName] = if payload.action == "remove" then 0 else assetId
+				if payload.action == "remove" then
+					if (desc :: any)[partName] == assetId then
+						(desc :: any)[partName] = 0
+					end
+				else
+					(desc :: any)[partName] = assetId
+				end
 			end)
 			if not ok then
 				warn("Failed to set body part", partName, "err:", err)
@@ -107,7 +113,13 @@ function AvatarDescriptionDraft.applyPayloadToSnapshot(snapshot: any, payload: a
 	if payload.animations then
 		for animName, assetId in pairs(payload.animations) do
 			local ok, err = pcall(function()
-				(desc :: any)[animName] = if payload.action == "remove" then 0 else assetId
+				if payload.action == "remove" then
+					if (desc :: any)[animName] == assetId then
+						(desc :: any)[animName] = 0
+					end
+				else
+					(desc :: any)[animName] = assetId
+				end
 			end)
 			if not ok then
 				warn("Failed to set animation", animName, "err:", err)
