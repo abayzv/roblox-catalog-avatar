@@ -359,13 +359,13 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 				CornerRadius = UDim.new(0, Theme.Radius.LG),
 			}),
 
-			Gradient = React.createElement("UIGradient", {
-				Color = ColorSequence.new({
-					ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-					ColorSequenceKeypoint.new(1, Theme.Color.Background),
-				}),
-				Rotation = 90,
-			}),
+			-- Gradient = React.createElement("UIGradient", {
+			-- 	Color = ColorSequence.new({
+			-- 		ColorSequenceKeypoint.new(0, Theme.Color.PanelRaised),
+			-- 		ColorSequenceKeypoint.new(1, Theme.Color.Background),
+			-- 	}),
+			-- 	Rotation = 90,
+			-- }),
 
 			Viewport = React.createElement("ViewportFrame", {
 				Active = true,
@@ -382,43 +382,45 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 				[React.Event.InputEnded] = endDrag,
 			}),
 
-			TotalRobuxArea = props.showBuyButton and totalRobux > 0 and React.createElement("Frame", {
-				AnchorPoint = Vector2.new(0, 0),
-				Position = UDim2.new(0, Theme.Space.MD, 0, Theme.Space.MD),
-				AutomaticSize = Enum.AutomaticSize.XY,
-				BackgroundTransparency = 0.3,
-				BackgroundColor3 = Theme.Color.Background,
-				ZIndex = 13,
-			}, {
-				Corner = React.createElement("UICorner", {
-					CornerRadius = UDim.new(0, Theme.Radius.MD),
-				}),
-				Padding = React.createElement("UIPadding", {
-					PaddingTop = UDim.new(0, Theme.Space.SM),
-					PaddingBottom = UDim.new(0, Theme.Space.SM),
-					PaddingLeft = UDim.new(0, Theme.Space.MD),
-					PaddingRight = UDim.new(0, Theme.Space.MD),
-				}),
-				Layout = React.createElement("UIListLayout", {
-					FillDirection = Enum.FillDirection.Horizontal,
-					VerticalAlignment = Enum.VerticalAlignment.Center,
-					Padding = UDim.new(0, Theme.Space.SM),
-				}),
-				Icon = React.createElement("ImageLabel", {
-					Size = UDim2.fromOffset(20, 20),
-					BackgroundTransparency = 1,
-					Image = Icons.Robux,
-					ImageColor3 = Theme.Color.TextPrimary,
-				}),
-				Text = React.createElement("TextLabel", {
+			TotalRobuxArea = props.showBuyButton
+				and totalRobux > 0
+				and React.createElement("Frame", {
+					AnchorPoint = Vector2.new(0, 0),
+					Position = UDim2.new(0, Theme.Space.MD, 0, Theme.Space.MD),
 					AutomaticSize = Enum.AutomaticSize.XY,
-					BackgroundTransparency = 1,
-					Text = tostring(totalRobux),
-					TextColor3 = Theme.Color.TextPrimary,
-					Font = Theme.Font.Bold,
-					TextSize = Theme.Text.BodyStrong,
+					BackgroundTransparency = 0.3,
+					BackgroundColor3 = Theme.Color.Background,
+					ZIndex = 13,
+				}, {
+					Corner = React.createElement("UICorner", {
+						CornerRadius = UDim.new(0, Theme.Radius.MD),
+					}),
+					Padding = React.createElement("UIPadding", {
+						PaddingTop = UDim.new(0, Theme.Space.SM),
+						PaddingBottom = UDim.new(0, Theme.Space.SM),
+						PaddingLeft = UDim.new(0, Theme.Space.MD),
+						PaddingRight = UDim.new(0, Theme.Space.MD),
+					}),
+					Layout = React.createElement("UIListLayout", {
+						FillDirection = Enum.FillDirection.Horizontal,
+						VerticalAlignment = Enum.VerticalAlignment.Center,
+						Padding = UDim.new(0, Theme.Space.SM),
+					}),
+					Icon = React.createElement("ImageLabel", {
+						Size = UDim2.fromOffset(20, 20),
+						BackgroundTransparency = 1,
+						Image = Icons.Robux,
+						ImageColor3 = Theme.Color.TextPrimary,
+					}),
+					Text = React.createElement("TextLabel", {
+						AutomaticSize = Enum.AutomaticSize.XY,
+						BackgroundTransparency = 1,
+						Text = tostring(totalRobux),
+						TextColor3 = Theme.Color.TextPrimary,
+						Font = Theme.Font.Bold,
+						TextSize = Theme.Text.BodyStrong,
+					}),
 				}),
-			}),
 
 			ResetArea = React.createElement("Frame", {
 				AnchorPoint = Vector2.new(1, 0),
@@ -531,7 +533,6 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 						end,
 					}),
 			}),
-
 		}),
 	})
 end

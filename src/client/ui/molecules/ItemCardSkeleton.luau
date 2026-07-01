@@ -26,7 +26,7 @@ local function ItemCardSkeleton(props: ItemCardSkeletonProps)
 			"Frame",
 			{
 				Size = UDim2.new(width.Scale, width.Offset, 0, height),
-				BackgroundColor3 = Color3.fromRGB(235, 238, 245),
+				BackgroundColor3 = Theme.Color.SkeletonBase,
 				BorderSizePixel = 0,
 				LayoutOrder = layoutOrder,
 				ClipsDescendants = true,
@@ -36,9 +36,9 @@ local function ItemCardSkeleton(props: ItemCardSkeletonProps)
 			}),
 			React.createElement("UIGradient", {
 				Color = ColorSequence.new({
-					ColorSequenceKeypoint.new(0, Color3.fromRGB(235, 238, 245)),
-					ColorSequenceKeypoint.new(0.5, Color3.fromRGB(245, 247, 250)),
-					ColorSequenceKeypoint.new(1, Color3.fromRGB(235, 238, 245)),
+					ColorSequenceKeypoint.new(0, Theme.Color.SkeletonBase),
+					ColorSequenceKeypoint.new(0.5, Theme.Color.SkeletonHighlight),
+					ColorSequenceKeypoint.new(1, Theme.Color.SkeletonBase),
 				}),
 				Rotation = 45,
 				Offset = offsetBinding:map(function(offset)

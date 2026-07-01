@@ -117,8 +117,10 @@ function ItemDetailsService.resolveDetails(
 	return results
 end
 
-function ItemDetailsService.resolveBundlesFromAssets(assetIds: {number})
-	if not ResolveBundleFromAssetRemote then return {} end
+function ItemDetailsService.resolveBundlesFromAssets(assetIds: { number })
+	if not ResolveBundleFromAssetRemote then
+		return {}
+	end
 	local success, result = pcall(function()
 		return ResolveBundleFromAssetRemote:InvokeServer(assetIds)
 	end)

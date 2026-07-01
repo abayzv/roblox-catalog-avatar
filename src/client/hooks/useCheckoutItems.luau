@@ -25,7 +25,7 @@ local function useCheckoutItems()
 	local equippedKeys = usePreviewState()
 	local liveSnapshot, setLiveSnapshot = React.useState(nil)
 	local hasInitialLoad, setHasInitialLoad = React.useState(false)
-	
+
 	React.useEffect(function()
 		local state = AvatarAppearanceClient.getState()
 		if state and state.liveSnapshot then
@@ -39,7 +39,7 @@ local function useCheckoutItems()
 		end)
 		return unsubscribe
 	end, {})
-	
+
 	local ownedKeys, setOwnedKeys = React.useState({})
 	local itemDetails, setItemDetails = React.useState({})
 	local validItems, setValidItems = React.useState({})
@@ -49,7 +49,7 @@ local function useCheckoutItems()
 	React.useEffect(function()
 		local isMounted = true
 		local cleanupFns = {}
-		
+
 		if not liveSnapshot then
 			setIsLoading(false)
 			return
@@ -67,7 +67,14 @@ local function useCheckoutItems()
 			for _, item in ipairs(rawWorn) do
 				local p = item.property
 				idToProperty[item.id] = p
-				if p == "Head" or p == "Torso" or p == "LeftArm" or p == "RightArm" or p == "LeftLeg" or p == "RightLeg" then
+				if
+					p == "Head"
+					or p == "Torso"
+					or p == "LeftArm"
+					or p == "RightArm"
+					or p == "LeftLeg"
+					or p == "RightLeg"
+				then
 					table.insert(bodyPartIds, item.id)
 				end
 			end
@@ -76,17 +83,24 @@ local function useCheckoutItems()
 			if #bodyPartIds > 0 then
 				resolvedBundlesMap = ItemDetailsService.resolveBundlesFromAssets(bodyPartIds)
 			end
-			
-			if not isMounted then return end
+
+			if not isMounted then
+				return
+			end
 
 			local toResolve = {}
 			local toFetchDetails = {}
 			local addedKeys = {}
 
 			local function addTarget(key, id, itemType, property)
-				if addedKeys[key] then return end
+				if addedKeys[key] then
+					return
+				end
 				addedKeys[key] = true
-				table.insert(toResolve, { key = key, id = id, itemType = itemType, property = property })
+				table.insert(
+					toResolve,
+					{ key = key, id = id, itemType = itemType, property = property }
+				)
 				table.insert(toFetchDetails, { id = id, itemType = itemType })
 			end
 
@@ -120,7 +134,9 @@ local function useCheckoutItems()
 			end
 
 			local details = ItemDetailsService.resolveDetails(toFetchDetails)
-			if not isMounted then return end
+			if not isMounted then
+				return
+			end
 
 			local newHiddenAssets = {}
 			for key, _ in pairs(addedKeys) do
@@ -135,9 +151,13 @@ local function useCheckoutItems()
 			CommerceService.resolveBatch(toResolve)
 			for _, item in ipairs(toResolve) do
 				local unsubscribe = CommerceService.listen(item.key, function(isOwned)
-					if not isMounted then return end
+					if not isMounted then
+						return
+					end
 					setOwnedKeys(function(prev)
-						if prev[item.key] == isOwned then return prev end
+						if prev[item.key] == isOwned then
+							return prev
+						end
 						local nextState = table.clone(prev)
 						nextState[item.key] = isOwned
 						return nextState
@@ -145,7 +165,7 @@ local function useCheckoutItems()
 				end)
 				table.insert(cleanupFns, unsubscribe)
 			end
-			
+
 			setItemDetails(function(prev)
 				local nextState = table.clone(prev)
 				for k, v in pairs(details) do
@@ -153,7 +173,7 @@ local function useCheckoutItems()
 				end
 				return nextState
 			end)
-			
+
 			setValidItems(toResolve)
 			setHiddenAssets(newHiddenAssets)
 			setIsLoading(false)
@@ -169,14 +189,16 @@ local function useCheckoutItems()
 	end, { equippedKeys, liveSnapshot })
 
 	local checkoutItems = React.useMemo(function()
-		if isLoading then return {} end
-		
+		if isLoading then
+			return {}
+		end
+
 		local items = {}
 		for _, vItem in ipairs(validItems) do
 			if vItem.itemType == "Asset" and hiddenAssets[vItem.id] then
 				continue
 			end
-			
+
 			local isOwned = ownedKeys[vItem.key] == true
 			if not isOwned then
 				local detail = itemDetails[vItem.key]
@@ -197,8 +219,10 @@ local function useCheckoutItems()
 				end
 			end
 		end
-		
-		table.sort(items, function(a, b) return a.id < b.id end)
+
+		table.sort(items, function(a, b)
+			return a.id < b.id
+		end)
 		return items
 	end, { validItems, ownedKeys, itemDetails, hiddenAssets, isLoading })
 

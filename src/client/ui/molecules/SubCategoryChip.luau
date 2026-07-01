@@ -28,7 +28,7 @@ local function SubCategoryChip(props: SubCategoryChipProps)
 			end
 
 			local textColor = active and Theme.Color.Purple or Theme.Color.TextPrimary
-			local strokeColor = active and Color3.fromRGB(236, 215, 250) or Theme.Color.Border
+			local strokeColor = active and Theme.Color.Purple or Theme.Color.Border
 
 			return React.createElement(
 				"Frame",

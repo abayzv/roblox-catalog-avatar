@@ -31,7 +31,7 @@ local function GlassButton(props: GlassButtonProps)
 			end
 
 			return React.createElement("Frame", {
-				BackgroundColor3 = Color3.new(1, 1, 1),
+				BackgroundColor3 = Theme.Color.PanelRaised,
 				BackgroundTransparency = bgTransparency,
 				Size = UDim2.fromScale(1, 1),
 				AutomaticSize = if props.size then nil else Enum.AutomaticSize.X,
@@ -41,7 +41,7 @@ local function GlassButton(props: GlassButtonProps)
 				}),
 
 				Stroke = React.createElement("UIStroke", {
-					Color = Color3.new(1, 1, 1),
+					Color = Theme.Color.BorderStrong,
 					Transparency = 0,
 					Thickness = 1.5,
 				}),

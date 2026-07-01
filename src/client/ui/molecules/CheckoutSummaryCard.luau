@@ -36,7 +36,7 @@ local function CheckoutSummaryCard(props: CheckoutSummaryCardProps)
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			Padding = UDim.new(0, 10),
 		}),
-		
+
 		-- Price Row
 		PriceRow = React.createElement("Frame", {
 			Size = UDim2.new(1, 0, 0, 24),
@@ -85,7 +85,7 @@ local function CheckoutSummaryCard(props: CheckoutSummaryCardProps)
 				}),
 			}),
 		}),
-		
+
 		-- Cashback Row
 		CashbackRow = React.createElement("Frame", {
 			Size = UDim2.new(1, 0, 0, 24),
@@ -134,7 +134,7 @@ local function CheckoutSummaryCard(props: CheckoutSummaryCardProps)
 				}),
 			}),
 		}),
-		
+
 		-- Separator
 		Separator = React.createElement("Frame", {
 			Size = UDim2.new(1, 0, 0, 1),
@@ -142,7 +142,7 @@ local function CheckoutSummaryCard(props: CheckoutSummaryCardProps)
 			BorderSizePixel = 0,
 			LayoutOrder = 3,
 		}),
-		
+
 		-- Buy Button
 		BuyButton = React.createElement(GradientButton, {
 			text = "Buy",

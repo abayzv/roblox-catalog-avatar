@@ -201,7 +201,7 @@ local function CatalogGrid(props: CatalogGridProps)
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 6,
-		ScrollBarImageColor3 = Color3.fromRGB(154, 161, 173),
+		ScrollBarImageColor3 = Theme.Color.Scrollbar,
 		CanvasSize = contentSizeBinding:map(function(size)
 			return UDim2.fromOffset(
 				0,

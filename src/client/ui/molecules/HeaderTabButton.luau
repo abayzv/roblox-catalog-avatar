@@ -21,19 +21,19 @@ local function HeaderTabButton(props: HeaderTabButtonProps)
 			local active = props.active
 			local scale = isPressed and 0.98 or 1
 
-			local bgColor = active and Color3.new(1, 1, 1) or Theme.Color.Panel
+			local bgColor = active and Theme.Color.PanelRaised or Theme.Color.Panel
 			local textColor = active and Color3.new(1, 1, 1) or Theme.Color.TextPrimary
 			local iconColor = active and Color3.new(1, 1, 1) or Theme.Color.IconDark
 
 			local overlayTransparency = 1
-			local overlayColor = Color3.new(1, 1, 1)
+			local overlayColor = Theme.Color.OverlayLight
 
 			if isPressed then
 				overlayTransparency = 0.85
-				overlayColor = Color3.new(0, 0, 0)
+				overlayColor = Theme.Color.OverlayDark
 			elseif isHovered then
 				overlayTransparency = active and 0.9 or 0.95
-				overlayColor = Color3.new(1, 1, 1)
+				overlayColor = Theme.Color.OverlayLight
 			end
 
 			return React.createElement(

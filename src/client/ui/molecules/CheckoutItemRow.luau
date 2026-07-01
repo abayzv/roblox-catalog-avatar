@@ -35,7 +35,7 @@ local function CheckoutItemRow(props: CheckoutItemRowProps)
 
 	return React.createElement("Frame", {
 		Size = UDim2.new(1, 0, 0, 72),
-		BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundColor3 = Theme.Color.Panel,
 		LayoutOrder = props.layoutOrder,
 	}, {
 		UICorner = React.createElement("UICorner", {
@@ -44,7 +44,7 @@ local function CheckoutItemRow(props: CheckoutItemRowProps)
 		UIStroke = React.createElement("UIStroke", {
 			Color = Theme.Color.Border,
 			Thickness = 1,
-			BorderStrokePosition = Enum.BorderStrokePosition.Inner
+			BorderStrokePosition = Enum.BorderStrokePosition.Inner,
 		}),
 		UIPadding = React.createElement("UIPadding", {
 			PaddingTop = UDim.new(0, Theme.Space.SM),
@@ -155,8 +155,8 @@ local function CheckoutItemRow(props: CheckoutItemRowProps)
 			layoutOrder = 4,
 			onActivated = onRemove,
 			render = function(isHovered, isPressed)
-				local bgColor = isPressed and Color3.fromRGB(230, 230, 230)
-					or (isHovered and Color3.fromRGB(240, 240, 240) or Color3.new(1, 1, 1))
+				local bgColor = isPressed and Theme.Color.PanelRaised
+					or (isHovered and Theme.Color.PanelSoft or Theme.Color.Panel)
 				return React.createElement("Frame", {
 					Size = UDim2.fromScale(1, 1),
 					BackgroundColor3 = bgColor,
@@ -210,7 +210,7 @@ local function CheckoutItemRow(props: CheckoutItemRowProps)
 
 				return React.createElement("Frame", {
 					Size = UDim2.fromScale(1, 1),
-					BackgroundColor3 = Color3.new(1, 1, 1),
+					BackgroundColor3 = Theme.Color.OverlayLight,
 				}, {
 					UICorner = React.createElement(
 						"UICorner",
@@ -222,7 +222,7 @@ local function CheckoutItemRow(props: CheckoutItemRowProps)
 					),
 					Overlay = React.createElement("Frame", {
 						Size = UDim2.fromScale(1, 1),
-						BackgroundColor3 = Color3.new(0, 0, 0),
+						BackgroundColor3 = Theme.Color.OverlayDark,
 						BackgroundTransparency = 1 - alpha,
 						ZIndex = 2,
 					}, {

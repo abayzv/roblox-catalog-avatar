@@ -151,9 +151,10 @@ local function CheckoutPanel(props: CheckoutPanelProps)
 						local elements = {}
 						if checkoutData.isLoading then
 							for i = 1, 4 do
-								elements["Skeleton_" .. i] = React.createElement(CheckoutItemRowSkeleton, {
-									layoutOrder = i,
-								})
+								elements["Skeleton_" .. i] =
+									React.createElement(CheckoutItemRowSkeleton, {
+										layoutOrder = i,
+									})
 							end
 						elseif #checkoutData.items == 0 then
 							elements["EmptyState"] = React.createElement("Frame", {
@@ -182,7 +183,7 @@ local function CheckoutPanel(props: CheckoutPanelProps)
 									TextSize = Theme.Text.Body,
 									TextColor3 = Theme.Color.TextSecondary,
 									LayoutOrder = 2,
-								})
+								}),
 							})
 						else
 							for i, item in ipairs(checkoutData.items) do
@@ -212,7 +213,7 @@ local function CheckoutPanel(props: CheckoutPanelProps)
 				-- Summary Box
 				SummaryBox = React.createElement("Frame", {
 					Size = UDim2.new(1, 0, 0, 72),
-					BackgroundColor3 = Color3.fromRGB(250, 245, 255), -- light purple tint
+					BackgroundColor3 = Theme.Color.PanelRaised,
 					LayoutOrder = 1,
 				}, {
 					UICorner = React.createElement(
@@ -221,7 +222,7 @@ local function CheckoutPanel(props: CheckoutPanelProps)
 					),
 					UIStroke = React.createElement(
 						"UIStroke",
-						{ Color = Color3.fromRGB(230, 220, 240), Thickness = 1 }
+						{ Color = Theme.Color.BorderStrong, Thickness = 1 }
 					),
 					UIPadding = React.createElement("UIPadding", {
 						PaddingLeft = UDim.new(0, Theme.Space.MD),
@@ -240,7 +241,7 @@ local function CheckoutPanel(props: CheckoutPanelProps)
 						}),
 						IconBox = React.createElement("Frame", {
 							Size = UDim2.fromOffset(48, 48),
-							BackgroundColor3 = Color3.fromRGB(230, 210, 255),
+							BackgroundColor3 = Theme.Color.ActiveSoft,
 							LayoutOrder = 1,
 						}, {
 							UICorner = React.createElement(
@@ -250,7 +251,7 @@ local function CheckoutPanel(props: CheckoutPanelProps)
 							Icon = React.createElement(Icon, {
 								image = Icons.Robux or "rbxassetid://0",
 								size = 24,
-								color = Color3.fromRGB(150, 50, 200),
+								color = Theme.Color.Purple,
 								anchorPoint = Vector2.new(0.5, 0.5),
 								position = UDim2.fromScale(0.5, 0.5),
 							}),
@@ -333,7 +334,7 @@ local function CheckoutPanel(props: CheckoutPanelProps)
 
 						return React.createElement("Frame", {
 							Size = UDim2.fromScale(1, 1),
-							BackgroundColor3 = Color3.new(1, 1, 1),
+							BackgroundColor3 = Theme.Color.OverlayLight,
 						}, {
 							UICorner = React.createElement(
 								"UICorner",
@@ -345,7 +346,7 @@ local function CheckoutPanel(props: CheckoutPanelProps)
 							),
 							Overlay = React.createElement("Frame", {
 								Size = UDim2.fromScale(1, 1),
-								BackgroundColor3 = Color3.new(0, 0, 0),
+								BackgroundColor3 = Theme.Color.OverlayDark,
 								BackgroundTransparency = 1 - alpha,
 								ZIndex = 2,
 							}, {
@@ -369,7 +370,7 @@ local function CheckoutPanel(props: CheckoutPanelProps)
 								Icon = React.createElement(Icon, {
 									image = Icons.Cart or "rbxassetid://0",
 									size = 20,
-									color = Color3.new(1, 1, 1),
+									color = Theme.Color.OverlayLight,
 									layoutOrder = 1,
 								}),
 								Text = React.createElement("TextLabel", {
@@ -378,7 +379,7 @@ local function CheckoutPanel(props: CheckoutPanelProps)
 									Text = "Buy All Items (" .. checkoutData.buyableCount .. ")",
 									Font = Theme.Font.Bold,
 									TextSize = Theme.Text.Body,
-									TextColor3 = Color3.new(1, 1, 1),
+									TextColor3 = Theme.Color.OverlayLight,
 									LayoutOrder = 2,
 								}),
 							}),

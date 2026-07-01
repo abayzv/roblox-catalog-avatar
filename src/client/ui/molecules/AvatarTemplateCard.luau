@@ -78,7 +78,7 @@ local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 
 		return React.createElement("Frame", {
 			Size = UDim2.fromScale(1, 1),
-			BackgroundColor3 = Color3.fromRGB(235, 238, 245),
+			BackgroundColor3 = Theme.Color.SkeletonBase,
 			BorderSizePixel = 0,
 			ClipsDescendants = true,
 			ZIndex = 3,
@@ -90,9 +90,9 @@ local function AvatarTemplateCard(props: AvatarTemplateCardProps)
 				then nil
 				else React.createElement("UIGradient", {
 					Color = ColorSequence.new({
-						ColorSequenceKeypoint.new(0, Color3.fromRGB(235, 238, 245)),
-						ColorSequenceKeypoint.new(0.5, Color3.fromRGB(245, 247, 250)),
-						ColorSequenceKeypoint.new(1, Color3.fromRGB(235, 238, 245)),
+						ColorSequenceKeypoint.new(0, Theme.Color.SkeletonBase),
+						ColorSequenceKeypoint.new(0.5, Theme.Color.SkeletonHighlight),
+						ColorSequenceKeypoint.new(1, Theme.Color.SkeletonBase),
 					}),
 					Rotation = 45,
 					Offset = skeletonOffsetBinding:map(function(offset)

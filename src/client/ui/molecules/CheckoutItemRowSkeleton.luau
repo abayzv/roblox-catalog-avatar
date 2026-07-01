@@ -25,7 +25,7 @@ local function CheckoutItemRowSkeleton(props: CheckoutItemRowSkeletonProps)
 			"Frame",
 			{
 				Size = UDim2.new(width.Scale, width.Offset, 0, height),
-				BackgroundColor3 = Color3.fromRGB(235, 238, 245),
+				BackgroundColor3 = Theme.Color.SkeletonBase,
 				BorderSizePixel = 0,
 				LayoutOrder = layoutOrder,
 				ClipsDescendants = true,
@@ -35,9 +35,9 @@ local function CheckoutItemRowSkeleton(props: CheckoutItemRowSkeletonProps)
 			}),
 			React.createElement("UIGradient", {
 				Color = ColorSequence.new({
-					ColorSequenceKeypoint.new(0, Color3.fromRGB(235, 238, 245)),
-					ColorSequenceKeypoint.new(0.5, Color3.fromRGB(245, 247, 250)),
-					ColorSequenceKeypoint.new(1, Color3.fromRGB(235, 238, 245)),
+					ColorSequenceKeypoint.new(0, Theme.Color.SkeletonBase),
+					ColorSequenceKeypoint.new(0.5, Theme.Color.SkeletonHighlight),
+					ColorSequenceKeypoint.new(1, Theme.Color.SkeletonBase),
 				}),
 				Rotation = 45,
 				Offset = offsetBinding:map(function(offset)
@@ -49,7 +49,7 @@ local function CheckoutItemRowSkeleton(props: CheckoutItemRowSkeletonProps)
 
 	return React.createElement("Frame", {
 		Size = UDim2.new(1, 0, 0, 72),
-		BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundColor3 = Theme.Color.Panel,
 		LayoutOrder = props.layoutOrder,
 	}, {
 		UICorner = React.createElement("UICorner", {

@@ -21,7 +21,7 @@ local function GradientButton(props: GradientButtonProps)
 			local scale = isPressed and 0.98 or 1
 
 			local overlayTransparency = 1
-			local overlayColor = Color3.new(1, 1, 1)
+			local overlayColor = Theme.Color.OverlayLight
 			local buttonTransparency = 0
 			local textTransparency = 0
 
@@ -29,20 +29,20 @@ local function GradientButton(props: GradientButtonProps)
 				buttonTransparency = 0.35
 				textTransparency = 0.25
 				overlayTransparency = 0.68
-				overlayColor = Color3.new(1, 1, 1)
+				overlayColor = Theme.Color.OverlayLight
 			elseif isPressed then
 				overlayTransparency = 0.8
-				overlayColor = Color3.new(0, 0, 0)
+				overlayColor = Theme.Color.OverlayDark
 			elseif isHovered then
 				overlayTransparency = 0.85
-				overlayColor = Color3.new(1, 1, 1)
+				overlayColor = Theme.Color.OverlayLight
 			end
 
 			return React.createElement(
 				"Frame",
 				{
 					Size = UDim2.fromScale(1, 1),
-					BackgroundColor3 = Color3.new(1, 1, 1),
+					BackgroundColor3 = Theme.Color.OverlayLight,
 					BackgroundTransparency = buttonTransparency,
 					AnchorPoint = Vector2.new(0.5, 0.5),
 					Position = UDim2.fromScale(0.5, 0.5),

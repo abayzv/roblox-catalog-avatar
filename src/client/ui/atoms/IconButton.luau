@@ -43,7 +43,7 @@ local function IconButton(props: IconButtonProps)
 						CornerRadius = UDim.new(0, Theme.Radius.LG),
 					}),
 					UIStroke = React.createElement("UIStroke", {
-						Color = Color3.fromRGB(233, 215, 245),
+						Color = Theme.Color.BorderStrong,
 						Thickness = 1,
 						ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 					}),
