@@ -273,8 +273,17 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 	local totalRobux = checkoutData.totalRobux
 	
 	local scale = 1
-	if stageWidth > 0 and stageWidth < 400 then
-		scale = stageWidth / 400
+	local summaryAreaSize = UDim2.new(1, -(Theme.Space.XL * 2), 0, 160)
+	
+	if stageWidth > 0 then
+		local padding = Theme.Space.XL * 2
+		local targetWidth = stageWidth - padding
+		local baseWidth = 352
+		
+		if targetWidth < baseWidth then
+			scale = targetWidth / baseWidth
+			summaryAreaSize = UDim2.new(0, baseWidth, 0, 160)
+		end
 	end
 
 	local ViewportAnimationController =
@@ -492,7 +501,7 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 				AnchorPoint = Vector2.new(0.5, 1),
 				Position = UDim2.new(0.5, 0, 1, -Theme.Space.XL),
 				BackgroundTransparency = 1,
-				Size = UDim2.new(1, -(Theme.Space.XL * 2), 0, 160),
+				Size = summaryAreaSize,
 				ZIndex = 14,
 			}, {
 				UIScale = React.createElement("UIScale", {
