@@ -156,7 +156,7 @@ local function useCheckoutItems()
 				fn()
 			end
 		end
-	end, { equippedKeys, liveSnapshot })
+	end, { equippedKeys, activeSnapshot })
 
 	local checkoutItems = React.useMemo(function()
 		if isLoading then return {} end
