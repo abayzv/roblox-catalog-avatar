@@ -9,6 +9,7 @@ local ButtonBase = require(script.Parent.Parent.atoms.ButtonBase)
 local Icon = require(script.Parent.Parent.atoms.Icon)
 local useCheckoutItems = require(script.Parent.Parent.Parent.hooks.useCheckoutItems)
 local CheckoutController = require(script.Parent.Parent.Parent.controllers.CheckoutController)
+local FormatUtils = require(ReplicatedStorage.Shared.utils.FormatUtils)
 
 export type CheckoutPanelProps = {
 	layoutOrder: number?,
@@ -308,7 +309,7 @@ local function CheckoutPanel(props: CheckoutPanelProps)
 						Price = React.createElement("TextLabel", {
 							AutomaticSize = Enum.AutomaticSize.XY,
 							BackgroundTransparency = 1,
-							Text = tostring(checkoutData.totalRobux),
+							Text = FormatUtils.formatNumber(checkoutData.totalRobux),
 							Font = Theme.Font.Bold,
 							TextSize = 28,
 							TextColor3 = Theme.Color.TextPrimary,

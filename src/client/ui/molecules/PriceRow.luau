@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local Theme = require(script.Parent.Parent.theme.Theme)
+local FormatUtils = require(ReplicatedStorage.Shared.utils.FormatUtils)
 local Icons = require(script.Parent.Parent.theme.Icons)
 local Icon = require(script.Parent.Parent.atoms.Icon)
 
@@ -23,7 +24,7 @@ local function PriceRow(props: PriceRowProps)
 	elseif props.isFree then
 		displayText = "Free"
 	else
-		displayText = tostring(props.price or 0)
+		displayText = FormatUtils.formatNumber(props.price or 0)
 		showIcon = true
 	end
 

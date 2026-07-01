@@ -8,6 +8,7 @@ local AvatarPreviewController =
 	require(script.Parent.Parent.Parent.controllers.AvatarPreviewController)
 local CheckoutController = require(script.Parent.Parent.Parent.controllers.CheckoutController)
 local PreviewPayloadCache = require(script.Parent.Parent.Parent.services.PreviewPayloadCache)
+local FormatUtils = require(ReplicatedStorage.Shared.utils.FormatUtils)
 
 export type CheckoutItemRowProps = {
 	item: any, -- CheckoutItem
@@ -139,8 +140,8 @@ local function CheckoutItemRow(props: CheckoutItemRowProps)
 			PriceText = React.createElement("TextLabel", {
 				AutomaticSize = Enum.AutomaticSize.XY,
 				BackgroundTransparency = 1,
-				Text = item.isOffSale and "Off-Sale"
-					or (item.isFree and "Free" or tostring(item.price)),
+				Text = item.isOffSale and "Off Sale"
+					or (item.isFree and "Free" or FormatUtils.formatNumber(item.price)),
 				Font = Theme.Font.Bold,
 				TextSize = Theme.Text.Body,
 				TextColor3 = Theme.Color.TextPrimary,

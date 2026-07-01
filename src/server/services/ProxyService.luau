@@ -33,7 +33,7 @@ function ProxyService.initialize()
 		end
 		
 		for _, assetId in ipairs(toFetch) do
-			local url = "https://catalog.roproxy.com/v1/assets/" .. assetId .. "/bundles"
+			local url = "https://roblox-catalog-bundle-proxy.abayzv.workers.dev/assets/" .. assetId .. "/bundles"
 			local ok, response = pcall(function()
 				return HttpService:GetAsync(url)
 			end)
