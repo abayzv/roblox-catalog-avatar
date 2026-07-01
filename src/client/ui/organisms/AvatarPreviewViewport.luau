@@ -475,7 +475,7 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 					and React.createElement(GlassButton, {
 						text = "Buy",
 						icon = Icons.Robux,
-						color = Theme.Color.Purple,
+						color = Theme.Color.TextPrimary,
 						size = UDim2.fromScale(1, 1),
 						onActivated = function()
 							if props.onBuyClicked then

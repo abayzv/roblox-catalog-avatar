@@ -8,11 +8,11 @@ local AvatarTemplateService = {}
 
 local DataStoreService = game:GetService("DataStoreService")
 
-local AvatarTemplateById = DataStoreService:GetDataStore("AvatarTemplateById_v1")
-local CodeToTemplateId = DataStoreService:GetDataStore("CodeToTemplateId_v1")
+local AvatarTemplateById = DataStoreService:GetDataStore("AvatarTemplateById_v2")
+local CodeToTemplateId = DataStoreService:GetDataStore("CodeToTemplateId_v2")
 local RecentAvatarTemplateIndex =
-	DataStoreService:GetOrderedDataStore("RecentAvatarTemplateIndex_v1")
-local UserAvatarTemplateIndex = DataStoreService:GetOrderedDataStore("UserAvatarTemplateIndex_v1")
+	DataStoreService:GetOrderedDataStore("RecentAvatarTemplateIndex_v2")
+local UserAvatarTemplateIndex = DataStoreService:GetOrderedDataStore("UserAvatarTemplateIndex_v2")
 
 local ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
@@ -54,7 +54,7 @@ local function saveTemplateToDataStore(record: AvatarTemplateTypes.AvatarTemplat
 
 		-- Write to user's ordered index
 		local UserIndex = DataStoreService:GetOrderedDataStore(
-			"UserAvatarTemplateIndex_v1",
+			"UserAvatarTemplateIndex_v2",
 			tostring(record.creatorUserId)
 		)
 		UserIndex:SetAsync(record.templateId, record.createdAt)
@@ -107,7 +107,7 @@ local function listTemplatesFromDataStore(
 		local indexToUse = RecentAvatarTemplateIndex
 		if mode == "mine" and userId then
 			indexToUse =
-				DataStoreService:GetOrderedDataStore("UserAvatarTemplateIndex_v1", tostring(userId))
+				DataStoreService:GetOrderedDataStore("UserAvatarTemplateIndex_v2", tostring(userId))
 		end
 		return indexToUse:GetSortedAsync(false, limit)
 	end)
@@ -498,7 +498,7 @@ function AvatarTemplateService.searchAvatarLoader(
 	return {
 		success = true,
 		resultType = "empty",
-		message = "Template atau username tidak ditemukan.",
+		message = "Save your avatar to create a template!",
 	}
 end
 

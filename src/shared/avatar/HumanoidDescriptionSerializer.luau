@@ -81,6 +81,16 @@ local function safeRead(description: HumanoidDescription, propertyName: string)
 	return nil
 end
 
+local function serializeVector3(vec: Vector3?): {number}?
+	if not vec then return nil end
+	return {vec.X, vec.Y, vec.Z}
+end
+
+local function deserializeVector3(arr: {number}?): Vector3?
+	if not arr or type(arr) ~= "table" or #arr < 3 then return nil end
+	return Vector3.new(arr[1], arr[2], arr[3])
+end
+
 function HumanoidDescriptionSerializer.serialize(description: HumanoidDescription): table
 	local snapshot = {}
 
@@ -107,6 +117,9 @@ function HumanoidDescriptionSerializer.serialize(description: HumanoidDescriptio
 			IsLayered = acc.IsLayered,
 			Order = acc.Order,
 			Puffiness = acc.Puffiness,
+			Position = serializeVector3(acc.Position),
+			Rotation = serializeVector3(acc.Rotation),
+			Scale = serializeVector3(acc.Scale),
 		})
 	end
 	snapshot.SerializedAccessories = serializedAccessories
@@ -179,6 +192,9 @@ function HumanoidDescriptionSerializer.deserialize(snapshot: table): HumanoidDes
 					IsLayered = acc.IsLayered,
 					Order = acc.Order,
 					Puffiness = acc.Puffiness,
+					Position = deserializeVector3(acc.Position),
+					Rotation = deserializeVector3(acc.Rotation),
+					Scale = deserializeVector3(acc.Scale),
 				})
 			end
 		end
