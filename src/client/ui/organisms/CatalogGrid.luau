@@ -44,7 +44,7 @@ local function CatalogGrid(props: CatalogGridProps)
 	local gapX = 18
 	local gapY = 14
 	local originalWidth = 248
-	local originalHeight = 208
+	local originalHeight = 228
 
 	local targetCellWidth = math.max((usableWidth - (gapX * (columns - 1))) / columns, 1)
 	local scale = targetCellWidth / originalWidth
@@ -136,6 +136,8 @@ local function CatalogGrid(props: CatalogGridProps)
 								isOwned = item.isOwned
 									or (props.ownedKeys and props.ownedKeys[item.key]),
 								image = item.image,
+								creatorName = item.creatorName,
+								creatorHasVerifiedBadge = item.creatorHasVerifiedBadge,
 								isPreviewing = isPreviewing,
 								actionText = actionText,
 								onActivated = if props.onTryOn

@@ -16,6 +16,7 @@ local Icons = {
 	Cart = "rbxassetid://2161586955",
 	Trash = "rbxassetid://90865958932830",
 	Lock = "rbxassetid://15117261700",
+	Verified = "rbxassetid://0", -- Placeholder: replace with real verified badge icon
 }
 
 return Icons

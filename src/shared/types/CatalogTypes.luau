@@ -11,6 +11,8 @@ export type CatalogItem = {
 	name: string,
 	price: number | string | nil,
 	image: string,
+	creatorName: string?,
+	creatorHasVerifiedBadge: boolean?,
 
 	priceStatus: string?,
 	isFree: boolean?,

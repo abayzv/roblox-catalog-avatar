@@ -51,7 +51,7 @@ local function ItemCardSkeleton(props: ItemCardSkeletonProps)
 	return React.createElement(
 		"Frame",
 		{
-			Size = UDim2.fromOffset(248, 208),
+			Size = UDim2.fromOffset(248, 228),
 			BackgroundTransparency = 1,
 			LayoutOrder = props.layoutOrder,
 		},
@@ -87,8 +87,9 @@ local function ItemCardSkeleton(props: ItemCardSkeletonProps)
 				LayoutOrder = 1,
 			}, SkeletonBlock(UDim.new(1, 0), 124, 1)),
 
-			NameSkeleton = SkeletonBlock(UDim.new(0.8, 0), 22, 2),
-			PriceSkeleton = SkeletonBlock(UDim.new(0.4, 0), 24, 3),
+			NameSkeleton = SkeletonBlock(UDim.new(0.8, 0), 20, 2),
+			CreatorSkeleton = SkeletonBlock(UDim.new(0.5, 0), 16, 3),
+			PriceSkeleton = SkeletonBlock(UDim.new(0.4, 0), 24, 4),
 		})
 	)
 end

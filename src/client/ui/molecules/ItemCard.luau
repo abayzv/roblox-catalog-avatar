@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local Theme = require(script.Parent.Parent.theme.Theme)
+local Icons = require(script.Parent.Parent.theme.Icons)
 local PriceRow = require(script.Parent.PriceRow)
 
 export type ItemCardProps = {
@@ -10,6 +11,8 @@ export type ItemCardProps = {
 	isOffSale: boolean?,
 	isOwned: boolean?,
 	image: string,
+	creatorName: string?,
+	creatorHasVerifiedBadge: boolean?,
 	isPreviewing: boolean?,
 	onActivated: (() -> ())?,
 	layoutOrder: number?,
@@ -24,7 +27,7 @@ local function ItemCard(props: ItemCardProps)
 	return React.createElement(
 		"TextButton",
 		{
-			Size = UDim2.fromOffset(248, 208), -- Exactly matches guideline without button
+			Size = UDim2.fromOffset(248, 228), -- Added room for creator row
 			BackgroundTransparency = 1,
 			LayoutOrder = props.layoutOrder,
 			AutoButtonColor = false,
@@ -61,7 +64,7 @@ local function ItemCard(props: ItemCardProps)
 			Layout = React.createElement("UIListLayout", {
 				FillDirection = Enum.FillDirection.Vertical,
 				SortOrder = Enum.SortOrder.LayoutOrder,
-				Padding = UDim.new(0, 8),
+				Padding = UDim.new(0, 6),
 			}),
 
 			-- 1. Image Area
@@ -92,7 +95,7 @@ local function ItemCard(props: ItemCardProps)
 
 			-- 2. Item Name
 			ItemName = React.createElement("TextLabel", {
-				Size = UDim2.new(1, 0, 0, 22),
+				Size = UDim2.new(1, 0, 0, 20),
 				BackgroundTransparency = 1,
 				Text = props.name,
 				TextColor3 = Theme.Color.TextPrimary,
@@ -103,13 +106,47 @@ local function ItemCard(props: ItemCardProps)
 				LayoutOrder = 2,
 			}),
 
-			-- 3. Price
+			-- 3. Creator Row
+			CreatorRow = React.createElement("Frame", {
+				Size = UDim2.new(1, 0, 0, 16),
+				BackgroundTransparency = 1,
+				LayoutOrder = 3,
+			}, {
+				Layout = React.createElement("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					SortOrder = Enum.SortOrder.LayoutOrder,
+					VerticalAlignment = Enum.VerticalAlignment.Center,
+					Padding = UDim.new(0, 3),
+				}),
+				CreatorName = React.createElement("TextLabel", {
+					Size = UDim2.new(0, 0, 1, 0),
+					AutomaticSize = Enum.AutomaticSize.X,
+					BackgroundTransparency = 1,
+					Text = props.creatorName or "",
+					TextColor3 = Theme.Color.TextSecondary,
+					Font = Theme.Font.Regular,
+					TextSize = Theme.Text.Caption,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					TextTruncate = Enum.TextTruncate.AtEnd,
+					LayoutOrder = 1,
+				}),
+				VerifiedBadge = if props.creatorHasVerifiedBadge
+					then React.createElement("ImageLabel", {
+						Size = UDim2.fromOffset(12, 12),
+						BackgroundTransparency = 1,
+						Image = Icons.Verified,
+						LayoutOrder = 2,
+					})
+					else nil,
+			}),
+
+			-- 4. Price
 			Price = React.createElement(PriceRow, {
 				price = props.price,
 				isFree = props.isFree,
 				isOffSale = props.isOffSale,
 				isOwned = props.isOwned,
-				layoutOrder = 3,
+				layoutOrder = 4,
 			}),
 		})
 	)

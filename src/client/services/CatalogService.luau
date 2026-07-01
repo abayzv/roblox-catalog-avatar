@@ -208,6 +208,8 @@ function CatalogService.fetchPage(params: FetchParams): FetchResult
 				image = if itemType == "Bundle"
 					then `rbxthumb://type=BundleThumbnail&id={rawItem.Id}&w=420&h=420`
 					else `rbxthumb://type=Asset&id={rawItem.Id}&w=420&h=420`,
+				creatorName = rawItem.CreatorName or nil,
+				creatorHasVerifiedBadge = rawItem.CreatorHasVerifiedBadge or false,
 				assetId = if itemType == "Asset" then rawItem.Id else nil,
 				assetType = if itemType == "Asset" and rawItem.AssetType
 					then rawItem.AssetType.Name
