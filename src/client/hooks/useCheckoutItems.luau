@@ -177,13 +177,10 @@ local function useCheckoutItems()
 				continue
 			end
 			
-			local isBodyPart = vItem.property == "Head" or vItem.property == "Torso" or vItem.property == "LeftArm" or vItem.property == "RightArm" or vItem.property == "LeftLeg" or vItem.property == "RightLeg" or vItem.property == "DynamicHead"
-			local isBundle = vItem.itemType == "Bundle"
-			
 			local isOwned = ownedKeys[vItem.key] == true
 			if not isOwned then
 				local detail = itemDetails[vItem.key]
-				if detail and (not detail.isOffSale or isBundle or isBodyPart) then
+				if detail and not detail.isOffSale then
 					table.insert(items, {
 						key = vItem.key,
 						id = vItem.id,
