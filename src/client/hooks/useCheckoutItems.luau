@@ -23,24 +23,18 @@ export type CheckoutItem = {
 
 local function useCheckoutItems()
 	local equippedKeys = usePreviewState()
-	local activeSnapshot, setActiveSnapshot = React.useState(nil)
+	local liveSnapshot, setLiveSnapshot = React.useState(nil)
+	local hasInitialLoad, setHasInitialLoad = React.useState(false)
 	
 	React.useEffect(function()
-		local function getSnapshot(s)
-			if s.optimisticState and s.optimisticState.isOptimistic then
-				return s.optimisticState.predictedSnapshot
-			end
-			return s.liveSnapshot
-		end
-
 		local state = AvatarAppearanceClient.getState()
-		if state then
-			setActiveSnapshot(getSnapshot(state))
+		if state and state.liveSnapshot then
+			setLiveSnapshot(state.liveSnapshot)
 		end
 
 		local unsubscribe = AvatarAppearanceClient.subscribe(function(newState)
-			if newState then
-				setActiveSnapshot(getSnapshot(newState))
+			if newState and newState.liveSnapshot then
+				setLiveSnapshot(newState.liveSnapshot)
 			end
 		end)
 		return unsubscribe
@@ -56,15 +50,18 @@ local function useCheckoutItems()
 		local isMounted = true
 		local cleanupFns = {}
 		
-		if not activeSnapshot then
+		if not liveSnapshot then
 			setIsLoading(false)
 			return
 		end
 
-		setIsLoading(true)
+		-- Only show loading skeleton on first load, not on subsequent updates
+		if not hasInitialLoad then
+			setIsLoading(true)
+		end
 
 		task.spawn(function()
-			local rawWorn = WornItemExtractor.extract(activeSnapshot)
+			local rawWorn = WornItemExtractor.extract(liveSnapshot)
 			local bodyPartIds = {}
 			for _, item in ipairs(rawWorn) do
 				local p = item.property
@@ -148,6 +145,7 @@ local function useCheckoutItems()
 			setValidItems(toResolve)
 			setHiddenAssets(newHiddenAssets)
 			setIsLoading(false)
+			setHasInitialLoad(true)
 		end)
 
 		return function()
@@ -156,7 +154,7 @@ local function useCheckoutItems()
 				fn()
 			end
 		end
-	end, { equippedKeys, activeSnapshot })
+	end, { equippedKeys, liveSnapshot })
 
 	local checkoutItems = React.useMemo(function()
 		if isLoading then return {} end

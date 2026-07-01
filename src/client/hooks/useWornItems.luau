@@ -24,12 +24,16 @@ local function useWornItems(): UseWornItemsResult
 	local wornItems, setWornItems = React.useState({})
 	local isLoading, setIsLoading = React.useState(true)
 	local error, setError = React.useState(nil :: string?)
+	local hasInitialLoad, setHasInitialLoad = React.useState(false)
 
 	local processSnapshot = React.useCallback(function(snapshot)
 		if not snapshot then
 			return
 		end
-		setIsLoading(true)
+		-- Only show loading skeleton on first load
+		if not hasInitialLoad then
+			setIsLoading(true)
+		end
 		setError(nil)
 
 		task.spawn(function()
@@ -67,16 +71,14 @@ local function useWornItems(): UseWornItemsResult
 
 			setWornItems(itemsWithDetails)
 			setIsLoading(false)
+			setHasInitialLoad(true)
 		end)
 	end, {})
 
 	local refresh = React.useCallback(function()
 		task.spawn(function()
 			local state = AvatarAppearanceClient.fetchStateAsync()
-			local snapshot = if state.optimisticState and state.optimisticState.isOptimistic
-				then state.optimisticState.predictedSnapshot
-				else state.liveSnapshot
-			processSnapshot(snapshot)
+			processSnapshot(state.liveSnapshot)
 		end)
 	end, { processSnapshot })
 
@@ -86,10 +88,7 @@ local function useWornItems(): UseWornItemsResult
 
 		-- Subscribe to changes
 		local unsubscribe = AvatarAppearanceClient.subscribe(function(state)
-			local snapshot = if state.optimisticState and state.optimisticState.isOptimistic
-				then state.optimisticState.predictedSnapshot
-				else state.liveSnapshot
-			processSnapshot(snapshot)
+			processSnapshot(state.liveSnapshot)
 		end)
 
 		return function()
