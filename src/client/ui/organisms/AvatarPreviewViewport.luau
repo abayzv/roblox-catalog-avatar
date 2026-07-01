@@ -8,6 +8,8 @@ local AvatarAppearanceClient = require(script.Parent.Parent.Parent.services.Avat
 local AvatarTemplateCache = require(script.Parent.Parent.Parent.services.AvatarTemplateCache)
 local GlassButton = require(script.Parent.Parent.atoms.GlassButton)
 local useAppearanceState = require(script.Parent.Parent.Parent.hooks.useAppearanceState)
+local useCheckoutItems = require(script.Parent.Parent.Parent.hooks.useCheckoutItems)
+local CheckoutSummaryCard = require(script.Parent.Parent.molecules.CheckoutSummaryCard)
 local HumanoidDescriptionSerializer =
 	require(ReplicatedStorage.Shared.avatar.HumanoidDescriptionSerializer)
 local ApplyAvatarRemote = require(ReplicatedStorage.Shared.remotes.ApplyAvatarRemote)
@@ -266,6 +268,9 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 		else state.liveSnapshot
 	local activeRevision = state.previewRevision
 
+	local checkoutData = useCheckoutItems()
+	local totalRobux = checkoutData.totalRobux
+
 	local ViewportAnimationController =
 		require(script.Parent.Parent.Parent.controllers.ViewportAnimationController)
 
@@ -414,7 +419,7 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 
 			ActionArea = React.createElement("Frame", {
 				AnchorPoint = Vector2.new(0.5, 1),
-				Position = UDim2.new(0.5, 0, 1, -Theme.Space.XL),
+				Position = UDim2.new(0.5, 0, 1, -(Theme.Space.XL + (totalRobux > 0 and 176 or 0))),
 				BackgroundTransparency = 1,
 				Size = UDim2.new(1, -(Theme.Space.XL * 2), 0, 48),
 				ZIndex = 13,
@@ -472,6 +477,21 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 							end)
 						end,
 					}),
+			}),
+
+			CheckoutSummaryArea = totalRobux > 0 and React.createElement("Frame", {
+				AnchorPoint = Vector2.new(0.5, 1),
+				Position = UDim2.new(0.5, 0, 1, -Theme.Space.XL),
+				BackgroundTransparency = 1,
+				Size = UDim2.new(1, -(Theme.Space.XL * 2), 0, 160),
+				ZIndex = 14,
+			}, {
+				SummaryCard = React.createElement(CheckoutSummaryCard, {
+					totalPrice = totalRobux,
+					onBuy = function()
+						print("Buy clicked")
+					end,
+				}),
 			}),
 		}),
 	})
