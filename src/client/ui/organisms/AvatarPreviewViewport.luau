@@ -9,7 +9,6 @@ local AvatarTemplateCache = require(script.Parent.Parent.Parent.services.AvatarT
 local GlassButton = require(script.Parent.Parent.atoms.GlassButton)
 local useAppearanceState = require(script.Parent.Parent.Parent.hooks.useAppearanceState)
 local useCheckoutItems = require(script.Parent.Parent.Parent.hooks.useCheckoutItems)
-local CheckoutSummaryCard = require(script.Parent.Parent.molecules.CheckoutSummaryCard)
 local HumanoidDescriptionSerializer =
 	require(ReplicatedStorage.Shared.avatar.HumanoidDescriptionSerializer)
 local ApplyAvatarRemote = require(ReplicatedStorage.Shared.remotes.ApplyAvatarRemote)
@@ -248,6 +247,7 @@ end
 
 export type AvatarPreviewViewportProps = {
 	showSaveTemplate: boolean?,
+	showBuyButton: boolean?,
 	onTemplateSaved: (() -> ())?,
 }
 
@@ -260,7 +260,6 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 
 	local isSaving, setIsSaving = React.useState(false)
 	local saveSuccessText, setSaveSuccessText = React.useState(nil :: string?)
-	local stageWidth, setStageWidth = React.useState(0)
 
 	local state = useAppearanceState()
 
@@ -271,20 +270,6 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 
 	local checkoutData = useCheckoutItems()
 	local totalRobux = checkoutData.totalRobux
-	
-	local scale = 1
-	local summaryAreaSize = UDim2.new(1, -(Theme.Space.XL * 2), 0, 160)
-	
-	if stageWidth > 0 then
-		local padding = Theme.Space.XL * 2
-		local targetWidth = stageWidth - padding
-		local baseWidth = 352
-		
-		if targetWidth < baseWidth then
-			scale = targetWidth / baseWidth
-			summaryAreaSize = UDim2.new(0, baseWidth, 0, 160)
-		end
-	end
 
 	local ViewportAnimationController =
 		require(script.Parent.Parent.Parent.controllers.ViewportAnimationController)
@@ -368,9 +353,6 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 			ClipsDescendants = true,
 			Size = UDim2.fromScale(1, 1),
 			ZIndex = 11,
-			[React.Change.AbsoluteSize] = function(rbx)
-				setStageWidth(rbx.AbsoluteSize.X)
-			end,
 		}, {
 			Corner = React.createElement("UICorner", {
 				CornerRadius = UDim.new(0, Theme.Radius.LG),
@@ -397,6 +379,44 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 				[React.Event.InputBegan] = beginDrag,
 				[React.Event.InputChanged] = updateDrag,
 				[React.Event.InputEnded] = endDrag,
+			}),
+
+			TotalRobuxArea = props.showBuyButton and totalRobux > 0 and React.createElement("Frame", {
+				AnchorPoint = Vector2.new(0, 0),
+				Position = UDim2.new(0, Theme.Space.MD, 0, Theme.Space.MD),
+				AutomaticSize = Enum.AutomaticSize.XY,
+				BackgroundTransparency = 0.3,
+				BackgroundColor3 = Theme.Color.Background,
+				ZIndex = 13,
+			}, {
+				Corner = React.createElement("UICorner", {
+					CornerRadius = UDim.new(0, Theme.Radius.MD),
+				}),
+				Padding = React.createElement("UIPadding", {
+					PaddingTop = UDim.new(0, Theme.Space.SM),
+					PaddingBottom = UDim.new(0, Theme.Space.SM),
+					PaddingLeft = UDim.new(0, Theme.Space.MD),
+					PaddingRight = UDim.new(0, Theme.Space.MD),
+				}),
+				Layout = React.createElement("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					VerticalAlignment = Enum.VerticalAlignment.Center,
+					Padding = UDim.new(0, Theme.Space.SM),
+				}),
+				Icon = React.createElement("ImageLabel", {
+					Size = UDim2.fromOffset(20, 20),
+					BackgroundTransparency = 1,
+					Image = Icons.Robux,
+					ImageColor3 = Theme.Color.TextPrimary,
+				}),
+				Text = React.createElement("TextLabel", {
+					AutomaticSize = Enum.AutomaticSize.XY,
+					BackgroundTransparency = 1,
+					Text = tostring(totalRobux),
+					TextColor3 = Theme.Color.TextPrimary,
+					Font = Theme.Font.Bold,
+					TextSize = Theme.Text.BodyStrong,
+				}),
 			}),
 
 			ResetArea = React.createElement("Frame", {
@@ -437,7 +457,7 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 
 			ActionArea = React.createElement("Frame", {
 				AnchorPoint = Vector2.new(0.5, 1),
-				Position = UDim2.new(0.5, 0, 1, -(Theme.Space.XL + (totalRobux > 0 and (160 * scale + Theme.Space.MD) or 0))),
+				Position = UDim2.new(0.5, 0, 1, -Theme.Space.XL),
 				BackgroundTransparency = 1,
 				Size = UDim2.new(1, -(Theme.Space.XL * 2), 0, 48),
 				ZIndex = 13,
@@ -448,6 +468,18 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 					VerticalAlignment = Enum.VerticalAlignment.Center,
 					Padding = UDim.new(0, Theme.Space.MD),
 				}),
+
+				BuyButton = props.showBuyButton
+					and totalRobux > 0
+					and React.createElement(GlassButton, {
+						text = "Buy",
+						icon = Icons.Robux,
+						color = Theme.Color.Purple,
+						size = UDim2.fromScale(1, 1),
+						onActivated = function()
+							print("Buy clicked")
+						end,
+					}),
 
 				SaveTemplateButton = props.showSaveTemplate
 					and React.createElement(GlassButton, {
@@ -497,23 +529,6 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 					}),
 			}),
 
-			CheckoutSummaryArea = totalRobux > 0 and React.createElement("Frame", {
-				AnchorPoint = Vector2.new(0.5, 1),
-				Position = UDim2.new(0.5, 0, 1, -Theme.Space.XL),
-				BackgroundTransparency = 1,
-				Size = summaryAreaSize,
-				ZIndex = 14,
-			}, {
-				UIScale = React.createElement("UIScale", {
-					Scale = scale,
-				}),
-				SummaryCard = React.createElement(CheckoutSummaryCard, {
-					totalPrice = totalRobux,
-					onBuy = function()
-						print("Buy clicked")
-					end,
-				}),
-			}),
 		}),
 	})
 end
