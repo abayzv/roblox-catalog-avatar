@@ -260,6 +260,7 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 
 	local isSaving, setIsSaving = React.useState(false)
 	local saveSuccessText, setSaveSuccessText = React.useState(nil :: string?)
+	local stageWidth, setStageWidth = React.useState(0)
 
 	local state = useAppearanceState()
 
@@ -270,6 +271,11 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 
 	local checkoutData = useCheckoutItems()
 	local totalRobux = checkoutData.totalRobux
+	
+	local scale = 1
+	if stageWidth > 0 and stageWidth < 400 then
+		scale = stageWidth / 400
+	end
 
 	local ViewportAnimationController =
 		require(script.Parent.Parent.Parent.controllers.ViewportAnimationController)
@@ -353,6 +359,9 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 			ClipsDescendants = true,
 			Size = UDim2.fromScale(1, 1),
 			ZIndex = 11,
+			[React.Change.AbsoluteSize] = function(rbx)
+				setStageWidth(rbx.AbsoluteSize.X)
+			end,
 		}, {
 			Corner = React.createElement("UICorner", {
 				CornerRadius = UDim.new(0, Theme.Radius.LG),
@@ -419,7 +428,7 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 
 			ActionArea = React.createElement("Frame", {
 				AnchorPoint = Vector2.new(0.5, 1),
-				Position = UDim2.new(0.5, 0, 1, -(Theme.Space.XL + (totalRobux > 0 and 176 or 0))),
+				Position = UDim2.new(0.5, 0, 1, -(Theme.Space.XL + (totalRobux > 0 and (160 * scale + Theme.Space.MD) or 0))),
 				BackgroundTransparency = 1,
 				Size = UDim2.new(1, -(Theme.Space.XL * 2), 0, 48),
 				ZIndex = 13,
@@ -486,6 +495,9 @@ local function AvatarPreviewViewport(props: AvatarPreviewViewportProps)
 				Size = UDim2.new(1, -(Theme.Space.XL * 2), 0, 160),
 				ZIndex = 14,
 			}, {
+				UIScale = React.createElement("UIScale", {
+					Scale = scale,
+				}),
 				SummaryCard = React.createElement(CheckoutSummaryCard, {
 					totalPrice = totalRobux,
 					onBuy = function()

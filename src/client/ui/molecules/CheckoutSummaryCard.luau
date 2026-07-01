@@ -34,7 +34,7 @@ local function CheckoutSummaryCard(props: CheckoutSummaryCardProps)
 		Layout = React.createElement("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, Theme.Space.MD),
+			Padding = UDim.new(0, 10),
 		}),
 		
 		-- Price Row
